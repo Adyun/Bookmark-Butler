@@ -1,0 +1,30 @@
+{
+  "name": "smart-bookmark-extension",
+  "version": "1.0.0",
+  "description": "智能书签扩展，基于活跃度排序和快速搜索的书签管理工具",
+  "main": "src/content-script.js",
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "build": "node scripts/build.js",
+    "pack": "node scripts/pack.js",
+    "lint": "eslint src/"
+  },
+  "keywords": [
+    "chrome-extension",
+    "bookmark",
+    "productivity"
+  ],
+  "author": "Smart Bookmark Team",
+  "license": "MIT",
+  "devDependencies": {
+    "jest": "^27.0.0",
+    "eslint": "^8.0.0"
+  },
+  "jest": {
+    "testEnvironment": "jsdom",
+    "collectCoverageFrom": [
+      "src/**/*.js"
+    ]
+  }
+}

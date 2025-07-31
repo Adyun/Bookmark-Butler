@@ -1,0 +1,47 @@
+// Constants for the Smart Bookmark Extension
+
+// Keyboard shortcuts
+var KEYBOARD_SHORTCUT = 'Ctrl+Shift+B';
+
+// Modal element IDs
+var MODAL_ID = 'smart-bookmark-modal';
+var MODAL_TITLE_ID = 'smart-bookmark-modal-title';
+var SEARCH_INPUT_ID = 'smart-bookmark-search';
+var FOLDER_LIST_ID = 'smart-bookmark-folder-list';
+var TOAST_ID = 'smart-bookmark-toast';
+
+// CSS classes
+var MODAL_ACTIVE_CLASS = 'active';
+var FOLDER_ITEM_ACTIVE_CLASS = 'active';
+var TOAST_SHOW_CLASS = 'show';
+
+// Messages
+var BOOKMARK_SUCCESS_MESSAGE = '书签添加成功！';
+var BOOKMARK_ERROR_MESSAGE = '书签添加失败，请重试。';
+var LOADING_FOLDERS_MESSAGE = '正在加载书签文件夹...';
+
+// Performance
+var SEARCH_DEBOUNCE_TIME = 300; // ms
+var CACHE_TTL = 5000; // ms
+
+// Default values
+var DEFAULT_RECENT_FOLDERS_COUNT = 5;
+
+// 将常量附加到全局window对象，以便其他脚本可以访问
+window.SMART_BOOKMARK_CONSTANTS = {
+  KEYBOARD_SHORTCUT: KEYBOARD_SHORTCUT,
+  MODAL_ID: MODAL_ID,
+  MODAL_TITLE_ID: MODAL_TITLE_ID,
+  SEARCH_INPUT_ID: SEARCH_INPUT_ID,
+  FOLDER_LIST_ID: FOLDER_LIST_ID,
+  TOAST_ID: TOAST_ID,
+  MODAL_ACTIVE_CLASS: MODAL_ACTIVE_CLASS,
+  FOLDER_ITEM_ACTIVE_CLASS: FOLDER_ITEM_ACTIVE_CLASS,
+  TOAST_SHOW_CLASS: TOAST_SHOW_CLASS,
+  BOOKMARK_SUCCESS_MESSAGE: BOOKMARK_SUCCESS_MESSAGE,
+  BOOKMARK_ERROR_MESSAGE: BOOKMARK_ERROR_MESSAGE,
+  LOADING_FOLDERS_MESSAGE: LOADING_FOLDERS_MESSAGE,
+  SEARCH_DEBOUNCE_TIME: SEARCH_DEBOUNCE_TIME,
+  CACHE_TTL: CACHE_TTL,
+  DEFAULT_RECENT_FOLDERS_COUNT: DEFAULT_RECENT_FOLDERS_COUNT
+};

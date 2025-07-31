@@ -1,0 +1,50 @@
+{
+  "manifest_version": 3,
+  "name": "Smart Bookmark Extension",
+  "version": "1.0.0",
+  "description": "智能书签扩展，基于活跃度排序和快速搜索的书签管理工具。通过Ctrl+Shift+B快捷键快速将当前页面收藏到最相关的文件夹中。",
+  
+  "permissions": [
+    "bookmarks",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  
+  "background": {
+    "service_worker": "src/background.js"
+  },
+  
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": [
+        "src/utils/constants.js",
+        "src/utils/helpers.js",
+        "src/utils/bookmark-api.js",
+        "src/utils/sorting-algorithm.js",
+        "src/utils/search-engine.js",
+        "src/modal/modal-manager.js",
+        "src/content-script.js"
+      ],
+      "css": ["src/styles/modal.css"]
+    }
+  ],
+  
+  "commands": {
+    "toggle-bookmark-modal": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+B",
+        "mac": "Command+Shift+B"
+      },
+      "description": "打开智能书签扩展"
+    }
+  },
+  
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
