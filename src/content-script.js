@@ -23,14 +23,10 @@ function getCurrentPageInfo() {
  * 初始化扩展
  */
 function initExtension() {
-  // 监听键盘事件
-  keydownHandler = handleKeyDown;
-  document.addEventListener('keydown', keydownHandler);
-  
   // 监听来自background script的消息
   messageHandler = handleMessage;
   chrome.runtime.onMessage.addListener(messageHandler);
-  
+
   // 页面卸载时清理事件监听器
   window.addEventListener('beforeunload', cleanup);
 }
@@ -45,43 +41,24 @@ function handleMessage(request, sender, sendResponse) {
   if (request.action === "openBookmarkModal") {
     // 显示Modal
     modalManager.show(request.pageInfo);
-    sendResponse({status: "success"});
+    sendResponse({ status: "success" });
     return true; // 保持消息通道开放直到sendResponse被调用
   }
 }
 
-/**
- * 处理键盘事件
- * @param {Event} e - 键盘事件
- */
-function handleKeyDown(e) {
-  // 检查是否按下了 Ctrl+Shift+B (避免与浏览器默认快捷键冲突)
-  if (e.ctrlKey && e.shiftKey && e.key === 'B') {
-    e.preventDefault();
-    
-    // 显示Modal
-    var pageInfo = getCurrentPageInfo();
-    modalManager.show(pageInfo);
-  }
-}
 
 /**
  * 清理函数
  */
 function cleanup() {
   // 移除事件监听器
-  if (keydownHandler) {
-    document.removeEventListener('keydown', keydownHandler);
-    keydownHandler = null;
-  }
-  
   if (messageHandler) {
     chrome.runtime.onMessage.removeListener(messageHandler);
     messageHandler = null;
   }
-  
+
   window.removeEventListener('beforeunload', cleanup);
-  
+
   // 清理Modal管理器
   if (modalManager && typeof modalManager.cleanup === 'function') {
     modalManager.cleanup();

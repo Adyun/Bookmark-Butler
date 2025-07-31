@@ -2,11 +2,12 @@
   "manifest_version": 3,
   "name": "Smart Bookmark Extension",
   "version": "1.0.0",
-  "description": "智能书签扩展，基于活跃度排序和快速搜索的书签管理工具。通过Ctrl+Shift+B快捷键快速将当前页面收藏到最相关的文件夹中。",
+  "description": "智能书签扩展，提供两种模式的书签管理功能：模式一可快速搜索和打开已有书签，模式二可将当前页面快速添加到收藏文件夹中。支持深色/浅色主题切换。",
   
   "permissions": [
     "bookmarks",
-    "activeTab"
+    "activeTab",
+    "storage"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -39,6 +40,15 @@
         "mac": "Command+Shift+B"
       },
       "description": "打开智能书签扩展"
+    }
+  },
+  
+  "action": {
+    "default_title": "智能书签扩展",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
     }
   },
   

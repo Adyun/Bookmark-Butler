@@ -17,6 +17,11 @@
   transition: all 0.2s ease-out;
 }
 
+/* 模式切换动画 */
+.smart-bookmark-modal.mode-transition {
+  transition: all 0.3s ease-in-out;
+}
+
 /* 响应式设计 - 小屏幕设备 */
 @media (max-width: 600px) {
   .smart-bookmark-modal {
@@ -58,6 +63,9 @@
   padding: 20px;
   border-bottom: 1px solid #eee;
   background: linear-gradient(120deg, #f5f7fa, #e4edf9);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .smart-bookmark-modal-title {
@@ -65,6 +73,27 @@
   font-size: 18px;
   font-weight: 600;
   color: #333;
+}
+
+/* Header controls container */
+.smart-bookmark-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+}
+
+/* Mode tip icon */
+.smart-bookmark-mode-tip {
+  font-size: 16px;
+  cursor: help;
+  padding: 5px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.smart-bookmark-mode-tip:hover {
+  background-color: rgba(0, 0, 0, 0.1);
 }
 
 /* Modal body */
@@ -92,6 +121,15 @@
 
 /* Folder list */
 .smart-bookmark-folder-list {
+  list-style: none;
+  padding: 0 8px 0 0;
+  margin: 16px 0 0;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* Bookmark list */
+.smart-bookmark-bookmark-list {
   list-style: none;
   padding: 0 8px 0 0;
   margin: 16px 0 0;
@@ -237,6 +275,11 @@
   display: inline-block;
 }
 
+.smart-bookmark-folder-icon {
+  margin-right: 10px;
+  font-size: 16px;
+}
+
 .smart-bookmark-folder-name {
   flex: 1;
   font-size: 14px;
@@ -306,12 +349,196 @@
   border-left: 3px solid #9c27b0;
 }
 
+/* Bookmark item styles */
+.smart-bookmark-bookmark-item {
+  padding: 12px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 8px;
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  background-color: #fff;
+  border: 1px solid #eee;
+  position: relative;
+  box-sizing: border-box;
+}
+
+/* Bookmark content wrapper */
+.smart-bookmark-bookmark-content {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  justify-content: space-between;
+}
+
+.smart-bookmark-bookmark-item:hover {
+  background-color: #f8f9fa;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.smart-bookmark-bookmark-item.active {
+  background-color: #e8f0fe !important;
+  border-color: #4285f4 !important;
+  box-shadow: 0 2px 8px rgba(66, 133, 244, 0.4) !important;
+  z-index: 1;
+}
+
+/* Bookmark icon style */
+.smart-bookmark-bookmark-icon {
+  margin-right: 10px;
+  font-size: 16px;
+  align-self: center;
+}
+
+/* Bookmark title and URL styles */
+.smart-bookmark-bookmark-title {
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.smart-bookmark-bookmark-url {
+  font-size: 12px;
+  color: #666;
+  word-break: break-all;
+  text-align: right;
+  max-width: 40%;
+}
+
+/* 搜索匹配度样式 - 书签 */
+.smart-bookmark-bookmark-item.high-match {
+  background-color: #e8f5e9;
+  border-color: #4caf50;
+}
+
+.smart-bookmark-bookmark-item.medium-match {
+  background-color: #fff8e1;
+  border-color: #ffc107;
+}
+
+.smart-bookmark-bookmark-item.low-match {
+  background-color: #f3e5f5;
+  border-color: #9c27b0;
+}
+
+/* 当书签同时被选中且有匹配度时的样式 */
+.smart-bookmark-bookmark-item.active.high-match {
+  background-color: #e8f0fe !important;
+  border-color: #4285f4 !important;
+  box-shadow: 0 2px 8px rgba(66, 133, 244, 0.4) !important;
+}
+
+.smart-bookmark-bookmark-item.active.medium-match {
+  background-color: #e8f0fe !important;
+  border-color: #4285f4 !important;
+  box-shadow: 0 2px 8px rgba(66, 133, 244, 0.4) !important;
+}
+
+.smart-bookmark-bookmark-item.active.low-match {
+  background-color: #e8f0fe !important;
+  border-color: #4285f4 !important;
+  box-shadow: 0 2px 8px rgba(66, 133, 244, 0.4) !important;
+}
+
+.smart-bookmark-bookmark-item.no-results {
+  color: #666;
+  font-style: italic;
+  cursor: default;
+  background-color: #f5f5f5;
+  text-align: center;
+  padding: 16px;
+}
+
+.smart-bookmark-bookmark-item.no-results:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* 加载状态样式 - 书签 */
+.smart-bookmark-bookmark-item.loading {
+  color: #666;
+  font-style: italic;
+  cursor: default;
+  background-color: #f5f5f5;
+  text-align: center;
+  padding: 16px;
+}
+
+.smart-bookmark-bookmark-item.loading:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* 空书签状态样式 */
+.smart-bookmark-bookmark-item.empty {
+  color: #666;
+  font-style: italic;
+  cursor: default;
+  background-color: #f5f5f5;
+  text-align: center;
+  padding: 16px;
+}
+
+.smart-bookmark-bookmark-item.empty:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* 错误状态样式 - 书签 */
+.smart-bookmark-bookmark-item.error {
+  color: #d32f2f;
+  font-style: italic;
+  cursor: default;
+  background-color: #ffebee;
+  text-align: center;
+  padding: 16px;
+}
+
+.smart-bookmark-bookmark-item.error:hover {
+  transform: none;
+  box-shadow: none;
+}
+
 /* Modal footer */
 .smart-bookmark-modal-footer {
   padding: 20px;
   border-top: 1px solid #eee;
   text-align: right;
   background-color: #fafafa;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Keyboard hints container */
+.smart-bookmark-keyboard-hints {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  flex: 1;
+}
+
+/* Individual keyboard hint */
+.smart-bookmark-keyboard-hint {
+  font-size: 12px;
+  color: #666;
+  background-color: #f1f3f4;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-family: monospace;
+  border: 1px solid #e0e0e0;
+}
+
+/* Button container in footer */
+.smart-bookmark-footer-buttons {
+  display: flex;
+  gap: 12px;
+  align-items: center;
 }
 
 .smart-bookmark-btn {
@@ -350,7 +577,6 @@
 .smart-bookmark-btn-secondary {
   background-color: #f1f3f4;
   color: #3c4043;
-  margin-right: 12px;
 }
 
 .smart-bookmark-btn-secondary:hover {
@@ -384,20 +610,378 @@
 }
 
 /* 滚动条样式 */
-.smart-bookmark-folder-list::-webkit-scrollbar {
+.smart-bookmark-folder-list::-webkit-scrollbar,
+.smart-bookmark-bookmark-list::-webkit-scrollbar {
   width: 6px;
 }
 
-.smart-bookmark-folder-list::-webkit-scrollbar-track {
+.smart-bookmark-folder-list::-webkit-scrollbar-track,
+.smart-bookmark-bookmark-list::-webkit-scrollbar-track {
   background: #f1f1f1;
   border-radius: 10px;
 }
 
-.smart-bookmark-folder-list::-webkit-scrollbar-thumb {
+.smart-bookmark-folder-list::-webkit-scrollbar-thumb,
+.smart-bookmark-bookmark-list::-webkit-scrollbar-thumb {
   background: #c1c1c1;
   border-radius: 10px;
 }
 
-.smart-bookmark-folder-list::-webkit-scrollbar-thumb:hover {
+.smart-bookmark-folder-list::-webkit-scrollbar-thumb:hover,
+.smart-bookmark-bookmark-list::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
+}
+
+/* 深色模式样式 */
+.smart-bookmark-modal.dark-mode {
+  background: #2d2d2d;
+  color: #e0e0e0;
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-modal-header {
+  border-bottom: 1px solid #444;
+  background: linear-gradient(120deg, #3a3a3a, #2d2d2d);
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-modal-title {
+  color: #e0e0e0;
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-mode-tip:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-modal-body {
+  /* 背景色继承自modal */
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-search {
+  background: #3a3a3a;
+  border: 1px solid #555;
+  color: #e0e0e0;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-search:focus {
+  border-color: #5c9ce6;
+  box-shadow: 0 0 0 2px rgba(92, 156, 230, 0.2);
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-folder-item {
+  background-color: #3a3a3a;
+  border: 1px solid #444;
+  color: #e0e0e0;
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-folder-item:hover {
+  background-color: #444;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-folder-item.active {
+  background-color: #1e3a5f !important;
+  border-color: #5c9ce6 !important;
+  box-shadow: 0 2px 8px rgba(92, 156, 230, 0.4) !important;
+}
+
+/* 深色模式下的搜索匹配度样式 */
+.smart-bookmark-modal.dark-mode .smart-bookmark-folder-item.high-match {
+  background-color: #2e4a2e;
+  border-color: #4caf50;
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-folder-item.medium-match {
+  background-color: #4a3a2e;
+  border-color: #ffc107;
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-folder-item.low-match {
+  background-color: #4a2e4a;
+  border-color: #9c27b0;
+}
+
+/* 深色模式下同时选中和有匹配度的样式 */
+.smart-bookmark-modal.dark-mode .smart-bookmark-folder-item.active.high-match,
+.smart-bookmark-modal.dark-mode .smart-bookmark-folder-item.active.medium-match,
+.smart-bookmark-modal.dark-mode .smart-bookmark-folder-item.active.low-match {
+  background-color: #1e3a5f !important;
+  border-color: #5c9ce6 !important;
+  box-shadow: 0 2px 8px rgba(92, 156, 230, 0.4) !important;
+}
+
+/* 深色模式下普通选中状态（没有匹配度） */
+.smart-bookmark-modal.dark-mode .smart-bookmark-folder-item.active:not(.high-match):not(.medium-match):not(.low-match) {
+  background-color: #1e3a5f !important;
+  border-color: #5c9ce6 !important;
+  box-shadow: 0 2px 8px rgba(92, 156, 230, 0.4) !important;
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-folder-item.no-results,
+.smart-bookmark-modal.dark-mode .smart-bookmark-folder-item.loading,
+.smart-bookmark-modal.dark-mode .smart-bookmark-folder-item.empty {
+  background-color: #3a3a3a;
+  color: #bbb;
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-folder-item.error {
+  background-color: #4a2e2e;
+  color: #ff6b6b;
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-folder-name {
+  color: #e0e0e0;
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-folder-count {
+  background: #444;
+  color: #bbb;
+}
+
+/* 深色模式下高匹配度文件夹的书签数量样式 */
+.smart-bookmark-modal.dark-mode .smart-bookmark-folder-item.high-match .smart-bookmark-folder-count {
+  background: rgba(76, 175, 80, 0.2);
+  color: #81c784;
+  border: 1px solid rgba(76, 175, 80, 0.4);
+}
+
+/* 深色模式下中等匹配度文件夹的书签数量样式 */
+.smart-bookmark-modal.dark-mode .smart-bookmark-folder-item.medium-match .smart-bookmark-folder-count {
+  background: rgba(255, 193, 7, 0.2);
+  color: #ffd54f;
+  border: 1px solid rgba(255, 193, 7, 0.4);
+}
+
+/* 深色模式下低匹配度文件夹的书签数量样式 */
+.smart-bookmark-modal.dark-mode .smart-bookmark-folder-item.low-match .smart-bookmark-folder-count {
+  background: rgba(156, 39, 176, 0.2);
+  color: #ba68c8;
+  border: 1px solid rgba(156, 39, 176, 0.4);
+}
+
+/* 深色模式下选中状态文件夹的书签数量样式 */
+.smart-bookmark-modal.dark-mode .smart-bookmark-folder-item.active .smart-bookmark-folder-count {
+  background: rgba(92, 156, 230, 0.2);
+  color: #90caf9;
+  border: 1px solid rgba(92, 156, 230, 0.4);
+}
+
+/* 深色模式下组合状态的书签数量样式 */
+.smart-bookmark-modal.dark-mode .smart-bookmark-folder-item.active.high-match .smart-bookmark-folder-count {
+  background: rgba(92, 156, 230, 0.2) !important;
+  color: #90caf9 !important;
+  border: 1px solid rgba(92, 156, 230, 0.4) !important;
+  border-left: 3px solid #4caf50;
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-folder-item.active.medium-match .smart-bookmark-folder-count {
+  background: rgba(92, 156, 230, 0.2) !important;
+  color: #90caf9 !important;
+  border: 1px solid rgba(92, 156, 230, 0.4) !important;
+  border-left: 3px solid #ffc107;
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-folder-item.active.low-match .smart-bookmark-folder-count {
+  background: rgba(92, 156, 230, 0.2) !important;
+  color: #90caf9 !important;
+  border: 1px solid rgba(92, 156, 230, 0.4) !important;
+  border-left: 3px solid #9c27b0;
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-modal-footer {
+  border-top: 1px solid #444;
+  background-color: #3a3a3a;
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-keyboard-hint {
+  color: #bbb;
+  background-color: #444;
+  border: 1px solid #555;
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-btn-primary {
+  background-color: #5c9ce6;
+  color: white;
+  box-shadow: 0 2px 5px rgba(92, 156, 230, 0.3);
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-btn-primary:hover {
+  background-color: #4a8ad6;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(92, 156, 230, 0.4);
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-btn-primary:disabled {
+  background-color: #555;
+  box-shadow: none;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-btn-secondary {
+  background-color: #444;
+  color: #e0e0e0;
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-btn-secondary:hover {
+  background-color: #555;
+  transform: translateY(-1px);
+}
+
+/* 深色模式下的书签样式 */
+.smart-bookmark-modal.dark-mode .smart-bookmark-bookmark-item {
+  background-color: #3a3a3a;
+  border: 1px solid #444;
+  color: #e0e0e0;
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-bookmark-item:hover {
+  background-color: #444;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-bookmark-item.active {
+  background-color: #1e3a5f !important;
+  border-color: #5c9ce6 !important;
+  box-shadow: 0 2px 8px rgba(92, 156, 230, 0.4) !important;
+}
+
+/* 深色模式下的书签标题和URL样式 */
+.smart-bookmark-modal.dark-mode .smart-bookmark-bookmark-title {
+  color: #e0e0e0;
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-bookmark-url {
+  color: #bbb;
+}
+
+/* 深色模式下的书签搜索匹配度样式 */
+.smart-bookmark-modal.dark-mode .smart-bookmark-bookmark-item.high-match {
+  background-color: #2e4a2e;
+  border-color: #4caf50;
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-bookmark-item.medium-match {
+  background-color: #4a3a2e;
+  border-color: #ffc107;
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-bookmark-item.low-match {
+  background-color: #4a2e4a;
+  border-color: #9c27b0;
+}
+
+/* 深色模式下同时选中和有匹配度的书签样式 */
+.smart-bookmark-modal.dark-mode .smart-bookmark-bookmark-item.active.high-match,
+.smart-bookmark-modal.dark-mode .smart-bookmark-bookmark-item.active.medium-match,
+.smart-bookmark-modal.dark-mode .smart-bookmark-bookmark-item.active.low-match {
+  background-color: #1e3a5f !important;
+  border-color: #5c9ce6 !important;
+  box-shadow: 0 2px 8px rgba(92, 156, 230, 0.4) !important;
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-bookmark-item.no-results,
+.smart-bookmark-modal.dark-mode .smart-bookmark-bookmark-item.loading,
+.smart-bookmark-modal.dark-mode .smart-bookmark-bookmark-item.empty {
+  background-color: #3a3a3a;
+  color: #bbb;
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-bookmark-item.error {
+  background-color: #4a2e2e;
+  color: #ff6b6b;
+}
+
+/* 深色模式下的滚动条样式 */
+.smart-bookmark-modal.dark-mode .smart-bookmark-folder-list::-webkit-scrollbar-track,
+.smart-bookmark-modal.dark-mode .smart-bookmark-bookmark-list::-webkit-scrollbar-track {
+  background: #3a3a3a;
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-folder-list::-webkit-scrollbar-thumb,
+.smart-bookmark-modal.dark-mode .smart-bookmark-bookmark-list::-webkit-scrollbar-thumb {
+  background: #666;
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-folder-list::-webkit-scrollbar-thumb:hover,
+.smart-bookmark-modal.dark-mode .smart-bookmark-bookmark-list::-webkit-scrollbar-thumb:hover {
+  background: #888;
+}
+
+/* 深色模式切换按钮样式 */
+.smart-bookmark-dark-mode-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: #666;
+  padding: 5px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-dark-mode-toggle {
+  color: #bbb;
+}
+
+.smart-bookmark-dark-mode-toggle:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-dark-mode-toggle:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* 深色模式下拉菜单样式 */
+.smart-bookmark-dark-mode-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 10002;
+  min-width: 150px;
+  display: none;
+  margin-top: 5px;
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-dark-mode-dropdown {
+  background: #3a3a3a;
+  border: 1px solid #555;
+}
+
+.smart-bookmark-dark-mode-dropdown.show {
+  display: block;
+}
+
+.smart-bookmark-dark-mode-option {
+  padding: 10px 15px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  font-size: 14px;
+  color: #333;
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-dark-mode-option {
+  color: #e0e0e0;
+}
+
+.smart-bookmark-dark-mode-option:hover {
+  background-color: #f5f5f5;
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-dark-mode-option:hover {
+  background-color: #444;
+}
+
+.smart-bookmark-dark-mode-option.active {
+  background-color: #e8f0fe;
+  color: #4285f4;
+  font-weight: 500;
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-dark-mode-option.active {
+  background-color: #1e3a5f;
+  color: #5c9ce6;
 }

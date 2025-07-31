@@ -3,6 +3,7 @@
 // 缓存对象
 var cache = {
   folders: null,
+  bookmarks: null,
   lastFetch: 0,
   ttl: 5000 // 5秒缓存
 };
@@ -157,7 +158,8 @@ function searchFolders(query) {
       // 向后台脚本发送消息搜索书签
       chrome.runtime.sendMessage({
         action: "searchBookmarks",
-        query: query
+        query: query,
+        type: "folders"
       }, function (response) {
         if (chrome.runtime.lastError) {
           reject(new Error('Failed to communicate with background script: ' + chrome.runtime.lastError.message));
@@ -172,6 +174,98 @@ function searchFolders(query) {
         if (response && response.folders) {
           console.log('Found ' + response.folders.length + ' folders matching query via background script');
           resolve(response.folders);
+        } else {
+          reject(new Error('Invalid response from background script'));
+        }
+      });
+    });
+  });
+}
+
+/**
+ * 搜索书签
+ * @param {string} query - 搜索关键词
+ * @returns {Promise<Array>} 匹配的书签列表
+ */
+function searchBookmarks(query) {
+  return retryAsyncFunction(function () {
+    // 在内容脚本中，通过后台脚本搜索书签
+    return new Promise(function (resolve, reject) {
+      // 检查是否在扩展环境中
+      if (!chrome || !chrome.runtime) {
+        reject(new Error('Chrome runtime not available'));
+        return;
+      }
+
+      // 向后台脚本发送消息搜索书签
+      chrome.runtime.sendMessage({
+        action: "searchBookmarks",
+        query: query,
+        type: "bookmarks"
+      }, function (response) {
+        if (chrome.runtime.lastError) {
+          reject(new Error('Failed to communicate with background script: ' + chrome.runtime.lastError.message));
+          return;
+        }
+
+        if (response && response.error) {
+          reject(new Error(response.error));
+          return;
+        }
+
+        if (response && response.bookmarks) {
+          console.log('Found ' + response.bookmarks.length + ' bookmarks matching query via background script');
+          resolve(response.bookmarks);
+        } else {
+          reject(new Error('Invalid response from background script'));
+        }
+      });
+    });
+  });
+}
+
+/**
+ * 获取所有书签
+ * @returns {Promise<Array>} 书签列表
+ */
+function getAllBookmarks() {
+  return retryAsyncFunction(function () {
+    // 检查缓存
+    var now = Date.now();
+    if (cache.bookmarks && (now - cache.lastFetch) < cache.ttl) {
+      console.log('Returning cached bookmarks');
+      return Promise.resolve(cache.bookmarks);
+    }
+
+    // 在内容脚本中，通过后台脚本获取书签
+    return new Promise(function (resolve, reject) {
+      // 检查是否在扩展环境中
+      if (!chrome || !chrome.runtime) {
+        reject(new Error('Chrome runtime not available'));
+        return;
+      }
+
+      // 向后台脚本发送消息获取书签
+      chrome.runtime.sendMessage({
+        action: "getAllBookmarks"
+      }, function (response) {
+        if (chrome.runtime.lastError) {
+          reject(new Error('Failed to communicate with background script: ' + chrome.runtime.lastError.message));
+          return;
+        }
+
+        if (response && response.error) {
+          reject(new Error(response.error));
+          return;
+        }
+
+        if (response && response.bookmarks) {
+          // 更新缓存
+          cache.bookmarks = response.bookmarks;
+          cache.lastFetch = now;
+
+          console.log('Fetched ' + response.bookmarks.length + ' bookmarks from background script');
+          resolve(response.bookmarks);
         } else {
           reject(new Error('Invalid response from background script'));
         }
@@ -220,6 +314,7 @@ function requestBookmarksPermission() {
  */
 function clearCache() {
   cache.folders = null;
+  cache.bookmarks = null;
   cache.lastFetch = 0;
 }
 
@@ -239,8 +334,10 @@ function getCacheStatus() {
 // 将函数附加到全局window对象
 window.SMART_BOOKMARK_API = {
   getAllFolders: getAllFolders,
+  getAllBookmarks: getAllBookmarks,
   createBookmark: createBookmark,
   searchFolders: searchFolders,
+  searchBookmarks: searchBookmarks,
   calculateFolderActivity: calculateFolderActivity,
   clearCache: clearCache,
   getCacheStatus: getCacheStatus,

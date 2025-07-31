@@ -92,20 +92,111 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return;
       }
 
-      // 过滤出文件夹（没有url属性的节点）
-      const folders = [];
-      for (const result of results) {
-        if (!result.url) {
-          folders.push(result);
+      // 根据请求类型决定返回文件夹还是书签
+      if (request.type === "folders") {
+        // 过滤出文件夹（没有url属性的节点）
+        const folders = [];
+        for (const result of results) {
+          if (!result.url) {
+            folders.push(result);
+          }
         }
-      }
 
-      console.log(`Found ${folders.length} folders matching query: ${request.query}`);
-      sendResponse({ folders: folders });
+        console.log(`Found ${folders.length} folders matching query: ${request.query}`);
+        sendResponse({ folders: folders });
+      } else if (request.type === "bookmarks") {
+        // 过滤出书签（有url属性的节点）
+        const bookmarks = [];
+        for (const result of results) {
+          if (result.url) {
+            bookmarks.push(result);
+          }
+        }
+
+        console.log(`Found ${bookmarks.length} bookmarks matching query: ${request.query}`);
+        sendResponse({ bookmarks: bookmarks });
+      } else {
+        // 默认返回文件夹（保持向后兼容）
+        const folders = [];
+        for (const result of results) {
+          if (!result.url) {
+            folders.push(result);
+          }
+        }
+
+        console.log(`Found ${folders.length} folders matching query: ${request.query}`);
+        sendResponse({ folders: folders });
+      }
     });
 
     return true; // 保持消息通道开放，以便异步发送响应
   }
+
+  if (request.action === "getAllBookmarks") {
+    // 获取所有书签
+    chrome.bookmarks.getTree((bookmarkTree) => {
+      if (chrome.runtime.lastError) {
+        console.error("Error getting bookmark tree:", chrome.runtime.lastError);
+        sendResponse({ error: chrome.runtime.lastError.message });
+        return;
+      }
+
+      // 从书签树中提取书签
+      const bookmarks = [];
+
+      function traverse(node) {
+        if (!node) return;
+
+        // 如果节点有url属性，则认为是书签
+        if (node.url) {
+          bookmarks.push({
+            id: node.id,
+            title: node.title || '未命名书签',
+            url: node.url,
+            parentId: node.parentId
+          });
+        }
+
+        // 递归遍历子节点
+        if (node.children && Array.isArray(node.children)) {
+          for (const child of node.children) {
+            traverse(child);
+          }
+        }
+      }
+
+      try {
+        traverse(bookmarkTree[0]);
+        console.log(`Extracted ${bookmarks.length} bookmarks`);
+        sendResponse({ bookmarks: bookmarks });
+      } catch (error) {
+        console.error("Error traversing bookmark tree:", error);
+        sendResponse({ error: error.message });
+      }
+    });
+
+    return true; // 保持消息通道开放，以便异步发送响应
+  }
+});
+
+// 监听插件图标点击事件
+chrome.action.onClicked.addListener((tab) => {
+  console.log("Extension icon clicked");
+
+  // 向内容脚本发送消息以打开书签Modal
+  chrome.tabs.sendMessage(tab.id, {
+    action: "openBookmarkModal",
+    pageInfo: {
+      title: tab.title,
+      url: tab.url
+    }
+  }, (response) => {
+    if (chrome.runtime.lastError) {
+      console.error("Error sending message to content script:", chrome.runtime.lastError);
+    } else {
+      console.log("Message sent to content script:", response);
+    }
+  });
 });
 
 // 监听命令
