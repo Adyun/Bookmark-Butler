@@ -10,7 +10,7 @@ function ModalManager() {
   this.allBookmarks = [];
   this.filteredBookmarks = [];
   this.searchEngine = new window.SearchEngine();
-  this.itemHeight = 48; // 每个项目的高度（像素）- 与CSS min-height保持一致
+  this.itemHeight = 58; // 每个项目的高度（像素）- 与CSS min-height保持一致（文件夹52px+书签56px的平均值）
 
   // 组件实例
   this.uiManager = new window.UIManager();

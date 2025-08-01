@@ -47,7 +47,7 @@
     min-height 0.4s cubic-bezier(0.25, 0.8, 0.25, 1),
     box-shadow 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
   will-change: opacity, transform, height, box-shadow;
-  overflow: visible;
+  overflow: visible; /* 确保缩放内容不被裁剪 */
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.2);
   /* 确保阴影完全包含所有内容 */
@@ -152,9 +152,9 @@
 
 /* Modal body */
 .smart-bookmark-modal-body {
-  padding: 24px 28px;
+  padding: 24px 20px; /* 减少左右padding，给列表项目更多空间 */
   flex: 1;
-  overflow-y: hidden;
+  overflow: visible; /* 改为visible，避免裁剪 */
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -204,7 +204,7 @@
   flex: 1;
   min-height: 0;
   margin-top: 16px;
-  overflow: hidden;
+  overflow: visible; /* 改为visible，避免裁剪缩放的内容 */
   display: flex;
   flex-direction: column;
   position: relative;
@@ -244,11 +244,11 @@
 /* Folder list */
 .smart-bookmark-folder-list {
   list-style: none;
-  padding: 0;
+  padding: 8px 12px 8px 8px; /* 预留缩放空间，右侧多一些防止阴影被裁剪 */
   margin: 0; /* 移除margin，由容器管理 */
   flex: 1;
   overflow-y: auto;
-  overflow-x: hidden;
+  overflow-x: visible; /* 允许水平方向显示缩放内容 */
   min-height: 0; /* 防止flex子项溢出 */
   box-sizing: border-box;
   width: 100%;
@@ -262,11 +262,11 @@
 /* Bookmark list */
 .smart-bookmark-bookmark-list {
   list-style: none;
-  padding: 0;
+  padding: 8px 12px 8px 8px; /* 预留缩放空间，右侧多一些防止阴影被裁剪 */
   margin: 0; /* 移除margin，由容器管理 */
   flex: 1;
   overflow-y: auto;
-  overflow-x: hidden;
+  overflow-x: visible; /* 允许水平方向显示缩放内容 */
   min-height: 0; /* 防止flex子项溢出 */
   box-sizing: border-box;
   width: 100%;
@@ -278,73 +278,113 @@
 }
 
 .smart-bookmark-folder-item {
-  padding: 4px 16px;
-  border-radius: 8px;
+  padding: 12px 16px;
+  border-radius: 10px;
   cursor: pointer;
   display: flex;
   align-items: center;
   transition: 
-    background-color 0.2s ease, 
-    border-color 0.2s ease, 
-    box-shadow 0.2s ease,
-    opacity 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+    background-color 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+    border-color 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+    box-shadow 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
     transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
-    max-height 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
-    margin 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-  background-color: #fff;
-  border: 1px solid #eee;
+    opacity 0.4s cubic-bezier(0.25, 0.8, 0.25, 1),
+    max-height 0.4s cubic-bezier(0.25, 0.8, 0.25, 1),
+    margin 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.9) 100%);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  backdrop-filter: blur(10px);
   position: relative;
   box-sizing: border-box;
-  min-height: 40px; /* 与书签保持视觉平衡 */
-  margin-bottom: 8px; /* 添加底部间距 */
-  margin-right: 8px; /* 添加右边间距 */
-  max-height: 200px; /* 用于动画的最大高度 */
+  min-height: 52px;
+  margin-bottom: 8px;
+  margin-right: 4px;
+  margin-left: 4px; /* 左侧也预留空间，防止缩放时被裁剪 */
+  max-height: 200px;
   opacity: 1;
-  transform: translateY(0);
+  transform: translateY(0) scale(1);
+  will-change: transform, opacity, background-color;
 }
 
 .smart-bookmark-folder-item:hover {
-  background-color: #f8f9fa;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  background: linear-gradient(135deg, rgba(248, 250, 252, 1) 0%, rgba(241, 245, 249, 0.95) 100%);
+  border-color: rgba(148, 163, 184, 0.4);
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.08),
+    0 2px 8px rgba(0, 0, 0, 0.04);
+  transform: translateY(-1px) scale(1.015); /* 减少缩放幅度 */
 }
 
 .smart-bookmark-folder-item.active {
-  background-color: #e8f0fe !important;
-  border-color: #4285f4 !important;
-  box-shadow: 0 2px 8px rgba(66, 133, 244, 0.4) !important;
-  z-index: 1;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(37, 99, 235, 0.1) 100%) !important;
+  border: 2px solid #3b82f6 !important;
+  box-shadow: 
+    0 8px 25px rgba(59, 130, 246, 0.25),
+    0 4px 12px rgba(59, 130, 246, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  transform: translateY(-2px) scale(1.02) !important; /* 减少缩放幅度 */
+  z-index: 10;
 }
 
-/* 项目动画状态 */
+/* 项目动画状态 - 重新设计 */
 .smart-bookmark-folder-item.item-fade-out,
 .smart-bookmark-bookmark-item.item-fade-out {
-  opacity: 0;
-  transform: translateY(-10px);
-  max-height: 0;
-  margin-bottom: 0;
-  padding-top: 0;
-  padding-bottom: 0;
+  opacity: 0 !important;
+  transform: translateY(-20px) scale(0.9) !important;
+  max-height: 0 !important;
+  margin-bottom: 0 !important;
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  border-width: 0 !important;
+  overflow: hidden !important;
 }
 
 .smart-bookmark-folder-item.item-fade-in,
 .smart-bookmark-bookmark-item.item-fade-in {
-  animation: itemFadeIn 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+  animation: itemFadeIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
 @keyframes itemFadeIn {
   0% {
     opacity: 0;
-    transform: translateY(20px) scale(0.95);
+    transform: translateY(30px) scale(0.8);
     max-height: 0;
+    margin-bottom: 0;
+    border-width: 0;
   }
-  50% {
+  30% {
     max-height: 200px;
+    margin-bottom: 6px;
+    border-width: 1px;
+  }
+  60% {
+    opacity: 0.7;
+    transform: translateY(10px) scale(0.95);
   }
   100% {
     opacity: 1;
     transform: translateY(0) scale(1);
     max-height: 200px;
   }
+}
+
+/* 列表进入动画 */
+@keyframes listEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 应用列表进入动画 */
+.smart-bookmark-folder-list,
+.smart-bookmark-bookmark-list {
+  animation: listEnter 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 /* 内容切换动画 */
@@ -360,50 +400,63 @@
     opacity 0.3s ease;
 }
 
-/* 搜索匹配度样式 */
+/* 搜索匹配度样式 - 重新设计 */
 .smart-bookmark-folder-item.high-match {
-  background-color: #e8f5e9;
-  border-color: #4caf50;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.12) 0%, rgba(22, 163, 74, 0.08) 100%);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  box-shadow: 
+    0 2px 8px rgba(34, 197, 94, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .smart-bookmark-folder-item.medium-match {
-  background-color: #fff8e1;
-  border-color: #ffc107;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(217, 119, 6, 0.08) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  box-shadow: 
+    0 2px 8px rgba(245, 158, 11, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .smart-bookmark-folder-item.low-match {
-  background-color: #f3e5f5;
-  border-color: #9c27b0;
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.12) 0%, rgba(147, 51, 234, 0.08) 100%);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  box-shadow: 
+    0 2px 8px rgba(168, 85, 247, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
-/* 当文件夹同时被选中且有匹配度时的样式 */
+/* 当文件夹同时被选中且有匹配度时的样式 - 蓝色优先，匹配度作为强调 */
 .smart-bookmark-folder-item.active.high-match {
-  background-color: #e8f0fe !important;
-  border-color: #4285f4 !important;
-  box-shadow: 0 2px 8px rgba(66, 133, 244, 0.4) !important;
-  margin-left: 0 !important;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(37, 99, 235, 0.1) 100%) !important;
+  border: 2px solid #3b82f6 !important;
+  box-shadow: 
+    0 8px 25px rgba(59, 130, 246, 0.25),
+    0 4px 12px rgba(59, 130, 246, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 0 0 3px rgba(34, 197, 94, 0.2) !important; /* 绿色光环表示高匹配 */
+  transform: translateY(-2px) scale(1.02) !important; /* 减少缩放幅度 */
 }
 
 .smart-bookmark-folder-item.active.medium-match {
-  background-color: #e8f0fe !important;
-  border-color: #4285f4 !important;
-  box-shadow: 0 2px 8px rgba(66, 133, 244, 0.4) !important;
-  margin-left: 0 !important;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(37, 99, 235, 0.1) 100%) !important;
+  border: 2px solid #3b82f6 !important;
+  box-shadow: 
+    0 8px 25px rgba(59, 130, 246, 0.25),
+    0 4px 12px rgba(59, 130, 246, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 0 0 3px rgba(245, 158, 11, 0.2) !important; /* 黄色光环表示中匹配 */
+  transform: translateY(-2px) scale(1.02) !important; /* 减少缩放幅度 */
 }
 
 .smart-bookmark-folder-item.active.low-match {
-  background-color: #e8f0fe !important;
-  border-color: #4285f4 !important;
-  box-shadow: 0 2px 8px rgba(66, 133, 244, 0.4) !important;
-  margin-left: 0 !important;
-}
-
-/* 普通选中状态 */
-.smart-bookmark-folder-item.active:not(.high-match):not(.medium-match):not(.low-match) {
-  background-color: #e8f0fe !important;
-  border-color: #4285f4 !important;
-  box-shadow: 0 2px 8px rgba(66, 133, 244, 0.4) !important;
-  margin-left: 0 !important;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(37, 99, 235, 0.1) 100%) !important;
+  border: 2px solid #3b82f6 !important;
+  box-shadow: 
+    0 8px 25px rgba(59, 130, 246, 0.25),
+    0 4px 12px rgba(59, 130, 246, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 0 0 3px rgba(168, 85, 247, 0.2) !important; /* 紫色光环表示低匹配 */
+  transform: translateY(-2px) scale(1.02) !important; /* 减少缩放幅度 */
 }
 
 .smart-bookmark-folder-item.no-results {
@@ -546,31 +599,35 @@
   border-left: 3px solid #9c27b0;
 }
 
-/* Bookmark item styles - 紧凑型上下布局 */
+/* Bookmark item styles - 现代化设计 */
 .smart-bookmark-bookmark-item {
-  padding: 4px 16px; /* 减少上下内边距 */
-  border-radius: 8px;
+  padding: 10px 16px;
+  border-radius: 10px;
   cursor: pointer;
   display: flex;
-  align-items: flex-start; /* 改为顶部对齐，适配上下布局 */
+  align-items: flex-start;
   transition: 
-    background-color 0.2s ease, 
-    border-color 0.2s ease, 
-    box-shadow 0.2s ease,
-    opacity 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+    background-color 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+    border-color 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+    box-shadow 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
     transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
-    max-height 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
-    margin 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-  background-color: #fff;
-  border: 1px solid #eee;
+    opacity 0.4s cubic-bezier(0.25, 0.8, 0.25, 1),
+    max-height 0.4s cubic-bezier(0.25, 0.8, 0.25, 1),
+    margin 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.9) 100%);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  backdrop-filter: blur(10px);
   position: relative;
   box-sizing: border-box;
-  min-height: 48px; /* 减少高度，更紧凑 */
-  max-height: 200px; /* 用于动画的最大高度 */
+  min-height: 56px;
+  max-height: 200px;
   overflow: hidden;
   opacity: 1;
-  transform: translateY(0);
-  margin-bottom: 2px; /* 添加少量底部间距用于动画 */
+  transform: translateY(0) scale(1);
+  margin-bottom: 6px;
+  margin-right: 4px;
+  margin-left: 4px; /* 左侧也预留空间，防止缩放时被裁剪 */
+  will-change: transform, opacity, background-color;
 }
 
 /* Bookmark content wrapper */
@@ -584,33 +641,41 @@
 }
 
 .smart-bookmark-bookmark-item:hover {
-  background-color: #f8f9fa;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  background: linear-gradient(135deg, rgba(248, 250, 252, 1) 0%, rgba(241, 245, 249, 0.95) 100%);
+  border-color: rgba(148, 163, 184, 0.4);
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.08),
+    0 2px 8px rgba(0, 0, 0, 0.04);
+  transform: translateY(-1px) scale(1.008); /* 减少缩放幅度 */
 }
 
 /* hover状态下的遮罩颜色 */
 .smart-bookmark-bookmark-item:hover .smart-bookmark-bookmark-title-container::before {
-  background: linear-gradient(to right, #f8f9fa, transparent);
+  background: linear-gradient(to right, rgba(248, 250, 252, 1), transparent);
 }
 
 .smart-bookmark-bookmark-item:hover .smart-bookmark-bookmark-title-container::after {
-  background: linear-gradient(to left, #f8f9fa, transparent);
+  background: linear-gradient(to left, rgba(248, 250, 252, 1), transparent);
 }
 
 .smart-bookmark-bookmark-item.active {
-  background-color: #e8f0fe !important;
-  border-color: #4285f4 !important;
-  box-shadow: 0 2px 8px rgba(66, 133, 244, 0.4) !important;
-  z-index: 1;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(37, 99, 235, 0.1) 100%) !important;
+  border: 2px solid #3b82f6 !important;
+  box-shadow: 
+    0 8px 25px rgba(59, 130, 246, 0.25),
+    0 4px 12px rgba(59, 130, 246, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  transform: translateY(-2px) scale(1.015) !important; /* 减少书签缩放幅度 */
+  z-index: 10;
 }
 
 /* active状态下的遮罩颜色 */
 .smart-bookmark-bookmark-item.active .smart-bookmark-bookmark-title-container::before {
-  background: linear-gradient(to right, #e8f0fe, transparent);
+  background: linear-gradient(to right, rgba(59, 130, 246, 0.15), transparent);
 }
 
 .smart-bookmark-bookmark-item.active .smart-bookmark-bookmark-title-container::after {
-  background: linear-gradient(to left, #e8f0fe, transparent);
+  background: linear-gradient(to left, rgba(59, 130, 246, 0.15), transparent);
 }
 
 /* Bookmark icon style */
@@ -720,37 +785,61 @@
 
 /* 搜索匹配度样式 - 书签 */
 .smart-bookmark-bookmark-item.high-match {
-  background-color: #e8f5e9;
-  border-color: #4caf50;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.12) 0%, rgba(22, 163, 74, 0.08) 100%);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  box-shadow: 
+    0 2px 8px rgba(34, 197, 94, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .smart-bookmark-bookmark-item.medium-match {
-  background-color: #fff8e1;
-  border-color: #ffc107;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(217, 119, 6, 0.08) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  box-shadow: 
+    0 2px 8px rgba(245, 158, 11, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .smart-bookmark-bookmark-item.low-match {
-  background-color: #f3e5f5;
-  border-color: #9c27b0;
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.12) 0%, rgba(147, 51, 234, 0.08) 100%);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  box-shadow: 
+    0 2px 8px rgba(168, 85, 247, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 /* 当书签同时被选中且有匹配度时的样式 */
 .smart-bookmark-bookmark-item.active.high-match {
-  background-color: #e8f0fe !important;
-  border-color: #4285f4 !important;
-  box-shadow: 0 2px 8px rgba(66, 133, 244, 0.4) !important;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(37, 99, 235, 0.1) 100%) !important;
+  border: 2px solid #3b82f6 !important;
+  box-shadow: 
+    0 8px 25px rgba(59, 130, 246, 0.25),
+    0 4px 12px rgba(59, 130, 246, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 0 0 3px rgba(34, 197, 94, 0.2) !important;
+  transform: translateY(-2px) scale(1.015) !important; /* 减少书签缩放幅度 */
 }
 
 .smart-bookmark-bookmark-item.active.medium-match {
-  background-color: #e8f0fe !important;
-  border-color: #4285f4 !important;
-  box-shadow: 0 2px 8px rgba(66, 133, 244, 0.4) !important;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(37, 99, 235, 0.1) 100%) !important;
+  border: 2px solid #3b82f6 !important;
+  box-shadow: 
+    0 8px 25px rgba(59, 130, 246, 0.25),
+    0 4px 12px rgba(59, 130, 246, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 0 0 3px rgba(245, 158, 11, 0.2) !important;
+  transform: translateY(-2px) scale(1.015) !important; /* 减少书签缩放幅度 */
 }
 
 .smart-bookmark-bookmark-item.active.low-match {
-  background-color: #e8f0fe !important;
-  border-color: #4285f4 !important;
-  box-shadow: 0 2px 8px rgba(66, 133, 244, 0.4) !important;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(37, 99, 235, 0.1) 100%) !important;
+  border: 2px solid #3b82f6 !important;
+  box-shadow: 
+    0 8px 25px rgba(59, 130, 246, 0.25),
+    0 4px 12px rgba(59, 130, 246, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 0 0 3px rgba(168, 85, 247, 0.2) !important;
+  transform: translateY(-2px) scale(1.015) !important; /* 减少书签缩放幅度 */
 }
 
 .smart-bookmark-bookmark-item.no-results {
@@ -1070,36 +1159,54 @@
 }
 
 .smart-bookmark-modal.dark-mode .smart-bookmark-folder-item {
-  background-color: #3a3a3a;
-  border: 1px solid #444;
+  background: linear-gradient(135deg, rgba(58, 58, 58, 0.95) 0%, rgba(45, 45, 45, 0.9) 100%);
+  border: 1px solid rgba(75, 85, 99, 0.6);
   color: #e0e0e0;
+  backdrop-filter: blur(10px);
 }
 
 .smart-bookmark-modal.dark-mode .smart-bookmark-folder-item:hover {
-  background-color: #444;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  background: linear-gradient(135deg, rgba(68, 68, 68, 1) 0%, rgba(55, 65, 81, 0.95) 100%);
+  border-color: rgba(156, 163, 175, 0.4);
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.3),
+    0 2px 8px rgba(0, 0, 0, 0.2);
+  transform: translateY(-1px) scale(1.015); /* 减少缩放幅度 */
 }
 
 .smart-bookmark-modal.dark-mode .smart-bookmark-folder-item.active {
-  background-color: #1e3a5f !important;
-  border-color: #5c9ce6 !important;
-  box-shadow: 0 2px 8px rgba(92, 156, 230, 0.4) !important;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.25) 0%, rgba(37, 99, 235, 0.2) 100%) !important;
+  border: 2px solid #60a5fa !important;
+  box-shadow: 
+    0 8px 25px rgba(59, 130, 246, 0.4),
+    0 4px 12px rgba(59, 130, 246, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+  transform: translateY(-2px) scale(1.02) !important; /* 减少缩放幅度 */
 }
 
 /* 深色模式下的搜索匹配度样式 */
 .smart-bookmark-modal.dark-mode .smart-bookmark-folder-item.high-match {
-  background-color: #2e4a2e;
-  border-color: #4caf50;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(22, 163, 74, 0.15) 100%);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  box-shadow: 
+    0 2px 8px rgba(34, 197, 94, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .smart-bookmark-modal.dark-mode .smart-bookmark-folder-item.medium-match {
-  background-color: #4a3a2e;
-  border-color: #ffc107;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(217, 119, 6, 0.15) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  box-shadow: 
+    0 2px 8px rgba(245, 158, 11, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .smart-bookmark-modal.dark-mode .smart-bookmark-folder-item.low-match {
-  background-color: #4a2e4a;
-  border-color: #9c27b0;
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.2) 0%, rgba(147, 51, 234, 0.15) 100%);
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  box-shadow: 
+    0 2px 8px rgba(168, 85, 247, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 /* 深色模式下同时选中和有匹配度的样式 */
@@ -1248,9 +1355,10 @@
 
 /* 深色模式下的书签样式 */
 .smart-bookmark-modal.dark-mode .smart-bookmark-bookmark-item {
-  background-color: #3a3a3a;
-  border: 1px solid #444;
+  background: linear-gradient(135deg, rgba(58, 58, 58, 0.95) 0%, rgba(45, 45, 45, 0.9) 100%);
+  border: 1px solid rgba(75, 85, 99, 0.6);
   color: #e0e0e0;
+  backdrop-filter: blur(10px);
 }
 
 /* 深色模式下的列表容器遮罩 */
@@ -1272,32 +1380,40 @@
 }
 
 .smart-bookmark-modal.dark-mode .smart-bookmark-bookmark-item:hover {
-  background-color: #444;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  background: linear-gradient(135deg, rgba(68, 68, 68, 1) 0%, rgba(55, 65, 81, 0.95) 100%);
+  border-color: rgba(156, 163, 175, 0.4);
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.3),
+    0 2px 8px rgba(0, 0, 0, 0.2);
+  transform: translateY(-1px) scale(1.008); /* 减少缩放幅度 */
 }
 
 /* 暗色模式hover状态下的遮罩颜色 */
 .smart-bookmark-modal.dark-mode .smart-bookmark-bookmark-item:hover .smart-bookmark-bookmark-title-container::before {
-  background: linear-gradient(to right, #444, transparent);
+  background: linear-gradient(to right, rgba(68, 68, 68, 1), transparent);
 }
 
 .smart-bookmark-modal.dark-mode .smart-bookmark-bookmark-item:hover .smart-bookmark-bookmark-title-container::after {
-  background: linear-gradient(to left, #444, transparent);
+  background: linear-gradient(to left, rgba(68, 68, 68, 1), transparent);
 }
 
 .smart-bookmark-modal.dark-mode .smart-bookmark-bookmark-item.active {
-  background-color: #1e3a5f !important;
-  border-color: #5c9ce6 !important;
-  box-shadow: 0 2px 8px rgba(92, 156, 230, 0.4) !important;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.25) 0%, rgba(37, 99, 235, 0.2) 100%) !important;
+  border: 2px solid #60a5fa !important;
+  box-shadow: 
+    0 8px 25px rgba(59, 130, 246, 0.4),
+    0 4px 12px rgba(59, 130, 246, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+  transform: translateY(-2px) scale(1.015) !important; /* 减少深色模式下的缩放 */
 }
 
 /* 暗色模式active状态下的遮罩颜色 */
 .smart-bookmark-modal.dark-mode .smart-bookmark-bookmark-item.active .smart-bookmark-bookmark-title-container::before {
-  background: linear-gradient(to right, #1e3a5f, transparent);
+  background: linear-gradient(to right, rgba(59, 130, 246, 0.25), transparent);
 }
 
 .smart-bookmark-modal.dark-mode .smart-bookmark-bookmark-item.active .smart-bookmark-bookmark-title-container::after {
-  background: linear-gradient(to left, #1e3a5f, transparent);
+  background: linear-gradient(to left, rgba(59, 130, 246, 0.25), transparent);
 }
 
 /* 深色模式下的书签标题和URL样式 */
