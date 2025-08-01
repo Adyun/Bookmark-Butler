@@ -206,6 +206,8 @@ UIManager.prototype.setMode = function (mode) {
   var modal = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.MODAL_ID);
   if (!modal) return;
 
+  var self = this;
+
   // 添加过渡动画类
   modal.classList.add(window.SMART_BOOKMARK_CONSTANTS.MODE_TRANSITION_CLASS);
   modal.classList.add('content-changing');
@@ -249,16 +251,21 @@ UIManager.prototype.setMode = function (mode) {
     searchInput.value = '';
   }
 
-  // 重新计算布局
-  setTimeout(() => {
-    this.recalculateLayout();
+  // 延迟重新计算布局，让动画效果可见
+  setTimeout(function() {
+    self.updateModalHeight();
+  }, 50);
+  
+  // 再次延迟确保高度动画完成后更新布局
+  setTimeout(function() {
+    self.recalculateLayout();
   }, 100);
 
   // 移除过渡动画类
   setTimeout(function () {
     modal.classList.remove(window.SMART_BOOKMARK_CONSTANTS.MODE_TRANSITION_CLASS);
     modal.classList.remove('content-changing');
-  }, 500);
+  }, 300); // 简化延迟时间
 };
 
 /**
@@ -276,17 +283,35 @@ UIManager.prototype.toggleMode = function () {
  * 重新计算布局
  */
 UIManager.prototype.recalculateLayout = function () {
-  // 强制浏览器重新计算布局
-  var modal = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.MODAL_ID);
-  if (modal) {
-    modal.style.display = 'none';
-    modal.offsetHeight; // 强制重新计算
-    modal.style.display = 'flex';
-  }
-
+  this.updateModalHeight();
+  
   // 通知虚拟滚动器更新
   var event = new CustomEvent('layout-recalculated');
   window.dispatchEvent(event);
+};
+
+/**
+ * 更新Modal高度以启用transition动画
+ */
+UIManager.prototype.updateModalHeight = function () {
+  var modal = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.MODAL_ID);
+  if (!modal) return;
+  
+  // 临时设置为auto来测量实际需要的高度
+  var originalHeight = modal.style.height;
+  modal.style.height = 'auto';
+  var actualHeight = modal.offsetHeight;
+  
+  // 恢复原始高度（如果有的话）
+  if (originalHeight) {
+    modal.style.height = originalHeight;
+  }
+  
+  // 强制重排
+  modal.offsetHeight;
+  
+  // 设置新的高度，触发transition动画
+  modal.style.height = actualHeight + 'px';
 };
 
 /**

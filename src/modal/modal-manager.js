@@ -407,7 +407,18 @@ ModalManager.prototype.handlePermissionRequest = function () {
  */
 ModalManager.prototype.handleSearch = function (query) {
   var startTime = performance.now();
-
+  var self = this;
+  
+  // 记录当前高度
+  var modal = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.MODAL_ID);
+  var currentHeight = null;
+  if (modal) {
+    currentHeight = modal.offsetHeight;
+    modal.style.height = currentHeight + 'px'; // 设置当前高度
+    modal.classList.add('content-changing');
+  }
+  
+  // 执行搜索
   if (this.uiManager.currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH) {
     this.filteredBookmarks = this.searchEngine.searchBookmarks(query, this.allBookmarks);
     this.keyboardManager.setCurrentItems(this.filteredBookmarks);
@@ -417,6 +428,29 @@ ModalManager.prototype.handleSearch = function (query) {
     this.keyboardManager.setCurrentItems(this.filteredFolders);
     this.updateFolderList();
   }
+
+  // 计算新高度并应用动画
+  setTimeout(function() {
+    if (modal) {
+      // 临时设置为auto来测量新高度
+      modal.style.height = 'auto';
+      var newHeight = modal.offsetHeight;
+      
+      // 恢复原高度触发重排
+      modal.style.height = currentHeight + 'px';
+      modal.offsetHeight; // 强制重排
+      
+      // 设置新高度触发动画
+      modal.style.height = newHeight + 'px';
+      
+      // 动画完成后清理
+      setTimeout(function() {
+        if (modal) {
+          modal.classList.remove('content-changing');
+        }
+      }, 400);
+    }
+  }, 50);
 
   // 重置选中索引
   this.keyboardManager.setSelectedIndex(-1);
@@ -458,6 +492,9 @@ ModalManager.prototype.updateFolderList = function () {
 ModalManager.prototype.renderFolderListWithVirtualScroll = function (folderList, hasSearchQuery) {
   var self = this;
 
+  // 添加列表进入动画
+  folderList.style.animation = 'listEnter 0.3s ease-out';
+
   // 销毁旧的虚拟滚动器
   if (this.folderVirtualScroller) {
     this.folderVirtualScroller.destroy();
@@ -469,7 +506,28 @@ ModalManager.prototype.renderFolderListWithVirtualScroll = function (folderList,
     this.itemHeight,
     this.filteredFolders.length,
     function (folder, index) {
-      return self.renderFolderItem(folder, index, hasSearchQuery);
+      var item = self.renderFolderItem(folder, index, hasSearchQuery);
+      // 为搜索结果添加依次从右到左淡入动画
+      if (item && hasSearchQuery) {
+        item.style.opacity = '0';
+        item.style.transform = 'translateX(30px)';
+        
+        // 依次延迟显示，创造从右到左的效果
+        setTimeout(function() {
+          if (item) {
+            item.classList.add('item-fade-in');
+            // 动画完成后清理样式
+            setTimeout(function() {
+              if (item) {
+                item.classList.remove('item-fade-in');
+                item.style.opacity = '';
+                item.style.transform = '';
+              }
+            }, 400);
+          }
+        }, index * 50); // 每个项目延迟50ms
+      }
+      return item;
     }
   );
 
@@ -551,6 +609,9 @@ ModalManager.prototype.updateBookmarkList = function () {
 ModalManager.prototype.renderBookmarkListWithVirtualScroll = function (bookmarkList, hasSearchQuery) {
   var self = this;
 
+  // 添加列表进入动画
+  bookmarkList.style.animation = 'listEnter 0.3s ease-out';
+
   // 销毁旧的虚拟滚动器
   if (this.bookmarkVirtualScroller) {
     this.bookmarkVirtualScroller.destroy();
@@ -562,7 +623,28 @@ ModalManager.prototype.renderBookmarkListWithVirtualScroll = function (bookmarkL
     this.itemHeight,
     this.filteredBookmarks.length,
     function (bookmark, index) {
-      return self.renderBookmarkItem(bookmark, index, hasSearchQuery);
+      var item = self.renderBookmarkItem(bookmark, index, hasSearchQuery);
+      // 为搜索结果添加依次从右到左淡入动画
+      if (item && hasSearchQuery) {
+        item.style.opacity = '0';
+        item.style.transform = 'translateX(30px)';
+        
+        // 依次延迟显示，创造从右到左的效果
+        setTimeout(function() {
+          if (item) {
+            item.classList.add('item-fade-in');
+            // 动画完成后清理样式
+            setTimeout(function() {
+              if (item) {
+                item.classList.remove('item-fade-in');
+                item.style.opacity = '';
+                item.style.transform = '';
+              }
+            }, 400);
+          }
+        }, index * 50); // 每个项目延迟50ms
+      }
+      return item;
     }
   );
 
