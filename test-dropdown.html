@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试下拉菜单</title>
+    <link rel="stylesheet" href="src/styles/modal.css">
+</head>
+<body>
+    <div class="smart-bookmark-modal active">
+        <div class="smart-bookmark-modal-header">
+            <h2 class="smart-bookmark-modal-title">搜索书签</h2>
+            <div class="smart-bookmark-header-controls">
+                <button id="smart-bookmark-dark-mode-toggle" class="smart-bookmark-dark-mode-toggle" title="深色模式设置">🌙</button>
+                <div id="smart-bookmark-dark-mode-dropdown" class="smart-bookmark-dark-mode-dropdown">
+                    <div class="smart-bookmark-dark-mode-option" data-mode="auto">跟随系统</div>
+                    <div class="smart-bookmark-dark-mode-option" data-mode="light">浅色模式</div>
+                    <div class="smart-bookmark-dark-mode-option" data-mode="dark">深色模式</div>
+                </div>
+            </div>
+        </div>
+        <div class="smart-bookmark-modal-body">
+            <input type="text" class="smart-bookmark-search" placeholder="搜索书签...">
+            <div class="smart-bookmark-list-container">
+                <ul class="smart-bookmark-bookmark-list">
+                    <li class="smart-bookmark-bookmark-item">测试项目</li>
+                </ul>
+            </div>
+        </div>
+        <div class="smart-bookmark-modal-footer">
+            <div class="smart-bookmark-keyboard-hints">
+                <span class="smart-bookmark-keyboard-hint">↑↓ 选择</span>
+            </div>
+            <div class="smart-bookmark-footer-buttons">
+                <button class="smart-bookmark-btn smart-bookmark-btn-secondary">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 确保初始状态正确
+        document.addEventListener('DOMContentLoaded', function() {
+            var dropdown = document.getElementById('smart-bookmark-dark-mode-dropdown');
+            dropdown.classList.remove('show');
+            console.log('Initial state set - dropdown hidden');
+        });
+
+        document.getElementById('smart-bookmark-dark-mode-toggle').addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            var dropdown = document.getElementById('smart-bookmark-dark-mode-dropdown');
+            console.log('Toggle clicked, dropdown:', dropdown);
+            console.log('Current classes:', dropdown.classList.toString());
+            
+            if (dropdown.classList.contains('show')) {
+                dropdown.classList.remove('show');
+                console.log('Removed show class');
+            } else {
+                dropdown.classList.add('show');
+                console.log('Added show class');
+                console.log('New classes:', dropdown.classList.toString());
+                console.log('Dropdown styles after show:', {
+                    display: window.getComputedStyle(dropdown).display,
+                    opacity: window.getComputedStyle(dropdown).opacity,
+                    visibility: window.getComputedStyle(dropdown).visibility,
+                    transform: window.getComputedStyle(dropdown).transform,
+                    zIndex: window.getComputedStyle(dropdown).zIndex
+                });
+            }
+        });
+
+        // 点击选项
+        document.querySelectorAll('.smart-bookmark-dark-mode-option').forEach(function(option) {
+            option.addEventListener('click', function(e) {
+                console.log('Option clicked:', this.getAttribute('data-mode'));
+                var dropdown = document.getElementById('smart-bookmark-dark-mode-dropdown');
+                dropdown.classList.remove('show');
+            });
+        });
+    </script>
+</body>
+</html>

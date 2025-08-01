@@ -73,6 +73,8 @@
   justify-content: space-between;
   align-items: center;
   overflow: visible; /* 确保下拉菜单不被裁剪 */
+  position: relative;
+  z-index: 10000;
 }
 
 .smart-bookmark-modal-title {
@@ -88,7 +90,7 @@
   align-items: center;
   gap: 10px;
   position: relative;
-  z-index: 10003;
+  z-index: 10010;
 }
 
 /* Mode tip icon - 已移除 */
@@ -1080,13 +1082,14 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   z-index: 999999; /* 确保显示在最顶层 */
   min-width: 150px;
-  display: none;
   margin-top: 5px;
+  
+  /* 默认隐藏状态 */
+  display: none;
   opacity: 0;
   transform: translateY(-10px);
   transition: opacity 0.2s ease, transform 0.2s ease;
   pointer-events: none;
-  /* 强制确保可见性 */
   visibility: hidden;
 }
 
@@ -1096,9 +1099,6 @@
   transform: translateY(0) !important;
   pointer-events: auto !important;
   visibility: visible !important;
-  /* 调试用：临时添加明显的样式 */
-  background: #ff0000 !important; /* 红色背景便于调试 */
-  border: 2px solid #000 !important; /* 黑色边框便于调试 */
 }
 
 .smart-bookmark-modal.dark-mode .smart-bookmark-dark-mode-dropdown {

@@ -30,10 +30,6 @@ ThemeManager.prototype.init = function () {
   this.loadDarkModeSetting();
   console.log('Dark mode loaded:', this.darkMode);
   
-  // 应用当前主题
-  console.log('Applying dark mode...');
-  this.applyDarkMode();
-  
   // 设置系统主题监听
   console.log('Setting up system theme listener...');
   this.setupSystemThemeListener();
@@ -153,51 +149,7 @@ ThemeManager.prototype.isSystemDarkMode = function () {
   return false;
 };
 
-/**
- * 监听系统主题变化
- */
-ThemeManager.prototype.listenForSystemThemeChange = function () {
-  var self = this;
 
-  // 先停止之前的监听器
-  this.stopListeningForSystemThemeChange();
-
-  if (window.matchMedia) {
-    var mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-
-    this.systemThemeListener = function (e) {
-      if (self.darkMode === window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_AUTO) {
-        self.applyDarkMode();
-      }
-    };
-
-    // 添加监听器
-    if (mediaQuery.addEventListener) {
-      mediaQuery.addEventListener('change', this.systemThemeListener);
-    } else if (mediaQuery.addListener) {
-      // 兼容旧版浏览器
-      mediaQuery.addListener(this.systemThemeListener);
-    }
-  }
-};
-
-/**
- * 停止监听系统主题变化
- */
-ThemeManager.prototype.stopListeningForSystemThemeChange = function () {
-  if (this.systemThemeListener && window.matchMedia) {
-    var mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    
-    if (mediaQuery.removeEventListener) {
-      mediaQuery.removeEventListener('change', this.systemThemeListener);
-    } else if (mediaQuery.removeListener) {
-      // 兼容旧版浏览器
-      mediaQuery.removeListener(this.systemThemeListener);
-    }
-    
-    this.systemThemeListener = null;
-  }
-};
 
 /**
  * 应用深色模式
@@ -232,18 +184,19 @@ ThemeManager.prototype.applyDarkMode = function () {
  */
 ThemeManager.prototype.updateDarkModeDropdownSelection = function () {
   var options = document.querySelectorAll('.smart-bookmark-dark-mode-option');
-  var self = this;
+  var currentMode = this.darkMode;
 
   for (var i = 0; i < options.length; i++) {
     var option = options[i];
+    var optionMode = option.getAttribute('data-mode');
+    
+    // 移除所有active类
     option.classList.remove('active');
 
-    var mode = option.getAttribute('data-mode');
-    if (
-      (self.darkMode === window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_AUTO && mode === 'auto') ||
-      (self.darkMode === window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_LIGHT && mode === 'light') ||
-      (self.darkMode === window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_DARK && mode === 'dark')
-    ) {
+    // 添加对应的active类
+    if ((currentMode === window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_AUTO && optionMode === 'auto') ||
+        (currentMode === window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_LIGHT && optionMode === 'light') ||
+        (currentMode === window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_DARK && optionMode === 'dark')) {
       option.classList.add('active');
     }
   }
@@ -256,10 +209,12 @@ ThemeManager.prototype.updateDarkModeToggleIcon = function () {
   var toggle = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_TOGGLE_ID);
   if (!toggle) return;
 
-  if (this.darkMode === window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_DARK) {
+  var currentMode = this.darkMode;
+
+  if (currentMode === window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_DARK) {
     toggle.textContent = '🌙'; // 深色模式图标
     toggle.title = '深色模式';
-  } else if (this.darkMode === window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_LIGHT) {
+  } else if (currentMode === window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_LIGHT) {
     toggle.textContent = '☀️'; // 浅色模式图标
     toggle.title = '浅色模式';
   } else {
@@ -269,24 +224,65 @@ ThemeManager.prototype.updateDarkModeToggleIcon = function () {
 };
 
 /**
+ * 确保下拉菜单初始状态正确
+ */
+ThemeManager.prototype.ensureDropdownInitialState = function () {
+  var dropdown = document.getElementById('smart-bookmark-dark-mode-dropdown');
+  if (!dropdown) return;
+  
+  // 强制移除show类，确保初始状态是隐藏的
+  dropdown.classList.remove('show');
+  console.log('Dropdown initial state ensured - show class removed');
+};
+
+/**
  * 切换深色模式下拉菜单
  */
 ThemeManager.prototype.toggleDarkModeDropdown = function () {
+  console.log('ThemeManager.toggleDarkModeDropdown called');
+  
   var dropdown = document.getElementById('smart-bookmark-dark-mode-dropdown');
   
   if (!dropdown) {
+    console.error('Dropdown element not found!');
     return;
   }
 
+  // 首先确保下拉菜单初始状态正确
+  this.ensureDropdownInitialState();
+
   var isVisible = dropdown.classList.contains('show');
+  console.log('Dropdown current state - isVisible:', isVisible);
+  console.log('Dropdown computed styles:', {
+    display: window.getComputedStyle(dropdown).display,
+    opacity: window.getComputedStyle(dropdown).opacity,
+    visibility: window.getComputedStyle(dropdown).visibility,
+    transform: window.getComputedStyle(dropdown).transform,
+    zIndex: window.getComputedStyle(dropdown).zIndex
+  });
 
   if (isVisible) {
+    console.log('Hiding dropdown...');
     dropdown.classList.remove('show');
   } else {
+    console.log('Showing dropdown...');
     dropdown.classList.add('show');
+    
+    // 强制重新计算样式
+    dropdown.offsetHeight;
     
     // 更新选中状态
     this.updateDarkModeDropdownSelection();
+    
+    // 调试信息
+    console.log('Dropdown after show:', {
+      classList: dropdown.classList.toString(),
+      display: window.getComputedStyle(dropdown).display,
+      opacity: window.getComputedStyle(dropdown).opacity,
+      visibility: window.getComputedStyle(dropdown).visibility,
+      transform: window.getComputedStyle(dropdown).transform,
+      zIndex: window.getComputedStyle(dropdown).zIndex
+    });
     
     // 点击其他地方时关闭下拉菜单
     var self = this;
@@ -294,6 +290,7 @@ ThemeManager.prototype.toggleDarkModeDropdown = function () {
       // 检查点击是否在下拉菜单或切换按钮内
       var toggle = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_TOGGLE_ID);
       if (!dropdown.contains(e.target) && e.target !== toggle) {
+        console.log('Closing dropdown due to outside click');
         dropdown.classList.remove('show');
         document.removeEventListener('click', closeDropdown);
       }
@@ -301,6 +298,7 @@ ThemeManager.prototype.toggleDarkModeDropdown = function () {
     
     setTimeout(function() {
       document.addEventListener('click', closeDropdown);
+      console.log('Outside click handler registered');
     }, 0);
   }
 };
@@ -337,6 +335,8 @@ ThemeManager.prototype.handleDarkModeSelect = function (mode) {
  */
 ThemeManager.prototype.bindEvents = function (addEventListenerFn) {
   var self = this;
+
+  console.log('ThemeManager.bindEvents called');
 
   // 立即尝试绑定，如果失败则延迟重试
   this.tryBindEvents(addEventListenerFn, 0);
@@ -381,11 +381,19 @@ ThemeManager.prototype.tryBindEvents = function (addEventListenerFn, retryCount)
   // 绑定切换按钮事件
   if (toggleButton) {
     console.log('Binding click event to toggle button');
-    addEventListenerFn(toggleButton, 'click', function (e) {
+    var clickHandler = function (e) {
       console.log('Toggle button clicked!');
       e.preventDefault();
       e.stopPropagation();
-      self.toggleDropdown();
+      self.toggleDarkModeDropdown();
+    };
+    addEventListenerFn(toggleButton, 'click', clickHandler);
+    
+    // 同时保存事件监听器引用，便于调试
+    this.eventListeners.push({
+      element: toggleButton,
+      event: 'click',
+      handler: clickHandler
     });
   } else {
     console.warn('Toggle button not found after retries');
@@ -396,12 +404,23 @@ ThemeManager.prototype.tryBindEvents = function (addEventListenerFn, retryCount)
     console.log('Binding click events to', options.length, 'options');
     for (var i = 0; i < options.length; i++) {
       var option = options[i];
-      addEventListenerFn(option, 'click', function (e) {
-        console.log('Option clicked:', this.getAttribute('data-mode'));
-        e.preventDefault();
-        e.stopPropagation();
-        var mode = this.getAttribute('data-mode');
-        self.selectThemeMode(mode);
+      var optionClickHandler = (function(opt) {
+        return function (e) {
+          console.log('Option clicked:', opt.getAttribute('data-mode'));
+          e.preventDefault();
+          e.stopPropagation();
+          var mode = opt.getAttribute('data-mode');
+          self.handleDarkModeSelect(mode);
+        };
+      })(option);
+      
+      addEventListenerFn(option, 'click', optionClickHandler);
+      
+      // 保存事件监听器引用
+      this.eventListeners.push({
+        element: option,
+        event: 'click',
+        handler: optionClickHandler
       });
     }
   } else {
@@ -417,174 +436,15 @@ ThemeManager.prototype.tryBindEvents = function (addEventListenerFn, retryCount)
   this.updateToggleButtonDisplay();
 };
 
-/**
- * 切换下拉菜单 - 重写版本
- */
-ThemeManager.prototype.toggleDropdown = function () {
-  console.log('ThemeManager.toggleDropdown called');
-  
-  if (!this.dropdownElement) {
-    console.log('Dropdown element not cached, searching...');
-    this.dropdownElement = document.getElementById('smart-bookmark-dark-mode-dropdown');
-  }
-  
-  if (!this.dropdownElement) {
-    console.error('Dropdown element not found!');
-    return;
-  }
-  
-  var isVisible = this.dropdownElement.classList.contains('show');
-  console.log('Dropdown current state - isVisible:', isVisible);
-  
-  if (isVisible) {
-    console.log('Hiding dropdown...');
-    this.hideDropdown();
-  } else {
-    console.log('Showing dropdown...');
-    this.showDropdown();
-  }
-};
 
-/**
- * 显示下拉菜单
- */
-ThemeManager.prototype.showDropdown = function () {
-  console.log('ThemeManager.showDropdown called');
-  
-  if (!this.dropdownElement) {
-    console.error('Cannot show dropdown - element is null');
-    return;
-  }
-  
-  console.log('Adding show class to dropdown');
-  this.dropdownElement.classList.add('show');
-  
-  console.log('Updating dropdown selection...');
-  this.updateDropdownSelection();
-  
-  console.log('Dropdown classes after show:', this.dropdownElement.classList.toString());
-  console.log('Dropdown computed style:', window.getComputedStyle(this.dropdownElement).display);
-  
-  // 添加详细的调试信息
-  var computedStyle = window.getComputedStyle(this.dropdownElement);
-  console.log('Dropdown detailed styles:', {
-    display: computedStyle.display,
-    visibility: computedStyle.visibility,
-    opacity: computedStyle.opacity,
-    transform: computedStyle.transform,
-    zIndex: computedStyle.zIndex,
-    position: computedStyle.position,
-    top: computedStyle.top,
-    right: computedStyle.right,
-    width: this.dropdownElement.offsetWidth,
-    height: this.dropdownElement.offsetHeight,
-    boundingRect: this.dropdownElement.getBoundingClientRect()
-  });
-  
-  // 点击外部关闭下拉菜单
-  var self = this;
-  var closeHandler = function(e) {
-    var toggle = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_TOGGLE_ID);
-    if (!self.dropdownElement.contains(e.target) && e.target !== toggle) {
-      console.log('Closing dropdown due to outside click');
-      self.hideDropdown();
-      document.removeEventListener('click', closeHandler);
-    }
-  };
-  
-  setTimeout(function() {
-    document.addEventListener('click', closeHandler);
-    console.log('Outside click handler registered');
-  }, 0);
-};
-
-/**
- * 隐藏下拉菜单
- */
-ThemeManager.prototype.hideDropdown = function () {
-  console.log('ThemeManager.hideDropdown called');
-  
-  if (this.dropdownElement) {
-    console.log('Removing show class from dropdown');
-    this.dropdownElement.classList.remove('show');
-    console.log('Dropdown classes after hide:', this.dropdownElement.classList.toString());
-  } else {
-    console.warn('Cannot hide dropdown - element is null');
-  }
-};
-
-/**
- * 选择主题模式 - 重写版本
- * @param {string} mode - 选择的模式 ('auto', 'light', 'dark')
- */
-ThemeManager.prototype.selectThemeMode = function (mode) {
-  var mappedMode;
-  
-  switch(mode) {
-    case 'auto':
-      mappedMode = window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_AUTO;
-      break;
-    case 'light':
-      mappedMode = window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_LIGHT;
-      break;
-    case 'dark':
-      mappedMode = window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_DARK;
-      break;
-    default:
-      return;
-  }
-  
-  // 保存设置
-  this.saveDarkModeSetting(mappedMode);
-  
-  // 隐藏下拉菜单
-  this.hideDropdown();
-};
-
-/**
- * 更新下拉菜单选中状态
- */
-ThemeManager.prototype.updateDropdownSelection = function () {
-  var options = document.querySelectorAll('.smart-bookmark-dark-mode-option');
-  var currentMode = this.darkMode;
-  
-  for (var i = 0; i < options.length; i++) {
-    var option = options[i];
-    var optionMode = option.getAttribute('data-mode');
-    
-    // 移除所有active类
-    option.classList.remove('active');
-    
-    // 添加对应的active类
-    if ((currentMode === window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_AUTO && optionMode === 'auto') ||
-        (currentMode === window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_LIGHT && optionMode === 'light') ||
-        (currentMode === window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_DARK && optionMode === 'dark')) {
-      option.classList.add('active');
-    }
-  }
-};
 
 /**
  * 更新切换按钮显示
  */
 ThemeManager.prototype.updateToggleButtonDisplay = function () {
-  var toggle = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_TOGGLE_ID);
-  if (!toggle) {
-    return;
-  }
-  
-  var currentMode = this.darkMode;
-  
-  if (currentMode === window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_DARK) {
-    toggle.textContent = '🌙';
-    toggle.title = '深色模式';
-  } else if (currentMode === window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_LIGHT) {
-    toggle.textContent = '☀️';
-    toggle.title = '浅色模式';
-  } else {
-    toggle.textContent = '🌗';
-    toggle.title = '跟随系统';
-  }
+  this.updateDarkModeToggleIcon();
+  // 确保下拉菜单初始状态正确
+  this.ensureDropdownInitialState();
 };
 
 /**
@@ -616,13 +476,15 @@ ThemeManager.prototype.forceReapplyTheme = function () {
  */
 ThemeManager.prototype.cleanup = function () {
   // 停止监听系统主题变化
-  this.stopListeningForSystemThemeChange();
+  this.stopSystemThemeListener();
   
   // 清理事件监听器
   this.eventListeners = [];
   
   // 重置状态
   this.darkMode = null;
+  this.isInitialized = false;
+  this.dropdownElement = null;
 };
 
 // 将类附加到全局window对象
