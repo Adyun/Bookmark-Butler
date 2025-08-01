@@ -10,11 +10,15 @@
   z-index: 10000;
   width: 500px;
   max-width: 90vw;
-  max-height: 80vh;
-  overflow: hidden;
+  max-height: 65vh;  /* 从80vh改为65vh，降低高度 */
+  height: 65vh;      /* 从80vh改为65vh，降低高度 */
   display: none;
+  flex-direction: column;
   opacity: 0;
   transition: all 0.2s ease-out;
+  visibility: hidden; /* 防止透明时仍可交互 */
+  will-change: opacity, transform; /* 优化渲染性能 */
+  overflow: visible; /* 确保下拉菜单不被裁剪 */
 }
 
 /* 模式切换动画 */
@@ -26,7 +30,8 @@
 @media (max-width: 600px) {
   .smart-bookmark-modal {
     width: 95vw;
-    max-height: 90vh;
+    max-height: 70vh; /* 从80vh改为70vh，与主modal保持一致 */
+    height: 70vh;     /* 也设置固定高度 */
   }
   
   .smart-bookmark-modal-header,
@@ -36,7 +41,7 @@
   }
   
   .smart-bookmark-folder-item {
-    padding: 10px 12px;
+    padding: 4px 12px;
   }
   
   .smart-bookmark-btn {
@@ -53,8 +58,9 @@
 }
 
 .smart-bookmark-modal.active {
-  display: block;
+  display: flex;
   opacity: 1;
+  visibility: visible; /* 确保可见性 */
   transform: translate(-50%, -50%) scale(1);
 }
 
@@ -66,6 +72,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  overflow: visible; /* 确保下拉菜单不被裁剪 */
 }
 
 .smart-bookmark-modal-title {
@@ -81,24 +88,19 @@
   align-items: center;
   gap: 10px;
   position: relative;
+  z-index: 10003;
 }
 
-/* Mode tip icon */
-.smart-bookmark-mode-tip {
-  font-size: 16px;
-  cursor: help;
-  padding: 5px;
-  border-radius: 4px;
-  transition: background-color 0.2s ease;
-}
-
-.smart-bookmark-mode-tip:hover {
-  background-color: rgba(0, 0, 0, 0.1);
-}
+/* Mode tip icon - 已移除 */
 
 /* Modal body */
 .smart-bookmark-modal-body {
   padding: 20px;
+  flex: 1;
+  overflow-y: hidden; /* 改为hidden，让子容器处理滚动 */
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* 防止flex子项溢出 */
 }
 
 /* Search input */
@@ -119,36 +121,58 @@
   box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
 }
 
+/* List container - 新增：包装书签和文件夹列表的容器 */
+.smart-bookmark-list-container {
+  flex: 1;
+  min-height: 0;
+  margin-top: 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
 /* Folder list */
 .smart-bookmark-folder-list {
   list-style: none;
-  padding: 0 8px 0 0;
-  margin: 16px 0 0;
-  max-height: 300px;
+  padding: 0;
+  margin: 0; /* 移除margin，由容器管理 */
+  flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0; /* 防止flex子项溢出 */
+  box-sizing: border-box;
+  width: 100%;
+  position: relative; /* 为虚拟滚动定位 */
 }
 
 /* Bookmark list */
 .smart-bookmark-bookmark-list {
   list-style: none;
-  padding: 0 8px 0 0;
-  margin: 16px 0 0;
-  max-height: 300px;
+  padding: 0;
+  margin: 0; /* 移除margin，由容器管理 */
+  flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0; /* 防止flex子项溢出 */
+  box-sizing: border-box;
+  width: 100%;
+  position: relative; /* 为虚拟滚动定位 */
 }
 
 .smart-bookmark-folder-item {
-  padding: 12px 16px;
+  padding: 4px 16px;
   border-radius: 8px;
   cursor: pointer;
   display: flex;
   align-items: center;
-  margin-bottom: 8px;
   transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
   background-color: #fff;
   border: 1px solid #eee;
   position: relative;
   box-sizing: border-box;
+  min-height: 40px; /* 与书签保持视觉平衡 */
+  margin-bottom: 8px; /* 添加底部间距 */
+  margin-right: 8px; /* 添加右边间距 */
 }
 
 .smart-bookmark-folder-item:hover {
@@ -349,32 +373,44 @@
   border-left: 3px solid #9c27b0;
 }
 
-/* Bookmark item styles */
+/* Bookmark item styles - 紧凑型上下布局 */
 .smart-bookmark-bookmark-item {
-  padding: 12px 16px;
+  padding: 4px 16px; /* 减少上下内边距 */
   border-radius: 8px;
   cursor: pointer;
   display: flex;
-  flex-direction: column;
-  margin-bottom: 8px;
+  align-items: flex-start; /* 改为顶部对齐，适配上下布局 */
   transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
   background-color: #fff;
   border: 1px solid #eee;
   position: relative;
   box-sizing: border-box;
+  min-height: 48px; /* 减少高度，更紧凑 */
+  overflow: hidden;
 }
 
 /* Bookmark content wrapper */
 .smart-bookmark-bookmark-content {
   display: flex;
-  align-items: center;
+  align-items: flex-start; /* 顶部对齐 */
   width: 100%;
-  justify-content: space-between;
+  gap: 0px; /* 缩小图标和文字间距，因为文字有12px左间距 */
+  min-width: 0;
+  padding-top: 2px; /* 减少顶部微调 */
 }
 
 .smart-bookmark-bookmark-item:hover {
   background-color: #f8f9fa;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+/* hover状态下的遮罩颜色 */
+.smart-bookmark-bookmark-item:hover .smart-bookmark-bookmark-title-container::before {
+  background: linear-gradient(to right, #f8f9fa, transparent);
+}
+
+.smart-bookmark-bookmark-item:hover .smart-bookmark-bookmark-title-container::after {
+  background: linear-gradient(to left, #f8f9fa, transparent);
 }
 
 .smart-bookmark-bookmark-item.active {
@@ -384,30 +420,107 @@
   z-index: 1;
 }
 
-/* Bookmark icon style */
-.smart-bookmark-bookmark-icon {
-  margin-right: 10px;
-  font-size: 16px;
-  align-self: center;
+/* active状态下的遮罩颜色 */
+.smart-bookmark-bookmark-item.active .smart-bookmark-bookmark-title-container::before {
+  background: linear-gradient(to right, #e8f0fe, transparent);
 }
 
-/* Bookmark title and URL styles */
+.smart-bookmark-bookmark-item.active .smart-bookmark-bookmark-title-container::after {
+  background: linear-gradient(to left, #e8f0fe, transparent);
+}
+
+/* Bookmark icon style */
+.smart-bookmark-bookmark-icon {
+  font-size: 15px; /* 稍微减小图标 */
+  color: #666;
+  flex-shrink: 0; /* 图标固定，不受滚动影响 */
+  margin-top: 2px; /* 微调对齐 */
+}
+
+/* 书签文本区域 - 包含标题和URL的上下布局 */
+.smart-bookmark-bookmark-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px; /* 减少标题和URL之间的间距 */
+}
+
+/* 标题容器 - 带遮罩的滚动区域 */
+.smart-bookmark-bookmark-title-container {
+  overflow: hidden;
+  white-space: nowrap;
+  width: 100%;
+  position: relative;
+  /* 遮罩往图标方向移动，两侧都有遮罩 */
+  mask: linear-gradient(to right, transparent 0%, black 10px, black calc(100% - 15px), transparent 100%);
+  -webkit-mask: linear-gradient(to right, transparent 0%, black 10px, black calc(100% - 15px), transparent 100%);
+}
+
+/* 添加伪元素作为备用遮罩方案 - 双侧遮罩 */
+.smart-bookmark-bookmark-title-container::before,
+.smart-bookmark-bookmark-title-container::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.smart-bookmark-bookmark-title-container::before {
+  left: 0;
+  width: 10px;
+  background: linear-gradient(to right, #fff, transparent);
+}
+
+.smart-bookmark-bookmark-title-container::after {
+  right: 0;
+  width: 15px;
+  background: linear-gradient(to left, #fff, transparent);
+}
+
+/* 选中时标题文字的横向滚动动画（在容器内滚动） */
+.smart-bookmark-bookmark-item.active .smart-bookmark-bookmark-title {
+  animation: titleTextScroll 4s ease-in-out infinite;
+}
+
+@keyframes titleTextScroll {
+  0%, 25% {
+    transform: translateX(0);
+  }
+  50%, 75% {
+    transform: translateX(-40%); /* 在容器内滚动，显示更多文字 */
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+/* 书签标题样式 */
 .smart-bookmark-bookmark-title {
-  font-size: 14px;
+  font-size: 13px; /* 稍微减小标题字体 */
   color: #333;
   font-weight: 500;
-  flex: 1;
+  white-space: nowrap;
+  display: inline-block;
+  line-height: 1.3; /* 调整行高 */
+  transition: transform 0.3s ease; /* 滚动过渡效果 */
+  width: max-content; /* 确保文字完整显示 */
+  padding-left: 12px; /* 在文字前面增加间距，避免被左侧遮罩遮挡 */
+}
+
+/* 书签URL样式 - 小小的淡淡的 */
+.smart-bookmark-bookmark-url {
+  font-size: 11px;
+  color: #999; /* 更淡的颜色 */
+  font-weight: 400;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.smart-bookmark-bookmark-url {
-  font-size: 12px;
-  color: #666;
-  word-break: break-all;
-  text-align: right;
-  max-width: 40%;
+  opacity: 0.8; /* 增加透明度让它更淡 */
+  line-height: 1.2; /* 调整行高 */
+  padding-left: 12px; /* 与标题保持一致的左侧间距 */
 }
 
 /* 搜索匹配度样式 - 书签 */
@@ -647,9 +760,7 @@
   color: #e0e0e0;
 }
 
-.smart-bookmark-modal.dark-mode .smart-bookmark-mode-tip:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
+/* Dark mode tip hover - 已移除 */
 
 .smart-bookmark-modal.dark-mode .smart-bookmark-modal-body {
   /* 背景色继承自modal */
@@ -834,15 +945,42 @@
   color: #e0e0e0;
 }
 
+/* 深色模式下的标题遮罩 */
+.smart-bookmark-modal.dark-mode .smart-bookmark-bookmark-title-container::before {
+  background: linear-gradient(to right, #3a3a3a, transparent);
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-bookmark-title-container::after {
+  background: linear-gradient(to left, #3a3a3a, transparent);
+}
+
 .smart-bookmark-modal.dark-mode .smart-bookmark-bookmark-item:hover {
   background-color: #444;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* 暗色模式hover状态下的遮罩颜色 */
+.smart-bookmark-modal.dark-mode .smart-bookmark-bookmark-item:hover .smart-bookmark-bookmark-title-container::before {
+  background: linear-gradient(to right, #444, transparent);
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-bookmark-item:hover .smart-bookmark-bookmark-title-container::after {
+  background: linear-gradient(to left, #444, transparent);
 }
 
 .smart-bookmark-modal.dark-mode .smart-bookmark-bookmark-item.active {
   background-color: #1e3a5f !important;
   border-color: #5c9ce6 !important;
   box-shadow: 0 2px 8px rgba(92, 156, 230, 0.4) !important;
+}
+
+/* 暗色模式active状态下的遮罩颜色 */
+.smart-bookmark-modal.dark-mode .smart-bookmark-bookmark-item.active .smart-bookmark-bookmark-title-container::before {
+  background: linear-gradient(to right, #1e3a5f, transparent);
+}
+
+.smart-bookmark-modal.dark-mode .smart-bookmark-bookmark-item.active .smart-bookmark-bookmark-title-container::after {
+  background: linear-gradient(to left, #1e3a5f, transparent);
 }
 
 /* 深色模式下的书签标题和URL样式 */
@@ -940,19 +1078,32 @@
   border: 1px solid #ddd;
   border-radius: 6px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  z-index: 10002;
+  z-index: 999999; /* 确保显示在最顶层 */
   min-width: 150px;
   display: none;
   margin-top: 5px;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+  /* 强制确保可见性 */
+  visibility: hidden;
+}
+
+.smart-bookmark-dark-mode-dropdown.show {
+  display: block !important;
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+  pointer-events: auto !important;
+  visibility: visible !important;
+  /* 调试用：临时添加明显的样式 */
+  background: #ff0000 !important; /* 红色背景便于调试 */
+  border: 2px solid #000 !important; /* 黑色边框便于调试 */
 }
 
 .smart-bookmark-modal.dark-mode .smart-bookmark-dark-mode-dropdown {
   background: #3a3a3a;
   border: 1px solid #555;
-}
-
-.smart-bookmark-dark-mode-dropdown.show {
-  display: block;
 }
 
 .smart-bookmark-dark-mode-option {

@@ -1,6 +1,62 @@
 // Background script to handle extension commands
 console.log("Smart Bookmark Extension background script loaded");
 
+// 内存管理器
+const memoryManager = {
+  messageHandlers: new Map(),
+  tabStates: new Map(),
+  cleanupInterval: null,
+
+  init() {
+    // 设置定期清理
+    this.cleanupInterval = setInterval(() => {
+      this.cleanup();
+    }, 5 * 60 * 1000); // 每5分钟清理一次
+
+    // 监听标签页关闭事件
+    chrome.tabs.onRemoved.addListener((tabId) => {
+      this.cleanupTab(tabId);
+    });
+  },
+
+  cleanup() {
+    // 清理过期的缓存数据
+    const now = Date.now();
+    for (const [key, value] of this.tabStates.entries()) {
+      if (now - value.lastAccess > 10 * 60 * 1000) { // 10分钟未访问
+        this.tabStates.delete(key);
+      }
+    }
+
+    // 清理空的messageHandlers
+    for (const [key, handlers] of this.messageHandlers.entries()) {
+      if (handlers && handlers.length === 0) {
+        this.messageHandlers.delete(key);
+      }
+    }
+
+    console.log("Background memory cleaned up");
+  },
+
+  cleanupTab(tabId) {
+    this.tabStates.delete(tabId);
+    this.messageHandlers.delete(tabId);
+    console.log(`Cleaned up tab ${tabId}`);
+  },
+
+  destroy() {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+    }
+    this.messageHandlers.clear();
+    this.tabStates.clear();
+  }
+};
+
+// 初始化内存管理器
+memoryManager.init();
+
 // 监听来自内容脚本的消息
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log("Message received in background script:", request);

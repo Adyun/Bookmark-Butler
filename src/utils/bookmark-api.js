@@ -1,11 +1,21 @@
 // Bookmark API wrapper for the Smart Bookmark Extension
 
-// 缓存对象
+// 智能缓存系统
 var cache = {
-  folders: null,
-  bookmarks: null,
-  lastFetch: 0,
-  ttl: 5000 // 5秒缓存
+  // 内存缓存
+  memory: {
+    folders: null,
+    bookmarks: null,
+    lastFetch: 0,
+    ttl: 60000, // 1分钟内存缓存
+    version: 0 // 缓存版本号，用于检测数据变化
+  },
+  // 持久化缓存
+  persistent: {
+    key: 'smart_bookmark_cache',
+    ttl: 3600000, // 1小时持久化缓存
+    enabled: true
+  }
 };
 
 /**
@@ -42,50 +52,144 @@ function retryAsyncFunction(asyncFn, retries, delay) {
 }
 
 /**
+ * 从持久化存储加载缓存
+ * @returns {Promise<Object>} 缓存数据
+ */
+function loadPersistentCache() {
+  return new Promise(function (resolve) {
+    if (!cache.persistent.enabled) {
+      resolve(null);
+      return;
+    }
+
+    try {
+      // 尝试从 chrome.storage 获取缓存
+      if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+        chrome.storage.local.get([cache.persistent.key], function (result) {
+          var cachedData = result[cache.persistent.key];
+          if (cachedData && (Date.now() - cachedData.timestamp) < cache.persistent.ttl) {
+            resolve(cachedData);
+          } else {
+            resolve(null);
+          }
+        });
+      } else {
+        // 如果 chrome.storage 不可用，尝试从 localStorage 获取
+        var cachedData = localStorage.getItem(cache.persistent.key);
+        if (cachedData) {
+          cachedData = JSON.parse(cachedData);
+          if ((Date.now() - cachedData.timestamp) < cache.persistent.ttl) {
+            resolve(cachedData);
+          } else {
+            resolve(null);
+          }
+        } else {
+          resolve(null);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading persistent cache:', error);
+      resolve(null);
+    }
+  });
+}
+
+/**
+ * 保存缓存到持久化存储
+ * @param {Object} data - 要保存的缓存数据
+ */
+function savePersistentCache(data) {
+  if (!cache.persistent.enabled) return;
+
+  try {
+    var cacheData = {
+      folders: data.folders,
+      bookmarks: data.bookmarks,
+      timestamp: Date.now(),
+      version: data.version || 0
+    };
+
+    // 尝试保存到 chrome.storage
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.set({
+        'smart_bookmark_cache': cacheData
+      });
+    } else {
+      // 如果 chrome.storage 不可用，保存到 localStorage
+      localStorage.setItem(cache.persistent.key, JSON.stringify(cacheData));
+    }
+  } catch (error) {
+    console.error('Error saving persistent cache:', error);
+  }
+}
+
+/**
  * 获取所有书签文件夹
  * @returns {Promise<Array>} 文件夹列表
  */
 function getAllFolders() {
   return retryAsyncFunction(function () {
-    // 检查缓存
     var now = Date.now();
-    if (cache.folders && (now - cache.lastFetch) < cache.ttl) {
-      console.log('Returning cached folders');
-      return Promise.resolve(cache.folders);
+
+    // 检查内存缓存
+    if (cache.memory.folders && (now - cache.memory.lastFetch) < cache.memory.ttl) {
+      console.log('Returning cached folders from memory');
+      return Promise.resolve(cache.memory.folders);
     }
 
-    // 在内容脚本中，通过后台脚本获取书签
-    return new Promise(function (resolve, reject) {
-      // 检查是否在扩展环境中
-      if (!chrome || !chrome.runtime) {
-        reject(new Error('Chrome runtime not available'));
-        return;
+    // 检查持久化缓存
+    return loadPersistentCache().then(function (persistentCache) {
+      if (persistentCache && persistentCache.folders) {
+        // 更新内存缓存
+        cache.memory.folders = persistentCache.folders;
+        cache.memory.lastFetch = now;
+        cache.memory.version = persistentCache.version || 0;
+
+        console.log('Returning cached folders from persistent storage');
+        return Promise.resolve(persistentCache.folders);
       }
 
-      // 向后台脚本发送消息获取书签
-      chrome.runtime.sendMessage({
-        action: "getBookmarks"
-      }, function (response) {
-        if (chrome.runtime.lastError) {
-          reject(new Error('Failed to communicate with background script: ' + chrome.runtime.lastError.message));
+      // 没有有效缓存，从后台脚本获取
+      return new Promise(function (resolve, reject) {
+        // 检查是否在扩展环境中
+        if (!chrome || !chrome.runtime) {
+          reject(new Error('Chrome runtime not available'));
           return;
         }
 
-        if (response && response.error) {
-          reject(new Error(response.error));
-          return;
-        }
+        // 向后台脚本发送消息获取书签
+        chrome.runtime.sendMessage({
+          action: "getBookmarks"
+        }, function (response) {
+          if (chrome.runtime.lastError) {
+            reject(new Error('Failed to communicate with background script: ' + chrome.runtime.lastError.message));
+            return;
+          }
 
-        if (response && response.folders) {
-          // 更新缓存
-          cache.folders = response.folders;
-          cache.lastFetch = now;
+          if (response && response.error) {
+            reject(new Error(response.error));
+            return;
+          }
 
-          console.log('Fetched ' + response.folders.length + ' folders from background script');
-          resolve(response.folders);
-        } else {
-          reject(new Error('Invalid response from background script'));
-        }
+          if (response && response.folders) {
+            // 更新内存缓存
+            cache.memory.folders = response.folders;
+            cache.memory.lastFetch = now;
+            cache.memory.version++;
+
+            // 保存到持久化缓存
+            savePersistentCache({
+              folders: response.folders,
+              bookmarks: cache.memory.bookmarks,
+              version: cache.memory.version
+            });
+
+            console.log('Fetched ' + response.folders.length + ' folders from background script');
+            resolve(response.folders);
+          } else {
+            reject(new Error('Invalid response from background script'));
+          }
+        });
       });
     });
   });
@@ -230,45 +334,67 @@ function searchBookmarks(query) {
  */
 function getAllBookmarks() {
   return retryAsyncFunction(function () {
-    // 检查缓存
     var now = Date.now();
-    if (cache.bookmarks && (now - cache.lastFetch) < cache.ttl) {
-      console.log('Returning cached bookmarks');
-      return Promise.resolve(cache.bookmarks);
+
+    // 检查内存缓存
+    if (cache.memory.bookmarks && (now - cache.memory.lastFetch) < cache.memory.ttl) {
+      console.log('Returning cached bookmarks from memory');
+      return Promise.resolve(cache.memory.bookmarks);
     }
 
-    // 在内容脚本中，通过后台脚本获取书签
-    return new Promise(function (resolve, reject) {
-      // 检查是否在扩展环境中
-      if (!chrome || !chrome.runtime) {
-        reject(new Error('Chrome runtime not available'));
-        return;
+    // 检查持久化缓存
+    return loadPersistentCache().then(function (persistentCache) {
+      if (persistentCache && persistentCache.bookmarks) {
+        // 更新内存缓存
+        cache.memory.bookmarks = persistentCache.bookmarks;
+        cache.memory.lastFetch = now;
+        cache.memory.version = persistentCache.version || 0;
+
+        console.log('Returning cached bookmarks from persistent storage');
+        return Promise.resolve(persistentCache.bookmarks);
       }
 
-      // 向后台脚本发送消息获取书签
-      chrome.runtime.sendMessage({
-        action: "getAllBookmarks"
-      }, function (response) {
-        if (chrome.runtime.lastError) {
-          reject(new Error('Failed to communicate with background script: ' + chrome.runtime.lastError.message));
+      // 没有有效缓存，从后台脚本获取
+      return new Promise(function (resolve, reject) {
+        // 检查是否在扩展环境中
+        if (!chrome || !chrome.runtime) {
+          reject(new Error('Chrome runtime not available'));
           return;
         }
 
-        if (response && response.error) {
-          reject(new Error(response.error));
-          return;
-        }
+        // 向后台脚本发送消息获取书签
+        chrome.runtime.sendMessage({
+          action: "getAllBookmarks"
+        }, function (response) {
+          if (chrome.runtime.lastError) {
+            reject(new Error('Failed to communicate with background script: ' + chrome.runtime.lastError.message));
+            return;
+          }
 
-        if (response && response.bookmarks) {
-          // 更新缓存
-          cache.bookmarks = response.bookmarks;
-          cache.lastFetch = now;
+          if (response && response.error) {
+            reject(new Error(response.error));
+            return;
+          }
 
-          console.log('Fetched ' + response.bookmarks.length + ' bookmarks from background script');
-          resolve(response.bookmarks);
-        } else {
-          reject(new Error('Invalid response from background script'));
-        }
+          if (response && response.bookmarks) {
+            // 更新内存缓存
+            cache.memory.bookmarks = response.bookmarks;
+            cache.memory.lastFetch = now;
+            cache.memory.version++;
+
+            // 保存到持久化缓存
+            savePersistentCache({
+              folders: cache.memory.folders,
+              bookmarks: response.bookmarks,
+              version: cache.memory.version
+            });
+
+            console.log('Fetched ' + response.bookmarks.length + ' bookmarks from background script');
+            resolve(response.bookmarks);
+          } else {
+            reject(new Error('Invalid response from background script'));
+          }
+        });
       });
     });
   });
@@ -313,9 +439,25 @@ function requestBookmarksPermission() {
  * 清除缓存
  */
 function clearCache() {
-  cache.folders = null;
-  cache.bookmarks = null;
-  cache.lastFetch = 0;
+  cache.memory.folders = null;
+  cache.memory.bookmarks = null;
+  cache.memory.lastFetch = 0;
+  cache.memory.version = 0;
+
+  // 清除持久化缓存
+  try {
+    // 检查扩展上下文是否有效
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local && chrome.runtime.id) {
+      chrome.storage.local.remove([cache.persistent.key]);
+    } else {
+      localStorage.removeItem(cache.persistent.key);
+    }
+  } catch (error) {
+    // 忽略扩展上下文无效的错误，这是正常的页面卸载时的行为
+    if (!error.message.includes('Extension context invalidated')) {
+      console.error('Error clearing persistent cache:', error);
+    }
+  }
 }
 
 /**
@@ -323,11 +465,20 @@ function clearCache() {
  * @returns {Object} 缓存状态信息
  */
 function getCacheStatus() {
+  var now = Date.now();
   return {
-    hasCache: !!cache.folders,
-    lastFetch: cache.lastFetch,
-    ttl: cache.ttl,
-    age: Date.now() - cache.lastFetch
+    memoryCache: {
+      hasFolders: !!cache.memory.folders,
+      hasBookmarks: !!cache.memory.bookmarks,
+      lastFetch: cache.memory.lastFetch,
+      ttl: cache.memory.ttl,
+      age: now - cache.memory.lastFetch,
+      version: cache.memory.version
+    },
+    persistentCache: {
+      enabled: cache.persistent.enabled,
+      ttl: cache.persistent.ttl
+    }
   };
 }
 
@@ -341,5 +492,7 @@ window.SMART_BOOKMARK_API = {
   calculateFolderActivity: calculateFolderActivity,
   clearCache: clearCache,
   getCacheStatus: getCacheStatus,
-  requestBookmarksPermission: requestBookmarksPermission
+  requestBookmarksPermission: requestBookmarksPermission,
+  loadPersistentCache: loadPersistentCache,
+  savePersistentCache: savePersistentCache
 };

@@ -1,11 +1,306 @@
 // Search engine for the Smart Bookmark Extension
 
 /**
+ * 搜索索引类 - 用于优化搜索性能
+ */
+function SearchIndex() {
+  this.titleIndex = new Map(); // 标题倒排索引
+  this.urlIndex = new Map();    // URL倒排索引
+  this.trieIndex = null;        // Trie索引，用于前缀搜索
+  this.built = false;           // 索引是否已构建
+}
+
+/**
+ * 构建搜索索引
+ * @param {Array} items - 要索引的项目（文件夹或书签）
+ * @param {string} type - 项目类型 ('folders' 或 'bookmarks')
+ */
+SearchIndex.prototype.buildIndex = function (items, type) {
+  // 清空现有索引
+  this.titleIndex.clear();
+  this.urlIndex.clear();
+  this.trieIndex = new Trie();
+
+  // 构建倒排索引
+  for (var i = 0; i < items.length; i++) {
+    var item = items[i];
+
+    if (type === 'folders') {
+      this.indexFolder(item);
+    } else if (type === 'bookmarks') {
+      this.indexBookmark(item);
+    }
+  }
+
+  this.built = true;
+  console.log('Search index built for ' + items.length + ' ' + type);
+};
+
+/**
+ * 索引文件夹
+ * @param {Object} folder - 文件夹对象
+ */
+SearchIndex.prototype.indexFolder = function (folder) {
+  if (!folder || !folder.title) return;
+
+  var title = folder.title.toLowerCase();
+  var words = this.tokenize(title);
+
+  // 为每个词建立索引
+  for (var i = 0; i < words.length; i++) {
+    var word = words[i];
+    if (!this.titleIndex.has(word)) {
+      this.titleIndex.set(word, []);
+    }
+    this.titleIndex.get(word).push(folder);
+  }
+
+  // 添加到Trie索引用于前缀搜索
+  this.trieIndex.insert(title, folder);
+};
+
+/**
+ * 索引书签
+ * @param {Object} bookmark - 书签对象
+ */
+SearchIndex.prototype.indexBookmark = function (bookmark) {
+  if (!bookmark || (!bookmark.title && !bookmark.url)) return;
+
+  // 索引标题
+  if (bookmark.title) {
+    var title = bookmark.title.toLowerCase();
+    var titleWords = this.tokenize(title);
+
+    for (var i = 0; i < titleWords.length; i++) {
+      var word = titleWords[i];
+      if (!this.titleIndex.has(word)) {
+        this.titleIndex.set(word, []);
+      }
+      this.titleIndex.get(word).push(bookmark);
+    }
+
+    // 添加到Trie索引
+    this.trieIndex.insert(title, bookmark);
+  }
+
+  // 索引URL
+  if (bookmark.url) {
+    var url = bookmark.url.toLowerCase();
+    var urlWords = this.tokenize(url);
+
+    for (var i = 0; i < urlWords.length; i++) {
+      var word = urlWords[i];
+      if (!this.urlIndex.has(word)) {
+        this.urlIndex.set(word, []);
+      }
+      this.urlIndex.get(word).push(bookmark);
+    }
+  }
+};
+
+/**
+ * 分词处理
+ * @param {string} text - 要分词的文本
+ * @returns {Array} 分词结果
+ */
+SearchIndex.prototype.tokenize = function (text) {
+  // 简单的分词：按空格和标点符号分割
+  return text.split(/[\s\-_\.\/:]+/).filter(function (word) {
+    return word.length > 0;
+  });
+};
+
+/**
+ * 使用索引搜索
+ * @param {string} query - 搜索查询
+ * @param {string} type - 搜索类型 ('folders' 或 'bookmarks')
+ * @returns {Array} 搜索结果
+ */
+SearchIndex.prototype.search = function (query, type) {
+  if (!this.built || !query) return [];
+
+  var queryLower = query.toLowerCase();
+  var results = new Map(); // 使用Map去重
+
+  // 1. 使用Trie索引进行前缀搜索
+  var prefixResults = this.trieIndex.searchPrefix(queryLower);
+  for (var i = 0; i < prefixResults.length; i++) {
+    var item = prefixResults[i];
+    results.set(item.id, item);
+  }
+
+  // 2. 使用倒排索引进行词搜索
+  var queryWords = this.tokenize(queryLower);
+  for (var j = 0; j < queryWords.length; j++) {
+    var word = queryWords[j];
+
+    // 搜索标题索引
+    var titleMatches = this.titleIndex.get(word);
+    if (titleMatches) {
+      for (var k = 0; k < titleMatches.length; k++) {
+        var item = titleMatches[k];
+        results.set(item.id, item);
+      }
+    }
+
+    // 如果是书签搜索，也搜索URL索引
+    if (type === 'bookmarks') {
+      var urlMatches = this.urlIndex.get(word);
+      if (urlMatches) {
+        for (var l = 0; l < urlMatches.length; l++) {
+          var item = urlMatches[l];
+          results.set(item.id, item);
+        }
+      }
+    }
+  }
+
+  // 转换为数组并计算分数
+  var finalResults = Array.from(results.values());
+  for (var m = 0; m < finalResults.length; m++) {
+    finalResults[m].score = this.calculateScore(finalResults[m], query);
+  }
+
+  // 按分数排序
+  finalResults.sort(function (a, b) {
+    return b.score - a.score;
+  });
+
+  return finalResults;
+};
+
+/**
+ * 计算搜索分数
+ * @param {Object} item - 搜索结果项
+ * @param {string} query - 搜索查询
+ * @returns {number} 分数
+ */
+SearchIndex.prototype.calculateScore = function (item, query) {
+  var queryLower = query.toLowerCase();
+  var score = 0;
+
+  // 标题匹配
+  if (item.title) {
+    var title = item.title.toLowerCase();
+    if (title === queryLower) {
+      score += 1.0; // 完全匹配
+    } else if (title.indexOf(queryLower) === 0) {
+      score += 0.8; // 前缀匹配
+    } else if (title.indexOf(queryLower) > -1) {
+      score += 0.5; // 包含匹配
+    }
+  }
+
+  // URL匹配（仅书签）
+  if (item.url && queryLower.length > 2) {
+    var url = item.url.toLowerCase();
+    if (url.indexOf(queryLower) > -1) {
+      score += 0.3; // URL匹配权重较低
+    }
+  }
+
+  return Math.min(score, 1.0);
+};
+
+/**
+ * Trie树实现 - 用于高效的前缀搜索
+ */
+function Trie() {
+  this.root = {};
+  this.END_SYMBOL = '$';
+}
+
+/**
+ * 向Trie中插入单词
+ * @param {string} word - 要插入的单词
+ * @param {Object} data - 关联的数据
+ */
+Trie.prototype.insert = function (word, data) {
+  var node = this.root;
+
+  for (var i = 0; i < word.length; i++) {
+    var char = word[i];
+    if (!node[char]) {
+      node[char] = {};
+    }
+    node = node[char];
+  }
+
+  // 在单词结尾存储数据
+  if (!node[this.END_SYMBOL]) {
+    node[this.END_SYMBOL] = [];
+  }
+  node[this.END_SYMBOL].push(data);
+};
+
+/**
+ * 搜索前缀
+ * @param {string} prefix - 前缀
+ * @returns {Array} 匹配的数据数组
+ */
+Trie.prototype.searchPrefix = function (prefix) {
+  var node = this.root;
+  var results = [];
+
+  // 遍历到前缀的最后一个字符
+  for (var i = 0; i < prefix.length; i++) {
+    var char = prefix[i];
+    if (!node[char]) {
+      return results; // 没有匹配的前缀
+    }
+    node = node[char];
+  }
+
+  // 收集所有以该前缀开头的单词的数据
+  this.collectAllData(node, results);
+
+  return results;
+};
+
+/**
+ * 收集节点下的所有数据
+ * @param {Object} node - 当前节点
+ * @param {Array} results - 结果数组
+ */
+Trie.prototype.collectAllData = function (node, results) {
+  // 检查当前节点是否有结束符号
+  if (node[this.END_SYMBOL]) {
+    results.push.apply(results, node[this.END_SYMBOL]);
+  }
+
+  // 递归收集子节点的数据
+  for (var key in node) {
+    if (key !== this.END_SYMBOL) {
+      this.collectAllData(node[key], results);
+    }
+  }
+};
+
+/**
  * 搜索引擎类
  */
 function SearchEngine() {
-  // 构造函数
+  this.folderIndex = new SearchIndex();
+  this.bookmarkIndex = new SearchIndex();
+  this.indexBuilt = false;
 }
+
+/**
+ * 搜索文件夹
+ * @param {string} query - 搜索关键词
+ * @param {Array} folders - 待搜索文件夹列表
+ * @returns {Array} 匹配的文件夹，按相关性排序
+ */
+/**
+ * 构建搜索索引
+ * @param {Array} folders - 文件夹数组
+ * @param {Array} bookmarks - 书签数组
+ */
+SearchEngine.prototype.buildIndexes = function (folders, bookmarks) {
+  this.folderIndex.buildIndex(folders, 'folders');
+  this.bookmarkIndex.buildIndex(bookmarks, 'bookmarks');
+  this.indexBuilt = true;
+};
 
 /**
  * 搜索文件夹
@@ -22,33 +317,24 @@ SearchEngine.prototype.search = function (query, folders) {
     return folders;
   }
 
-  // 计算每个文件夹的匹配分数
-  var foldersWithScore = [];
-  for (var j = 0; j < folders.length; j++) {
-    var folder = folders[j];
-    var score = this.calculateScore(folder.title, query);
-    // 确保复制所有必要的属性
-    var folderWithScore = {
-      id: folder.id,
-      title: folder.title,
-      children: folder.children,
-      bookmarkCount: folder.bookmarkCount,
-      activity: folder.activity,
-      score: score
-    };
-
-    // 添加所有文件夹，但按分数排序
-    foldersWithScore.push(folderWithScore);
+  // 如果索引已构建，使用索引搜索
+  if (this.indexBuilt) {
+    var indexedResults = this.folderIndex.search(query, 'folders');
+    if (indexedResults.length > 0) {
+      return indexedResults;
+    }
   }
 
-  // 按分数降序排序
-  foldersWithScore.sort(function (a, b) {
-    return b.score - a.score;
-  });
-
-  return foldersWithScore;
+  // 回退到原始搜索方法
+  return this.fallbackSearch(query, folders, 'folders');
 };
 
+/**
+ * 搜索书签
+ * @param {string} query - 搜索关键词
+ * @param {Array} bookmarks - 待搜索书签列表
+ * @returns {Array} 匹配的书签，按相关性排序
+ */
 /**
  * 搜索书签
  * @param {string} query - 搜索关键词
@@ -64,30 +350,63 @@ SearchEngine.prototype.searchBookmarks = function (query, bookmarks) {
     return bookmarks;
   }
 
-  // 计算每个书签的匹配分数
-  var bookmarksWithScore = [];
-  for (var j = 0; j < bookmarks.length; j++) {
-    var bookmark = bookmarks[j];
-    var score = this.calculateBookmarkScore(bookmark, query);
+  // 如果索引已构建，使用索引搜索
+  if (this.indexBuilt) {
+    var indexedResults = this.bookmarkIndex.search(query, 'bookmarks');
+    if (indexedResults.length > 0) {
+      return indexedResults;
+    }
+  }
+
+  // 回退到原始搜索方法
+  return this.fallbackSearch(query, bookmarks, 'bookmarks');
+};
+
+/**
+ * 回退搜索方法（原始搜索算法）
+ * @param {string} query - 搜索关键词
+ * @param {Array} items - 待搜索项目列表
+ * @param {string} type - 项目类型 ('folders' 或 'bookmarks')
+ * @returns {Array} 匹配的项目，按相关性排序
+ */
+SearchEngine.prototype.fallbackSearch = function (query, items, type) {
+  var itemsWithScore = [];
+
+  for (var j = 0; j < items.length; j++) {
+    var item = items[j];
+    var score;
+
+    if (type === 'folders') {
+      score = this.calculateScore(item.title, query);
+    } else {
+      score = this.calculateBookmarkScore(item, query);
+    }
+
     // 确保复制所有必要的属性
-    var bookmarkWithScore = {
-      id: bookmark.id,
-      title: bookmark.title,
-      url: bookmark.url,
-      parentId: bookmark.parentId,
+    var itemWithScore = {
+      id: item.id,
+      title: item.title,
       score: score
     };
 
-    // 添加所有书签，但按分数排序
-    bookmarksWithScore.push(bookmarkWithScore);
+    if (type === 'folders') {
+      itemWithScore.children = item.children;
+      itemWithScore.bookmarkCount = item.bookmarkCount;
+      itemWithScore.activity = item.activity;
+    } else {
+      itemWithScore.url = item.url;
+      itemWithScore.parentId = item.parentId;
+    }
+
+    itemsWithScore.push(itemWithScore);
   }
 
   // 按分数降序排序
-  bookmarksWithScore.sort(function (a, b) {
+  itemsWithScore.sort(function (a, b) {
     return b.score - a.score;
   });
 
-  return bookmarksWithScore;
+  return itemsWithScore;
 };
 
 /**
@@ -99,6 +418,15 @@ SearchEngine.prototype.searchBookmarks = function (query, bookmarks) {
 SearchEngine.prototype.calculateScore = function (folderName, query) {
   // 使用全局帮助函数
   return window.SMART_BOOKMARK_HELPERS.calculateSearchScore(folderName, query);
+};
+
+/**
+ * 清除索引
+ */
+SearchEngine.prototype.clearIndexes = function () {
+  this.folderIndex = new SearchIndex();
+  this.bookmarkIndex = new SearchIndex();
+  this.indexBuilt = false;
 };
 
 /**

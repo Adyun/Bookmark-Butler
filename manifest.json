@@ -26,6 +26,10 @@
         "src/utils/bookmark-api.js",
         "src/utils/sorting-algorithm.js",
         "src/utils/search-engine.js",
+        "src/components/virtual-scroller.js",
+        "src/components/ui-manager.js",
+        "src/components/theme-manager.js",
+        "src/components/keyboard-manager.js",
         "src/modal/modal-manager.js",
         "src/content-script.js"
       ],
