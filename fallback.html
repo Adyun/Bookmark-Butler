@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能书签扩展</title>
+    <link rel="stylesheet" href="src/styles/modal.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        .fallback-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            padding: 40px;
+            max-width: 500px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        }
+        
+        .fallback-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+        
+        .fallback-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 16px;
+        }
+        
+        .fallback-message {
+            font-size: 16px;
+            color: #64748b;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+        
+        .fallback-button {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 12px 24px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 0 10px;
+        }
+        
+        .fallback-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+        }
+        
+        .fallback-button.secondary {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.8) 100%);
+            color: #374151;
+            border: 1px solid rgba(209, 213, 219, 0.8);
+        }
+    </style>
+</head>
+<body>
+    <div class="fallback-container">
+        <div class="fallback-icon">📚</div>
+        <h1 class="fallback-title">智能书签扩展</h1>
+        <p class="fallback-message">
+            当前页面不支持书签管理器扩展。<br>
+            请在普通网页中使用此功能，或者使用下面的快捷操作。
+        </p>
+        <button class="fallback-button" onclick="openNewTab()">打开新标签页</button>
+        <button class="fallback-button secondary" onclick="window.close()">关闭</button>
+    </div>
+
+    <script>
+        function openNewTab() {
+            chrome.tabs.create({ url: 'https://www.google.com' });
+            window.close();
+        }
+        
+        // 如果是从受限页面打开的，显示更详细的信息
+        const urlParams = new URLSearchParams(window.location.search);
+        const restrictedUrl = urlParams.get('from');
+        if (restrictedUrl) {
+            const message = document.querySelector('.fallback-message');
+            message.innerHTML = `
+                当前页面 <code>${restrictedUrl}</code> 不支持内容脚本。<br>
+                浏览器内部页面（如设置页、扩展管理页等）出于安全考虑不允许扩展注入脚本。<br>
+                请在普通网页中使用书签管理器功能。
+            `;
+        }
+    </script>
+</body>
+</html>

@@ -19,6 +19,10 @@ UIManager.prototype.createModal = function () {
     return;
   }
 
+  // 创建modal背景层
+  var modalBackdrop = document.createElement('div');
+  modalBackdrop.className = 'smart-bookmark-modal-backdrop';
+  
   var modal = document.createElement('div');
   modal.id = window.SMART_BOOKMARK_CONSTANTS.MODAL_ID;
   modal.className = 'smart-bookmark-modal';
@@ -58,7 +62,9 @@ UIManager.prototype.createModal = function () {
   toast.id = window.SMART_BOOKMARK_CONSTANTS.TOAST_ID;
   toast.className = 'smart-bookmark-toast';
 
-  document.body.appendChild(modal);
+  // 将modal放在backdrop中
+  modalBackdrop.appendChild(modal);
+  document.body.appendChild(modalBackdrop);
   document.body.appendChild(toast);
 
   // 修复布局问题 - 确保Modal内容区域正确计算高度
@@ -72,25 +78,25 @@ UIManager.prototype.setupModalLayout = function () {
   var modal = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.MODAL_ID);
   if (!modal) return;
 
-  // 使用CSS变量来动态计算高度
+  // 使用CSS变量来动态计算高度，但不强制固定高度
   var style = document.createElement('style');
   style.textContent = `
     .smart-bookmark-modal {
       --header-height: 70px;
       --footer-height: 80px;
       --padding: 40px;
-      --available-height: calc(100% - var(--header-height) - var(--footer-height));
     }
     
     .smart-bookmark-modal-body {
-      height: var(--available-height);
-      min-height: var(--available-height);
-      max-height: var(--available-height);
+      /* 让body根据内容自适应高度 */
+      flex: 1;
+      min-height: 300px;
+      max-height: calc(70vh - var(--header-height) - var(--footer-height));
     }
     
     .smart-bookmark-list-container {
-      height: calc(100% - 60px); /* 减去搜索框和间距的高度 */
-      min-height: 300px;
+      height: calc(100% - 80px); /* 减去搜索框和间距的高度 */
+      min-height: 250px;
       display: flex;
       flex-direction: column;
     }
@@ -98,7 +104,6 @@ UIManager.prototype.setupModalLayout = function () {
     .smart-bookmark-folder-list,
     .smart-bookmark-bookmark-list {
       flex: 1;
-      height: 100%;
       min-height: 0;
       margin: 16px 0 0;
     }
@@ -110,8 +115,14 @@ UIManager.prototype.setupModalLayout = function () {
         --footer-height: 70px;
       }
       
-      .smart-bookmark-list-container {
+      .smart-bookmark-modal-body {
         min-height: 200px;
+        max-height: calc(60vh - var(--header-height) - var(--footer-height));
+      }
+      
+      .smart-bookmark-list-container {
+        min-height: 150px;
+        height: calc(100% - 60px);
       }
     }
   `;
@@ -132,14 +143,16 @@ UIManager.prototype.setupModalLayout = function () {
  */
 UIManager.prototype.showModal = function (pageInfo) {
   var modal = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.MODAL_ID);
-  if (!modal) {
+  var backdrop = document.querySelector('.smart-bookmark-modal-backdrop');
+  if (!modal || !backdrop) {
     console.error('Modal element not found');
     return;
   }
 
   this.isModalVisible = true;
 
-  // 显示Modal
+  // 显示Modal和背景
+  backdrop.classList.add('active');
   modal.classList.add(window.SMART_BOOKMARK_CONSTANTS.MODAL_ACTIVE_CLASS);
 
   // 聚焦到搜索输入框
@@ -163,8 +176,12 @@ UIManager.prototype.showModal = function (pageInfo) {
  */
 UIManager.prototype.hideModal = function () {
   var modal = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.MODAL_ID);
+  var backdrop = document.querySelector('.smart-bookmark-modal-backdrop');
   if (modal) {
     modal.classList.remove(window.SMART_BOOKMARK_CONSTANTS.MODAL_ACTIVE_CLASS);
+  }
+  if (backdrop) {
+    backdrop.classList.remove('active');
   }
 
   // 清空搜索框
@@ -191,6 +208,7 @@ UIManager.prototype.setMode = function (mode) {
 
   // 添加过渡动画类
   modal.classList.add(window.SMART_BOOKMARK_CONSTANTS.MODE_TRANSITION_CLASS);
+  modal.classList.add('content-changing');
 
   // 移除所有模式类
   modal.classList.remove(window.SMART_BOOKMARK_CONSTANTS.BOOKMARK_SEARCH_MODE_CLASS);
@@ -239,7 +257,8 @@ UIManager.prototype.setMode = function (mode) {
   // 移除过渡动画类
   setTimeout(function () {
     modal.classList.remove(window.SMART_BOOKMARK_CONSTANTS.MODE_TRANSITION_CLASS);
-  }, 300);
+    modal.classList.remove('content-changing');
+  }, 500);
 };
 
 /**

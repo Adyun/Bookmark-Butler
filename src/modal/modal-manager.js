@@ -19,6 +19,10 @@ function ModalManager() {
   this.folderVirtualScroller = null;
   this.bookmarkVirtualScroller = null;
 
+  // 用户交互状态追踪
+  this.lastUserInteraction = Date.now();
+  this.isUserActive = false;
+
   this.init();
 }
 
@@ -90,10 +94,20 @@ ModalManager.prototype.bindEvents = function () {
       return; // 如果点击在下拉菜单内，不关闭模态框
     }
 
-    if (e.target.id === 'smart-bookmark-cancel' ||
-      (modal.classList.contains(window.SMART_BOOKMARK_CONSTANTS.MODAL_ACTIVE_CLASS) &&
-        e.target === modal)) {
+    // 点击取消按钮关闭
+    if (e.target.id === 'smart-bookmark-cancel') {
       self.hide();
+      return;
+    }
+
+    // 点击modal外部关闭（但不包括modal内部）
+    if (modal.classList.contains(window.SMART_BOOKMARK_CONSTANTS.MODAL_ACTIVE_CLASS)) {
+      var backdrop = document.querySelector('.smart-bookmark-modal-backdrop');
+      
+      // 如果点击的是backdrop（背景）或者点击在modal外部，则关闭
+      if (e.target === backdrop || (backdrop && backdrop.contains(e.target) && !modal.contains(e.target))) {
+        self.hide();
+      }
     }
   };
 
@@ -107,7 +121,27 @@ ModalManager.prototype.bindEvents = function () {
     }, 300);
 
     addEventListenerFn(searchInput, 'input', function (e) {
+      self.updateUserActivity(); // 记录用户活动
       debouncedSearch(e.target.value);
+    });
+
+    // 监听其他用户交互
+    addEventListenerFn(searchInput, 'keydown', function () {
+      self.updateUserActivity();
+    });
+    addEventListenerFn(searchInput, 'focus', function () {
+      self.updateUserActivity();
+    });
+  }
+
+  // 监听modal内的鼠标活动
+  var modal = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.MODAL_ID);
+  if (modal) {
+    addEventListenerFn(modal, 'mousemove', function () {
+      self.updateUserActivity();
+    });
+    addEventListenerFn(modal, 'click', function () {
+      self.updateUserActivity();
     });
   }
 
@@ -141,6 +175,22 @@ ModalManager.prototype.debounce = function (func, delay) {
       func.apply(context, args);
     }, delay);
   };
+};
+
+/**
+ * 更新用户活动状态
+ */
+ModalManager.prototype.updateUserActivity = function () {
+  this.lastUserInteraction = Date.now();
+  this.isUserActive = true;
+  
+  // 如果用户持续不活动5秒，标记为非活跃
+  var self = this;
+  setTimeout(function () {
+    if (Date.now() - self.lastUserInteraction >= 5000) {
+      self.isUserActive = false;
+    }
+  }, 5000);
 };
 
 /**
@@ -557,7 +607,7 @@ ModalManager.prototype.renderBookmarkItem = function (bookmark, index, hasSearch
     '<div class="smart-bookmark-bookmark-title-container">' +
     '<span class="smart-bookmark-bookmark-title">' + bookmark.title + '</span>' +
     '</div>' +
-    '<div class="smart-bookmark-bookmark-url">' + this.getDomainFromUrl(bookmark.url) + '</div>' +
+    '<div class="smart-bookmark-bookmark-url" title="' + bookmark.url + '">' + this.formatUrlForDisplay(bookmark.url) + '</div>' +
     '</div>' +
     '</div>';
 
@@ -580,6 +630,28 @@ ModalManager.prototype.getDomainFromUrl = function (url) {
     var domain = new URL(url).hostname;
     return domain.replace(/^www\./, '');
   } catch (e) {
+    return url;
+  }
+};
+
+/**
+ * 格式化URL用于显示 - 显示完整URL但去掉协议前缀
+ * @param {string} url - URL
+ * @returns {string} 格式化的URL
+ */
+ModalManager.prototype.formatUrlForDisplay = function (url) {
+  try {
+    // 移除协议前缀（http://、https://）
+    var displayUrl = url.replace(/^https?:\/\//, '');
+    
+    // 移除www前缀（可选）
+    displayUrl = displayUrl.replace(/^www\./, '');
+    
+    // 如果URL太长，确保末尾有足够空间显示省略号
+    // CSS会处理实际的截断和省略号显示
+    return displayUrl;
+  } catch (e) {
+    // 如果URL格式有问题，直接返回原URL
     return url;
   }
 };

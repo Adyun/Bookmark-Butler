@@ -1,5 +1,16 @@
 // Content script entry point
-console.log("Smart Bookmark Extension loaded");
+console.log("Smart Bookmark Extension content script loaded");
+
+// 向background script报告脚本已加载
+if (chrome.runtime && chrome.runtime.sendMessage) {
+  chrome.runtime.sendMessage({
+    action: "contentScriptLoaded",
+    url: window.location.href,
+    timestamp: Date.now()
+  }).catch((error) => {
+    console.log("Could not send loaded message:", error);
+  });
+}
 
 // 内存管理器
 const memoryManager = {
@@ -10,17 +21,33 @@ const memoryManager = {
   timeouts: [],
 
   init() {
-    // 创建Modal管理器实例
-    this.modalManager = new window.ModalManager();
+    console.log("Initializing memory manager");
+    
+    try {
+      // 检查必要的依赖是否存在
+      if (!window.ModalManager) {
+        console.error("ModalManager class not found");
+        return false;
+      }
 
-    // 设置定期清理
-    this.setupPeriodicCleanup();
+      // 创建Modal管理器实例
+      this.modalManager = new window.ModalManager();
+      console.log("ModalManager created successfully");
 
-    // 监听页面可见性变化
-    this.handleVisibilityChange();
+      // 设置定期清理
+      this.setupPeriodicCleanup();
 
-    // 监听页面卸载
-    this.setupUnloadHandlers();
+      // 监听页面可见性变化
+      this.handleVisibilityChange();
+
+      // 监听页面卸载
+      this.setupUnloadHandlers();
+      
+      return true;
+    } catch (error) {
+      console.error("Error initializing memory manager:", error);
+      return false;
+    }
   },
 
   /**
@@ -76,45 +103,64 @@ const memoryManager = {
   },
 
   /**
-   * 设置定期清理
+   * 设置定期清理 - 优化版本，避免在使用时清理
    */
   setupPeriodicCleanup() {
-    // 每30秒清理一次过期数据
+    // 每2分钟清理一次过期数据（但不在Modal显示时）
     const cleanupInterval = this.setInterval(() => {
-      this.cleanup();
-    }, 30000);
+      if (!this.modalManager || !this.modalManager.isModalVisible()) {
+        this.cleanup();
+      }
+    }, 2 * 60 * 1000);
 
-    // 每5分钟深度清理
+    // 每10分钟深度清理（但不在Modal显示时）
     const deepCleanupInterval = this.setInterval(() => {
-      this.deepCleanup();
-    }, 5 * 60 * 1000);
+      if (!this.modalManager || !this.modalManager.isModalVisible()) {
+        this.deepCleanup();
+      }
+    }, 10 * 60 * 1000);
   },
 
   /**
-   * 处理页面可见性变化
+   * 处理页面可见性变化 - 优化版本，避免误关闭
    */
   handleVisibilityChange() {
+    let hideTimeout = null;
+    
     this.addEventListener(document, 'visibilitychange', () => {
       if (document.hidden) {
-        // 页面隐藏时（离开页面）立即关闭Modal
-        if (this.modalManager && this.modalManager.isModalVisible()) {
-          this.modalManager.hide();
-          
-          // 同时清理缓存
-          if (window.SMART_BOOKMARK_API && window.SMART_BOOKMARK_API.clearCache) {
-            window.SMART_BOOKMARK_API.clearCache();
+        // 延迟关闭Modal，避免短暂失焦导致的误关闭
+        hideTimeout = setTimeout(() => {
+          if (document.hidden && this.modalManager && this.modalManager.isModalVisible()) {
+            // 检查用户是否在活跃交互，如果是则不关闭
+            if (this.modalManager.isUserActive) {
+              console.log('User is active, not closing modal despite page being hidden');
+              return;
+            }
+            console.log('Page hidden for extended time, closing modal');
+            this.modalManager.hide();
+            
+            // 清理缓存
+            if (window.SMART_BOOKMARK_API && window.SMART_BOOKMARK_API.clearCache) {
+              window.SMART_BOOKMARK_API.clearCache();
+            }
+            if (window.SMART_BOOKMARK_SORTING && window.SMART_BOOKMARK_SORTING.clearActivityCache) {
+              window.SMART_BOOKMARK_SORTING.clearActivityCache();
+            }
           }
-          if (window.SMART_BOOKMARK_SORTING && window.SMART_BOOKMARK_SORTING.clearActivityCache) {
-            window.SMART_BOOKMARK_SORTING.clearActivityCache();
-          }
+        }, 3000); // 3秒后才关闭，避免短暂失焦
+      } else {
+        // 页面重新可见时取消关闭
+        if (hideTimeout) {
+          clearTimeout(hideTimeout);
+          hideTimeout = null;
         }
       }
-      // 页面重新可见时不做任何操作，让用户主动重新打开Modal
     });
   },
 
   /**
-   * 设置页面卸载处理程序
+   * 设置页面卸载处理程序 - 精简版本，避免重复监听
    */
   setupUnloadHandlers() {
     // 监听扩展卸载
@@ -122,29 +168,25 @@ const memoryManager = {
       chrome.runtime.onSuspend.addListener(() => this.cleanup());
     }
 
-    // 使用更安全的页面可见性变化监听
-    this.addEventListener(document, 'visibilitychange', () => {
-      if (document.hidden) {
-        this.reduceMemoryUsage();
-      }
-    });
+    // 注意：visibilitychange 已在 handleVisibilityChange 中处理，不重复添加
   },
 
   /**
-   * 减少内存使用
+   * 减少内存使用 - 优化版本，避免在活跃使用时清理
    */
   reduceMemoryUsage() {
-    // 清理Modal实例
-    if (this.modalManager && this.modalManager.hide) {
-      this.modalManager.hide();
-    }
-
-    // 清理缓存
-    if (window.SMART_BOOKMARK_API && window.SMART_BOOKMARK_API.clearCache) {
-      window.SMART_BOOKMARK_API.clearCache();
-    }
-    if (window.SMART_BOOKMARK_SORTING && window.SMART_BOOKMARK_SORTING.clearActivityCache) {
-      window.SMART_BOOKMARK_SORTING.clearActivityCache();
+    // 只在Modal不可见时才进行内存清理
+    if (!this.modalManager || !this.modalManager.isModalVisible()) {
+      // 清理缓存
+      if (window.SMART_BOOKMARK_API && window.SMART_BOOKMARK_API.clearCache) {
+        window.SMART_BOOKMARK_API.clearCache();
+      }
+      if (window.SMART_BOOKMARK_SORTING && window.SMART_BOOKMARK_SORTING.clearActivityCache) {
+        window.SMART_BOOKMARK_SORTING.clearActivityCache();
+      }
+      console.log('Memory usage reduced (modal not active)');
+    } else {
+      console.log('Skipped memory cleanup - modal is active');
     }
   },
 
@@ -223,38 +265,84 @@ function getCurrentPageInfo() {
  * 处理来自background script的消息
  */
 function handleMessage(request, sender, sendResponse) {
-  if (request.action === "openBookmarkModal") {
-    // 显示Modal
-    memoryManager.modalManager.show(request.pageInfo);
-    sendResponse({ status: "success" });
+  console.log("Content script received message:", request);
+  
+  try {
+    // 简单的ping响应，用于检测脚本是否加载
+    if (request.action === "ping") {
+      console.log("Responding to ping");
+      sendResponse({ status: "success", message: "Content script is alive" });
+      return true;
+    }
+    
+    if (request.action === "openBookmarkModal") {
+      // 检查modalManager是否存在
+      if (!memoryManager.modalManager) {
+        console.error("ModalManager not initialized");
+        sendResponse({ status: "error", message: "ModalManager not initialized" });
+        return true;
+      }
 
-    // 移除自动清理逻辑，避免意外关闭模态框
-    // 清理将在用户主动关闭模态框时进行
-
+      // 显示Modal
+      memoryManager.modalManager.show(request.pageInfo);
+      sendResponse({ status: "success" });
+      
+      console.log("Modal opened successfully");
+      return true;
+    }
+  } catch (error) {
+    console.error("Error in handleMessage:", error);
+    sendResponse({ status: "error", message: error.message });
     return true;
   }
+  
+  // 未知的action
+  sendResponse({ status: "error", message: "Unknown action: " + request.action });
+  return true;
 }
 
 /**
  * 初始化扩展
  */
-function initExtension() {
-  // 初始化内存管理器
-  memoryManager.init();
+let isInitialized = false;
 
-  // 确保chrome.runtime.onMessage的正确使用
-  if (chrome.runtime.onMessage && chrome.runtime.onMessage.addListener) {
-    chrome.runtime.onMessage.addListener(handleMessage);
+function initExtension() {
+  if (isInitialized) {
+    console.log("Extension already initialized, skipping");
+    return;
+  }
+  
+  console.log("Initializing Smart Bookmark Extension");
+  
+  try {
+    // 初始化内存管理器
+    const initSuccess = memoryManager.init();
+    
+    if (!initSuccess) {
+      console.error("Failed to initialize memory manager");
+      return;
+    }
+
+    // 确保chrome.runtime.onMessage的正确使用
+    if (chrome.runtime.onMessage && chrome.runtime.onMessage.addListener) {
+      chrome.runtime.onMessage.addListener(handleMessage);
+      console.log("Message listener added successfully");
+    } else {
+      console.error("chrome.runtime.onMessage not available");
+    }
+    
+    isInitialized = true;
+    console.log("Smart Bookmark Extension initialized successfully");
+  } catch (error) {
+    console.error("Error initializing extension:", error);
   }
 }
 
-// 初始化扩展
-initExtension();
-
 // 监听DOMContentLoaded确保页面完全加载
 if (document.readyState === 'loading') {
-  memoryManager.addEventListener(document, 'DOMContentLoaded', initExtension);
+  document.addEventListener('DOMContentLoaded', initExtension);
 } else {
+  // 页面已经加载完成，直接初始化
   initExtension();
 }
 

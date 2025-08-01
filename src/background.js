@@ -57,9 +57,25 @@ const memoryManager = {
 // 初始化内存管理器
 memoryManager.init();
 
+// 存储已加载内容脚本的标签页
+const loadedTabs = new Set();
+
+// 监听标签页关闭，清理记录
+chrome.tabs.onRemoved.addListener((tabId) => {
+  loadedTabs.delete(tabId);
+});
+
 // 监听来自内容脚本的消息
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log("Message received in background script:", request);
+  
+  // 记录内容脚本已加载
+  if (sender.tab && request.action === "contentScriptLoaded") {
+    console.log(`Content script loaded in tab ${sender.tab.id}:`, request.url);
+    loadedTabs.add(sender.tab.id);
+    sendResponse({ status: "acknowledged" });
+    return;
+  }
 
   if (request.action === "getBookmarks") {
     // 获取书签树
@@ -235,22 +251,213 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
+/**
+ * 向内容脚本发送消息，带重试机制
+ */
+function sendMessageToContentScript(tabId, message, maxRetries = 3) {
+  let retryCount = 0;
+  
+  // 首先检查标签页是否可以注入脚本
+  chrome.tabs.get(tabId, (tab) => {
+    if (chrome.runtime.lastError) {
+      console.error("Failed to get tab info:", chrome.runtime.lastError);
+      return;
+    }
+    
+    // 检查URL是否允许内容脚本
+    if (isRestrictedUrl(tab.url)) {
+      console.warn("Cannot inject content script into restricted URL:", tab.url);
+      showNotificationFallback();
+      return;
+    }
+    
+    // 检查内容脚本是否已加载
+    if (!loadedTabs.has(tabId)) {
+      console.log("Content script not loaded in tab", tabId, "- injecting first");
+      injectContentScript(tabId, message);
+      return;
+    }
+    
+    attemptSend();
+  });
+  
+  function attemptSend() {
+    chrome.tabs.sendMessage(tabId, message, (response) => {
+      if (chrome.runtime.lastError) {
+        console.error(`Attempt ${retryCount + 1} failed:`, chrome.runtime.lastError.message);
+        
+        // 如果连接失败，可能是内容脚本被卸载了
+        if (chrome.runtime.lastError.message.includes("Receiving end does not exist")) {
+          console.log("Content script appears to be unloaded, removing from loaded tabs");
+          loadedTabs.delete(tabId);
+        }
+        
+        if (retryCount < maxRetries) {
+          retryCount++;
+          // 使用递增延迟策略：第一次500ms，第二次1000ms，第三次1500ms
+          const delay = retryCount * 500;
+          console.log(`Retrying in ${delay}ms... (${retryCount}/${maxRetries})`);
+          setTimeout(attemptSend, delay);
+        } else {
+          console.error("All retry attempts failed. Content script may not be loaded.");
+          // 尝试重新注入内容脚本
+          injectContentScript(tabId, message);
+        }
+      } else {
+        console.log("Message sent successfully:", response);
+      }
+    });
+  }
+}
+
+/**
+ * 检查URL是否为受限制的URL
+ */
+function isRestrictedUrl(url) {
+  const restrictedProtocols = [
+    'chrome://',
+    'chrome-extension://',
+    'moz-extension://',
+    'about:',
+    'edge://',
+    'opera://',
+    'file://'
+  ];
+  
+  return restrictedProtocols.some(protocol => url.startsWith(protocol));
+}
+
+/**
+ * 显示备用通知
+ */
+function showNotificationFallback() {
+  console.log("Showing notification fallback");
+  
+  // 如果支持通知API，显示通知
+  if (chrome.notifications) {
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'icons/icon48.png',
+      title: '智能书签扩展',
+      message: '当前页面不支持书签管理器。请在普通网页中使用此功能。'
+    });
+  }
+  
+  // 或者打开一个新标签页
+  chrome.tabs.create({
+    url: chrome.runtime.getURL('fallback.html'),
+    active: true
+  }).catch(() => {
+    console.log("Could not open fallback page");
+  });
+}
+
+/**
+ * 尝试重新注入内容脚本
+ */
+function injectContentScript(tabId, originalMessage) {
+  console.log("Attempting to inject content script into tab", tabId);
+  
+  // 首先检查标签页是否还存在
+  chrome.tabs.get(tabId, async (tab) => {
+    if (chrome.runtime.lastError) {
+      console.error("Tab no longer exists:", chrome.runtime.lastError);
+      return;
+    }
+    
+    console.log("Tab info:", tab.url, tab.status);
+    
+    if (isRestrictedUrl(tab.url)) {
+      console.warn("Cannot inject into restricted URL:", tab.url);
+      showNotificationFallback();
+      return;
+    }
+    
+    // 等待页面加载完成
+    if (tab.status !== 'complete') {
+      console.log("Tab not ready, waiting for load completion");
+      chrome.tabs.onUpdated.addListener(function listener(updatedTabId, changeInfo) {
+        if (updatedTabId === tabId && changeInfo.status === 'complete') {
+          chrome.tabs.onUpdated.removeListener(listener);
+          console.log("Tab loaded, now injecting content script");
+          performInjection();
+        }
+      });
+    } else {
+      performInjection();
+    }
+    
+    function performInjection() {
+      // 先尝试简单的ping测试
+      chrome.tabs.sendMessage(tabId, { action: 'ping' }, (response) => {
+        if (!chrome.runtime.lastError) {
+          console.log("Content script already loaded, sending original message");
+          loadedTabs.add(tabId);
+          if (originalMessage) {
+            sendMessageToContentScript(tabId, originalMessage, 1);
+          }
+          return;
+        }
+        
+        console.log("Content script not loaded, injecting scripts");
+        
+        // 尝试注入脚本
+        chrome.scripting.executeScript({
+          target: { tabId: tabId },
+          files: [
+            'src/utils/constants.js',
+            'src/utils/helpers.js',
+            'src/utils/bookmark-api.js',
+            'src/utils/sorting-algorithm.js',
+            'src/utils/search-engine.js',
+            'src/components/virtual-scroller.js',
+            'src/components/ui-manager.js',
+            'src/components/theme-manager.js',
+            'src/components/keyboard-manager.js',
+            'src/modal/modal-manager.js',
+            'src/content-script.js'
+          ]
+        }).then(() => {
+          console.log("Content script files injected successfully");
+          
+          // 同时注入CSS
+          return chrome.scripting.insertCSS({
+            target: { tabId: tabId },
+            files: ['src/styles/modal.css']
+          });
+        }).then(() => {
+          console.log("CSS injected successfully");
+          
+          // 记录脚本已加载
+          loadedTabs.add(tabId);
+          
+          // 等待脚本初始化后发送原始消息
+          setTimeout(() => {
+            console.log("Waiting period complete, sending original message");
+            if (originalMessage) {
+              sendMessageToContentScript(tabId, originalMessage, 1);
+            }
+          }, 2000);
+        }).catch((error) => {
+          console.error("Failed to inject content script or CSS:", error);
+          console.error("Error details:", error.message);
+          showNotificationFallback();
+        });
+      });
+    }
+  });
+}
+
 // 监听插件图标点击事件
 chrome.action.onClicked.addListener((tab) => {
-  console.log("Extension icon clicked");
+  console.log("Extension icon clicked for tab:", tab.id, tab.url);
 
   // 向内容脚本发送消息以打开书签Modal
-  chrome.tabs.sendMessage(tab.id, {
+  sendMessageToContentScript(tab.id, {
     action: "openBookmarkModal",
     pageInfo: {
       title: tab.title,
       url: tab.url
-    }
-  }, (response) => {
-    if (chrome.runtime.lastError) {
-      console.error("Error sending message to content script:", chrome.runtime.lastError);
-    } else {
-      console.log("Message sent to content script:", response);
     }
   });
 });
@@ -264,21 +471,18 @@ chrome.commands.onCommand.addListener((command) => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs.length > 0) {
         const activeTab = tabs[0];
+        console.log("Keyboard shortcut triggered for tab:", activeTab.id, activeTab.url);
 
         // 向内容脚本发送消息以打开书签Modal
-        chrome.tabs.sendMessage(activeTab.id, {
+        sendMessageToContentScript(activeTab.id, {
           action: "openBookmarkModal",
           pageInfo: {
             title: activeTab.title,
             url: activeTab.url
           }
-        }, (response) => {
-          if (chrome.runtime.lastError) {
-            console.error("Error sending message to content script:", chrome.runtime.lastError);
-          } else {
-            console.log("Message sent to content script:", response);
-          }
         });
+      } else {
+        console.error("No active tab found for keyboard shortcut");
       }
     });
   }

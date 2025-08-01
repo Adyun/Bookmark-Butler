@@ -156,6 +156,7 @@ ThemeManager.prototype.isSystemDarkMode = function () {
  */
 ThemeManager.prototype.applyDarkMode = function () {
   var modal = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.MODAL_ID);
+  var backdrop = document.querySelector('.smart-bookmark-modal-backdrop');
   if (!modal) return;
 
   var isDark = false;
@@ -168,8 +169,14 @@ ThemeManager.prototype.applyDarkMode = function () {
 
   if (isDark) {
     modal.classList.add(window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_CLASS);
+    if (backdrop) {
+      backdrop.classList.add(window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_CLASS);
+    }
   } else {
     modal.classList.remove(window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_CLASS);
+    if (backdrop) {
+      backdrop.classList.remove(window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_CLASS);
+    }
   }
 
   // 更新深色模式下拉菜单中的选中状态
