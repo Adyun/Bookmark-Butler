@@ -249,6 +249,41 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     return true; // 保持消息通道开放，以便异步发送响应
   }
+  
+  // 处理来自fallback页面的消息
+  if (request.action === "openNewTab") {
+    chrome.tabs.create({ 
+      url: request.url || 'https://www.google.com',
+      active: true 
+    }, function(tab) {
+      if (chrome.runtime.lastError) {
+        console.error("Error creating new tab:", chrome.runtime.lastError);
+        sendResponse({ status: "error", message: chrome.runtime.lastError.message });
+      } else {
+        console.log("New tab created successfully:", tab.id);
+        sendResponse({ status: "success", tabId: tab.id });
+      }
+    });
+    return true; // 保持消息通道开放
+  }
+  
+  if (request.action === "closeCurrentTab") {
+    // 获取当前标签页ID
+    if (sender.tab && sender.tab.id) {
+      chrome.tabs.remove(sender.tab.id, function() {
+        if (chrome.runtime.lastError) {
+          console.error("Error closing tab:", chrome.runtime.lastError);
+          sendResponse({ status: "error", message: chrome.runtime.lastError.message });
+        } else {
+          console.log("Tab closed successfully");
+          sendResponse({ status: "success" });
+        }
+      });
+    } else {
+      sendResponse({ status: "error", message: "Could not identify current tab" });
+    }
+    return true; // 保持消息通道开放
+  }
 });
 
 /**
@@ -333,23 +368,44 @@ function isRestrictedUrl(url) {
 function showNotificationFallback() {
   console.log("Showing notification fallback");
   
-  // 如果支持通知API，显示通知
-  if (chrome.notifications) {
-    chrome.notifications.create({
-      type: 'basic',
-      iconUrl: 'icons/icon48.png',
-      title: '智能书签扩展',
-      message: '当前页面不支持书签管理器。请在普通网页中使用此功能。'
-    });
-  }
-  
-  // 或者打开一个新标签页
+  // 直接打开新标签页，避免通知图标问题
   chrome.tabs.create({
     url: chrome.runtime.getURL('fallback.html'),
     active: true
-  }).catch(() => {
-    console.log("Could not open fallback page");
+  }).then(() => {
+    console.log("Fallback page opened successfully");
+  }).catch((error) => {
+    console.error("Could not open fallback page:", error);
+    
+    // 如果连fallback页面也打不开，尝试简单的通知
+    trySimpleNotification();
   });
+}
+
+/**
+ * 尝试创建简单通知（作为最后的备用方案）
+ */
+function trySimpleNotification() {
+  if (chrome.notifications) {
+    // 创建一个base64编码的简单图标作为备用
+    const simpleIcon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+    
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: simpleIcon,
+      title: '智能书签扩展',
+      message: '当前页面不支持书签管理器。请在普通网页中使用此功能。'
+    }, function(notificationId) {
+      if (chrome.runtime.lastError) {
+        console.error('Simple notification also failed:', chrome.runtime.lastError.message);
+        console.log('Notification system appears to be unavailable. User will need to manually navigate to a regular webpage.');
+      } else {
+        console.log('Simple notification created successfully:', notificationId);
+      }
+    });
+  } else {
+    console.log('Notifications API not available');
+  }
 }
 
 /**

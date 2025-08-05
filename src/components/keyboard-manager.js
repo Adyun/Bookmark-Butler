@@ -214,9 +214,14 @@ KeyboardManager.prototype.updateSelection = function () {
   if (this.selectedIndex >= 0 && this.selectedIndex < this.currentItems.length) {
     var selectedItem = this.currentItems[this.selectedIndex];
     
-    // 使用虚拟滚动器滚动到选中项
-    if (this.virtualScroller) {
-      this.virtualScroller.scrollToIndex(this.selectedIndex);
+    // 使用虚拟滚动器滚动到选中项，添加边界检查
+    if (this.virtualScroller && selectedItem) {
+      // 确保索引在虚拟滚动器的有效范围内
+      if (this.selectedIndex < this.virtualScroller.totalItems) {
+        this.virtualScroller.scrollToIndex(this.selectedIndex);
+      } else {
+        console.warn('Selected index out of virtual scroller range:', this.selectedIndex, 'total:', this.virtualScroller.totalItems);
+      }
     }
 
     // 延迟添加选中状态，确保虚拟滚动器已渲染且没有其他选中项
@@ -337,10 +342,20 @@ KeyboardManager.prototype.getSelectedIndex = function () {
  * @param {number} index - 选中索引
  */
 KeyboardManager.prototype.setSelectedIndex = function (index) {
+  // 添加额外的验证和调试信息
+  if (typeof index !== 'number') {
+    console.warn('Invalid index type:', typeof index, index);
+    this.selectedIndex = -1;
+    return;
+  }
+  
   if (index >= 0 && index < this.currentItems.length) {
     this.selectedIndex = index;
     this.updateSelection();
+  } else if (index === -1) {
+    this.selectedIndex = -1;
   } else {
+    console.warn('Index out of range:', index, 'total items:', this.currentItems.length);
     this.selectedIndex = -1;
   }
 };

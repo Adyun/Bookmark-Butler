@@ -104,10 +104,67 @@ SearchIndex.prototype.indexBookmark = function (bookmark) {
  * @returns {Array} 分词结果
  */
 SearchIndex.prototype.tokenize = function (text) {
-  // 简单的分词：按空格和标点符号分割
-  return text.split(/[\s\-_\.\/:]+/).filter(function (word) {
+  var words = [];
+  var addedWords = {}; // 用于去重
+  
+  // 按空格和标点符号分割
+  var basicWords = text.split(/[\s\-_\.\/:]+/).filter(function (word) {
     return word.length > 0;
   });
+  
+  // 添加词到结果中（去重）
+  var addWord = function(word) {
+    if (!addedWords[word] && word.length > 0) {
+      words.push(word);
+      addedWords[word] = true;
+    }
+  };
+  
+  // 对每个基础词进行进一步处理
+  for (var i = 0; i < basicWords.length; i++) {
+    var word = basicWords[i];
+    addWord(word); // 保留原始词
+    
+    // 对于长度大于1的词，生成有意义的子字符串（用于中文支持）
+    if (word.length > 1) {
+      // 对于较短的词（长度<=6），生成所有子字符串
+      if (word.length <= 6) {
+        // 生成长度为1到word.length-1的子字符串
+        for (var len = 1; len < word.length; len++) {
+          for (var start = 0; start <= word.length - len; start++) {
+            var substring = word.substring(start, start + len);
+            addWord(substring);
+          }
+        }
+      } else {
+        // 对于较长的词，只生成前缀、后缀和一些有意义的子字符串
+        
+        // 生成前缀（长度2-4）
+        for (var prefixLen = 2; prefixLen <= Math.min(4, word.length); prefixLen++) {
+          addWord(word.substring(0, prefixLen));
+        }
+        
+        // 生成后缀（长度2-4）
+        for (var suffixLen = 2; suffixLen <= Math.min(4, word.length); suffixLen++) {
+          addWord(word.substring(word.length - suffixLen));
+        }
+        
+        // 生成中间的子字符串（长度2-3）
+        for (var midLen = 2; midLen <= 3 && midLen < word.length; midLen++) {
+          for (var midStart = 1; midStart <= word.length - midLen - 1; midStart++) {
+            addWord(word.substring(midStart, midStart + midLen));
+          }
+        }
+        
+        // 生成单字符
+        for (var j = 0; j < word.length; j++) {
+          addWord(word.charAt(j));
+        }
+      }
+    }
+  }
+  
+  return words;
 };
 
 /**
@@ -157,16 +214,22 @@ SearchIndex.prototype.search = function (query, type) {
 
   // 转换为数组并计算分数
   var finalResults = Array.from(results.values());
+  var filteredResults = [];
+  
   for (var m = 0; m < finalResults.length; m++) {
     finalResults[m].score = this.calculateScore(finalResults[m], query);
+    // 只包含有匹配分数的项目
+    if (finalResults[m].score > 0) {
+      filteredResults.push(finalResults[m]);
+    }
   }
 
   // 按分数排序
-  finalResults.sort(function (a, b) {
+  filteredResults.sort(function (a, b) {
     return b.score - a.score;
   });
 
-  return finalResults;
+  return filteredResults;
 };
 
 /**
@@ -317,24 +380,23 @@ SearchEngine.prototype.search = function (query, folders) {
     return folders;
   }
 
+  var indexedResults = [];
+  var fallbackResults = [];
+  
   // 如果索引已构建，使用索引搜索
   if (this.indexBuilt) {
-    var indexedResults = this.folderIndex.search(query, 'folders');
-    if (indexedResults.length > 0) {
-      return indexedResults;
-    }
+    indexedResults = this.folderIndex.search(query, 'folders');
   }
 
-  // 回退到原始搜索方法
-  return this.fallbackSearch(query, folders, 'folders');
+  // 总是执行回退搜索以确保完整性，特别是对中文搜索
+  fallbackResults = this.fallbackSearch(query, folders, 'folders');
+  
+  // 合并结果并去重
+  var combinedResults = this.combineSearchResults(indexedResults, fallbackResults);
+  
+  return combinedResults;
 };
 
-/**
- * 搜索书签
- * @param {string} query - 搜索关键词
- * @param {Array} bookmarks - 待搜索书签列表
- * @returns {Array} 匹配的书签，按相关性排序
- */
 /**
  * 搜索书签
  * @param {string} query - 搜索关键词
@@ -350,16 +412,21 @@ SearchEngine.prototype.searchBookmarks = function (query, bookmarks) {
     return bookmarks;
   }
 
+  var indexedResults = [];
+  var fallbackResults = [];
+  
   // 如果索引已构建，使用索引搜索
   if (this.indexBuilt) {
-    var indexedResults = this.bookmarkIndex.search(query, 'bookmarks');
-    if (indexedResults.length > 0) {
-      return indexedResults;
-    }
+    indexedResults = this.bookmarkIndex.search(query, 'bookmarks');
   }
 
-  // 回退到原始搜索方法
-  return this.fallbackSearch(query, bookmarks, 'bookmarks');
+  // 总是执行回退搜索以确保完整性，特别是对中文搜索
+  fallbackResults = this.fallbackSearch(query, bookmarks, 'bookmarks');
+  
+  // 合并结果并去重
+  var combinedResults = this.combineSearchResults(indexedResults, fallbackResults);
+  
+  return combinedResults;
 };
 
 /**
@@ -398,7 +465,10 @@ SearchEngine.prototype.fallbackSearch = function (query, items, type) {
       itemWithScore.parentId = item.parentId;
     }
 
-    itemsWithScore.push(itemWithScore);
+    // 只添加有匹配分数的项目（分数大于0）
+    if (score > 0) {
+      itemsWithScore.push(itemWithScore);
+    }
   }
 
   // 按分数降序排序
@@ -418,6 +488,47 @@ SearchEngine.prototype.fallbackSearch = function (query, items, type) {
 SearchEngine.prototype.calculateScore = function (folderName, query) {
   // 使用全局帮助函数
   return window.SMART_BOOKMARK_HELPERS.calculateSearchScore(folderName, query);
+};
+
+/**
+ * 合并搜索结果并去重
+ * @param {Array} indexedResults - 索引搜索结果
+ * @param {Array} fallbackResults - 回退搜索结果
+ * @returns {Array} 合并后的搜索结果
+ */
+SearchEngine.prototype.combineSearchResults = function (indexedResults, fallbackResults) {
+  var resultsMap = new Map();
+  var results = [];
+  
+  // 添加索引搜索结果（优先级更高）
+  for (var i = 0; i < indexedResults.length; i++) {
+    var item = indexedResults[i];
+    if (item.id) {
+      resultsMap.set(item.id, item);
+    }
+  }
+  
+  // 添加回退搜索结果，但只添加不重复的项目
+  for (var j = 0; j < fallbackResults.length; j++) {
+    var item = fallbackResults[j];
+    if (item.id && !resultsMap.has(item.id)) {
+      resultsMap.set(item.id, item);
+    } else if (item.id && resultsMap.has(item.id)) {
+      // 如果项目已存在，选择分数更高的
+      var existingItem = resultsMap.get(item.id);
+      if (item.score > existingItem.score) {
+        resultsMap.set(item.id, item);
+      }
+    }
+  }
+  
+  // 转换为数组并按分数排序
+  results = Array.from(resultsMap.values());
+  results.sort(function (a, b) {
+    return b.score - a.score;
+  });
+  
+  return results;
 };
 
 /**

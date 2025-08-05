@@ -23,6 +23,8 @@ function ModalManager() {
   this.lastUserInteraction = Date.now();
   this.isUserActive = false;
 
+
+
   this.init();
 }
 
@@ -59,13 +61,13 @@ ModalManager.prototype.initializeComponents = function () {
   console.log('Initializing keyboard manager...');
   this.keyboardManager.init();
   this.keyboardManager.setCallbacks({
-    onConfirm: function() { self.handleConfirm(); },
-    onModeToggle: function() { self.toggleMode(); },
-    onModalClose: function() { self.hide(); }
+    onConfirm: function () { self.handleConfirm(); },
+    onModeToggle: function () { self.toggleMode(); },
+    onModalClose: function () { self.hide(); }
   });
 
   // 监听布局重新计算事件
-  window.addEventListener('layout-recalculated', function() {
+  window.addEventListener('layout-recalculated', function () {
     self.handleLayoutRecalculated();
   });
 };
@@ -79,7 +81,7 @@ ModalManager.prototype.bindEvents = function () {
   console.log('ModalManager.bindEvents called');
 
   // 使用UI管理器的事件监听器管理
-  var addEventListenerFn = function(element, event, handler) {
+  var addEventListenerFn = function (element, event, handler) {
     return self.uiManager.addEventListener(element, event, handler);
   };
 
@@ -103,7 +105,7 @@ ModalManager.prototype.bindEvents = function () {
     // 点击modal外部关闭（但不包括modal内部）
     if (modal.classList.contains(window.SMART_BOOKMARK_CONSTANTS.MODAL_ACTIVE_CLASS)) {
       var backdrop = document.querySelector('.smart-bookmark-modal-backdrop');
-      
+
       // 如果点击的是backdrop（背景）或者点击在modal外部，则关闭
       if (e.target === backdrop || (backdrop && backdrop.contains(e.target) && !modal.contains(e.target))) {
         self.hide();
@@ -183,7 +185,7 @@ ModalManager.prototype.debounce = function (func, delay) {
 ModalManager.prototype.updateUserActivity = function () {
   this.lastUserInteraction = Date.now();
   this.isUserActive = true;
-  
+
   // 如果用户持续不活动5秒，标记为非活跃
   var self = this;
   setTimeout(function () {
@@ -201,10 +203,10 @@ ModalManager.prototype.show = function (pageInfo) {
   var startTime = performance.now();
 
   this.currentPageInfo = pageInfo;
-  
+
   // 显示Modal
   this.uiManager.showModal(pageInfo);
-  
+
   // 应用主题
   this.themeManager.applyDarkMode();
 
@@ -269,7 +271,7 @@ ModalManager.prototype.loadFolders = function () {
       if (!sortedFolders) return;
 
       self.filteredFolders = sortedFolders;
-      
+
       // 更新键盘管理器的当前项目
       self.keyboardManager.setCurrentItems(self.filteredFolders);
 
@@ -367,7 +369,7 @@ ModalManager.prototype.bindPermissionRequestButton = function (type) {
   var self = this;
   var buttonId = 'smart-bookmark-request-permission-' + type;
   var permissionBtn = document.getElementById(buttonId);
-  
+
   if (permissionBtn) {
     this.uiManager.addEventListener(permissionBtn, 'click', function () {
       self.handlePermissionRequest();
@@ -408,7 +410,9 @@ ModalManager.prototype.handlePermissionRequest = function () {
 ModalManager.prototype.handleSearch = function (query) {
   var startTime = performance.now();
   var self = this;
-  
+
+
+
   // 记录当前高度
   var modal = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.MODAL_ID);
   var currentHeight = null;
@@ -417,7 +421,7 @@ ModalManager.prototype.handleSearch = function (query) {
     modal.style.height = currentHeight + 'px'; // 设置当前高度
     modal.classList.add('content-changing');
   }
-  
+
   // 执行搜索
   if (this.uiManager.currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH) {
     this.filteredBookmarks = this.searchEngine.searchBookmarks(query, this.allBookmarks);
@@ -430,21 +434,21 @@ ModalManager.prototype.handleSearch = function (query) {
   }
 
   // 计算新高度并应用动画
-  setTimeout(function() {
+  setTimeout(function () {
     if (modal) {
       // 临时设置为auto来测量新高度
       modal.style.height = 'auto';
       var newHeight = modal.offsetHeight;
-      
+
       // 恢复原高度触发重排
       modal.style.height = currentHeight + 'px';
       modal.offsetHeight; // 强制重排
-      
+
       // 设置新高度触发动画
       modal.style.height = newHeight + 'px';
-      
+
       // 动画完成后清理
-      setTimeout(function() {
+      setTimeout(function () {
         if (modal) {
           modal.classList.remove('content-changing');
         }
@@ -452,8 +456,22 @@ ModalManager.prototype.handleSearch = function (query) {
     }
   }, 50);
 
-  // 重置选中索引
-  this.keyboardManager.setSelectedIndex(-1);
+  // 延迟设置选中索引，确保虚拟滚动器完全渲染后再进行选择
+  setTimeout(function () {
+    if (self.uiManager.currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH) {
+      if (self.filteredBookmarks.length > 0) {
+        self.keyboardManager.setSelectedIndex(0);
+      } else {
+        self.keyboardManager.setSelectedIndex(-1);
+      }
+    } else {
+      if (self.filteredFolders.length > 0) {
+        self.keyboardManager.setSelectedIndex(0);
+      } else {
+        self.keyboardManager.setSelectedIndex(-1);
+      }
+    }
+  }, 100); // 100ms延迟，确保虚拟滚动器完全准备好
 
   var endTime = performance.now();
   console.log('Search took ' + (endTime - startTime) + ' milliseconds');
@@ -492,9 +510,6 @@ ModalManager.prototype.updateFolderList = function () {
 ModalManager.prototype.renderFolderListWithVirtualScroll = function (folderList, hasSearchQuery) {
   var self = this;
 
-  // 添加列表进入动画
-  folderList.style.animation = 'listEnter 0.3s ease-out';
-
   // 销毁旧的虚拟滚动器
   if (this.folderVirtualScroller) {
     this.folderVirtualScroller.destroy();
@@ -506,28 +521,7 @@ ModalManager.prototype.renderFolderListWithVirtualScroll = function (folderList,
     this.itemHeight,
     this.filteredFolders.length,
     function (folder, index) {
-      var item = self.renderFolderItem(folder, index, hasSearchQuery);
-      // 为搜索结果添加依次从右到左淡入动画
-      if (item && hasSearchQuery) {
-        item.style.opacity = '0';
-        item.style.transform = 'translateX(30px)';
-        
-        // 依次延迟显示，创造从右到左的效果
-        setTimeout(function() {
-          if (item) {
-            item.classList.add('item-fade-in');
-            // 动画完成后清理样式
-            setTimeout(function() {
-              if (item) {
-                item.classList.remove('item-fade-in');
-                item.style.opacity = '';
-                item.style.transform = '';
-              }
-            }, 400);
-          }
-        }, index * 50); // 每个项目延迟50ms
-      }
-      return item;
+      return self.renderFolderItem(folder, index, hasSearchQuery);
     }
   );
 
@@ -609,9 +603,6 @@ ModalManager.prototype.updateBookmarkList = function () {
 ModalManager.prototype.renderBookmarkListWithVirtualScroll = function (bookmarkList, hasSearchQuery) {
   var self = this;
 
-  // 添加列表进入动画
-  bookmarkList.style.animation = 'listEnter 0.3s ease-out';
-
   // 销毁旧的虚拟滚动器
   if (this.bookmarkVirtualScroller) {
     this.bookmarkVirtualScroller.destroy();
@@ -623,28 +614,7 @@ ModalManager.prototype.renderBookmarkListWithVirtualScroll = function (bookmarkL
     this.itemHeight,
     this.filteredBookmarks.length,
     function (bookmark, index) {
-      var item = self.renderBookmarkItem(bookmark, index, hasSearchQuery);
-      // 为搜索结果添加依次从右到左淡入动画
-      if (item && hasSearchQuery) {
-        item.style.opacity = '0';
-        item.style.transform = 'translateX(30px)';
-        
-        // 依次延迟显示，创造从右到左的效果
-        setTimeout(function() {
-          if (item) {
-            item.classList.add('item-fade-in');
-            // 动画完成后清理样式
-            setTimeout(function() {
-              if (item) {
-                item.classList.remove('item-fade-in');
-                item.style.opacity = '';
-                item.style.transform = '';
-              }
-            }, 400);
-          }
-        }, index * 50); // 每个项目延迟50ms
-      }
-      return item;
+      return self.renderBookmarkItem(bookmark, index, hasSearchQuery);
     }
   );
 
@@ -680,7 +650,7 @@ ModalManager.prototype.renderBookmarkItem = function (bookmark, index, hasSearch
   item.className = 'smart-bookmark-bookmark-item ' + matchClass;
   item.setAttribute('data-bookmark-id', bookmark.id);
   item.setAttribute('data-bookmark-url', bookmark.url);
-  
+
   // 重构为上下布局 - 参考文件夹模式的完美样式
   item.innerHTML =
     '<div class="smart-bookmark-bookmark-content">' +
@@ -725,10 +695,10 @@ ModalManager.prototype.formatUrlForDisplay = function (url) {
   try {
     // 移除协议前缀（http://、https://）
     var displayUrl = url.replace(/^https?:\/\//, '');
-    
+
     // 移除www前缀（可选）
     displayUrl = displayUrl.replace(/^www\./, '');
-    
+
     // 如果URL太长，确保末尾有足够空间显示省略号
     // CSS会处理实际的截断和省略号显示
     return displayUrl;

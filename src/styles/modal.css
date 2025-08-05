@@ -324,23 +324,6 @@
   z-index: 10;
 }
 
-/* 项目动画状态 - 简化版本，从右到左依次淡入 */
-.smart-bookmark-folder-item.item-fade-in,
-.smart-bookmark-bookmark-item.item-fade-in {
-  animation: itemSlideIn 0.4s ease-out forwards;
-}
-
-@keyframes itemSlideIn {
-  0% {
-    opacity: 0;
-    transform: translateX(30px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
 /* 列表项目默认状态 */
 .smart-bookmark-folder-item,
 .smart-bookmark-bookmark-item {
@@ -348,20 +331,10 @@
   transform: translateX(0);
 }
 
-/* 列表进入动画 - 简化版本 */
-@keyframes listEnter {
-  0% {
-    opacity: 0;
-  }
-  100% {
-    opacity: 1;
-  }
-}
-
-/* 应用列表进入动画 */
+/* 列表样式 */
 .smart-bookmark-folder-list,
 .smart-bookmark-bookmark-list {
-  animation: listEnter 0.3s ease-out;
+  /* 基础列表样式 */
 }
 
 /* 内容切换动画 - 简化版本 */
