@@ -34,20 +34,20 @@ UIManager.prototype.createModal = function () {
     
     // 语言设置按钮和下拉
     '<div class="smart-bookmark-control-group">' +
-    '<button id="smart-bookmark-language-toggle" class="smart-bookmark-control-toggle" title="语言设置">🌐</button>' +
+    '<button id="smart-bookmark-language-toggle" class="smart-bookmark-control-toggle" title="语言设置">🌏</button>' +
     '<div id="smart-bookmark-language-dropdown" class="smart-bookmark-control-dropdown">' +
-    '<div class="smart-bookmark-control-option" data-language="zh">🇨🇳 中文</div>' +
-    '<div class="smart-bookmark-control-option" data-language="en">🇺🇸 English</div>' +
+    '<div class="smart-bookmark-control-option" data-language="zh"><span class="smart-bookmark-option-icon">🇨🇳</span>中文</div>' +
+    '<div class="smart-bookmark-control-option" data-language="en"><span class="smart-bookmark-option-icon">🇺🇸</span>English</div>' +
     '</div>' +
     '</div>' +
     
     // 深浅色模式按钮和下拉
     '<div class="smart-bookmark-control-group">' +
-    '<button id="smart-bookmark-mode-toggle" class="smart-bookmark-control-toggle" title="深浅色模式">🌙</button>' +
+    '<button id="smart-bookmark-mode-toggle" class="smart-bookmark-control-toggle" title="深浅色模式">💡</button>' +
     '<div id="smart-bookmark-mode-dropdown" class="smart-bookmark-control-dropdown">' +
-    '<div class="smart-bookmark-control-option" data-mode="auto">跟随系统</div>' +
-    '<div class="smart-bookmark-control-option" data-mode="light">浅色模式</div>' +
-    '<div class="smart-bookmark-control-option" data-mode="dark">深色模式</div>' +
+    '<div class="smart-bookmark-control-option" data-mode="auto"><span class="smart-bookmark-option-icon">🔄</span>跟随系统</div>' +
+    '<div class="smart-bookmark-control-option" data-mode="light"><span class="smart-bookmark-option-icon">☀️</span>浅色模式</div>' +
+    '<div class="smart-bookmark-control-option" data-mode="dark"><span class="smart-bookmark-option-icon">🌙</span>深色模式</div>' +
     '</div>' +
     '</div>' +
     
@@ -55,11 +55,11 @@ UIManager.prototype.createModal = function () {
     '<div class="smart-bookmark-control-group">' +
     '<button id="smart-bookmark-theme-toggle" class="smart-bookmark-control-toggle" title="主题颜色">🎨</button>' +
     '<div id="smart-bookmark-theme-dropdown" class="smart-bookmark-control-dropdown">' +
-    '<div class="smart-bookmark-control-option" data-theme="default">🔵 默认蓝色</div>' +
-    '<div class="smart-bookmark-control-option" data-theme="red">🔴 经典红色</div>' +
-    '<div class="smart-bookmark-control-option" data-theme="green">🟢 清新绿色</div>' +
-    '<div class="smart-bookmark-control-option" data-theme="pink">🌸 温馨粉色</div>' +
-    '<div class="smart-bookmark-control-option" data-theme="purple">🟣 优雅紫色</div>' +
+    '<div class="smart-bookmark-control-option" data-theme="default"><span class="smart-bookmark-option-icon">💙</span>默认蓝色</div>' +
+    '<div class="smart-bookmark-control-option" data-theme="red"><span class="smart-bookmark-option-icon">❤️</span>经典红色</div>' +
+    '<div class="smart-bookmark-control-option" data-theme="green"><span class="smart-bookmark-option-icon">💚</span>清新绿色</div>' +
+    '<div class="smart-bookmark-control-option" data-theme="pink"><span class="smart-bookmark-option-icon">🩷</span>温馨粉色</div>' +
+    '<div class="smart-bookmark-control-option" data-theme="purple"><span class="smart-bookmark-option-icon">💜</span>优雅紫色</div>' +
     '</div>' +
     '</div>' +
     

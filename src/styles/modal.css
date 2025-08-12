@@ -736,7 +736,7 @@
 .smart-bookmark-control-toggle {
   background: transparent;
   border: none;
-  font-size: 15px;
+  font-size: 16px;
   cursor: pointer;
   padding: 8px;
   border-radius: 6px;
@@ -748,6 +748,7 @@
   min-width: 36px;
   height: 36px;
   position: relative;
+  line-height: 1;
 }
 
 .smart-bookmark-control-toggle:hover {
@@ -797,12 +798,24 @@
   visibility: visible !important;
 }
 
+/* Option Icon Styling */
+.smart-bookmark-option-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  font-size: 14px;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
 /* Control Options - shadcn风格统一样式 */
 .smart-bookmark-control-option,
 .smart-bookmark-dark-mode-option {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0px;
   padding: 8px 12px;
   cursor: pointer;
   border-radius: 6px;
@@ -838,8 +851,10 @@
 .smart-bookmark-dark-mode-option.active::after {
   content: "✓";
   margin-left: auto;
-  font-size: 12px;
-  opacity: 0.8;
+  font-size: 13px;
+  opacity: 0.9;
+  font-weight: 600;
+  color: var(--sb-ring);
 }
 
 /* Dropdown Separator - shadcn风格 */
@@ -869,9 +884,13 @@
   font-weight: 400;
 }
 
-/* 改进emoji和文字的间距 */
+/* 主题选项的特殊样式 */
 .smart-bookmark-control-option[data-theme] {
-  gap: 10px;
+  gap: 0px;
+}
+
+.smart-bookmark-control-option[data-theme] .smart-bookmark-option-icon {
+  margin-right: 10px;
 }
 
 /* 深色模式下的特殊样式 */

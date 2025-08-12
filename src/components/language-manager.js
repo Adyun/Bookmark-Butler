@@ -40,11 +40,11 @@ function LanguageManager() {
       followSystem: '跟随系统',
       lightMode: '浅色模式',
       darkMode: '深色模式',
-      defaultBlue: '🔵 默认蓝色',
-      classicRed: '🔴 经典红色',
-      freshGreen: '🟢 清新绿色',
-      warmPink: '🌸 温馨粉色',
-      elegantPurple: '🟣 优雅紫色',
+      defaultBlue: '默认蓝色',
+      classicRed: '经典红色',
+      freshGreen: '清新绿色',
+      warmPink: '温馨粉色',
+      elegantPurple: '优雅紫色',
       
       // 权限相关
       permissionTitle: '需要书签权限',
@@ -246,12 +246,22 @@ LanguageManager.prototype.updateThemeDropdown = function () {
   var modeOptions = document.querySelectorAll('[data-mode]');
   modeOptions.forEach(function (option) {
     var mode = option.getAttribute('data-mode');
+    var iconHtml = '';
+    var text = '';
+    
     if (mode === 'auto') {
-      option.textContent = this.t('followSystem');
+      iconHtml = '<span class="smart-bookmark-option-icon">🔄</span>';
+      text = this.t('followSystem');
     } else if (mode === 'light') {
-      option.textContent = this.t('lightMode');
+      iconHtml = '<span class="smart-bookmark-option-icon">☀️</span>';
+      text = this.t('lightMode');
     } else if (mode === 'dark') {
-      option.textContent = this.t('darkMode');
+      iconHtml = '<span class="smart-bookmark-option-icon">🌙</span>';
+      text = this.t('darkMode');
+    }
+    
+    if (iconHtml && text) {
+      option.innerHTML = iconHtml + text;
     }
   }.bind(this));
   
@@ -259,16 +269,48 @@ LanguageManager.prototype.updateThemeDropdown = function () {
   var themeOptions = document.querySelectorAll('[data-theme]');
   themeOptions.forEach(function (option) {
     var theme = option.getAttribute('data-theme');
+    var iconHtml = '';
+    var text = '';
+    
     if (theme === 'default') {
-      option.textContent = this.t('defaultBlue');
+      iconHtml = '<span class="smart-bookmark-option-icon">💙</span>';
+      text = this.t('defaultBlue');
     } else if (theme === 'red') {
-      option.textContent = this.t('classicRed');
+      iconHtml = '<span class="smart-bookmark-option-icon">❤️</span>';
+      text = this.t('classicRed');
     } else if (theme === 'green') {
-      option.textContent = this.t('freshGreen');
+      iconHtml = '<span class="smart-bookmark-option-icon">💚</span>';
+      text = this.t('freshGreen');
     } else if (theme === 'pink') {
-      option.textContent = this.t('warmPink');
+      iconHtml = '<span class="smart-bookmark-option-icon">🩷</span>';
+      text = this.t('warmPink');
     } else if (theme === 'purple') {
-      option.textContent = this.t('elegantPurple');
+      iconHtml = '<span class="smart-bookmark-option-icon">💜</span>';
+      text = this.t('elegantPurple');
+    }
+    
+    if (iconHtml && text) {
+      option.innerHTML = iconHtml + text;
+    }
+  }.bind(this));
+  
+  // 更新语言选项
+  var languageOptions = document.querySelectorAll('[data-language]');
+  languageOptions.forEach(function (option) {
+    var language = option.getAttribute('data-language');
+    var iconHtml = '';
+    var text = '';
+    
+    if (language === 'zh') {
+      iconHtml = '<span class="smart-bookmark-option-icon">🇨🇳</span>';
+      text = '中文';
+    } else if (language === 'en') {
+      iconHtml = '<span class="smart-bookmark-option-icon">🇺🇸</span>';
+      text = 'English';
+    }
+    
+    if (iconHtml && text) {
+      option.innerHTML = iconHtml + text;
     }
   }.bind(this));
   
@@ -280,27 +322,43 @@ LanguageManager.prototype.updateThemeDropdown = function () {
       var mode = option.getAttribute('data-mode');
       var theme = option.getAttribute('data-theme');
       var language = option.getAttribute('data-language');
+      var iconHtml = '';
+      var text = '';
       
       if (mode === 'auto') {
-        option.textContent = this.t('followSystem');
+        iconHtml = '<span class="smart-bookmark-option-icon">🔄</span>';
+        text = this.t('followSystem');
       } else if (mode === 'light') {
-        option.textContent = this.t('lightMode');
+        iconHtml = '<span class="smart-bookmark-option-icon">☀️</span>';
+        text = this.t('lightMode');
       } else if (mode === 'dark') {
-        option.textContent = this.t('darkMode');
+        iconHtml = '<span class="smart-bookmark-option-icon">🌙</span>';
+        text = this.t('darkMode');
       } else if (theme === 'default') {
-        option.textContent = this.t('defaultBlue');
+        iconHtml = '<span class="smart-bookmark-option-icon">💙</span>';
+        text = this.t('defaultBlue');
       } else if (theme === 'red') {
-        option.textContent = this.t('classicRed');
+        iconHtml = '<span class="smart-bookmark-option-icon">❤️</span>';
+        text = this.t('classicRed');
       } else if (theme === 'green') {
-        option.textContent = this.t('freshGreen');
+        iconHtml = '<span class="smart-bookmark-option-icon">💚</span>';
+        text = this.t('freshGreen');
       } else if (theme === 'pink') {
-        option.textContent = this.t('warmPink');
+        iconHtml = '<span class="smart-bookmark-option-icon">🩷</span>';
+        text = this.t('warmPink');
       } else if (theme === 'purple') {
-        option.textContent = this.t('elegantPurple');
+        iconHtml = '<span class="smart-bookmark-option-icon">💜</span>';
+        text = this.t('elegantPurple');
       } else if (language === 'zh') {
-        option.textContent = '🇨🇳 中文';
+        iconHtml = '<span class="smart-bookmark-option-icon">🇨🇳</span>';
+        text = '中文';
       } else if (language === 'en') {
-        option.textContent = '🇺🇸 English';
+        iconHtml = '<span class="smart-bookmark-option-icon">🇺🇸</span>';
+        text = 'English';
+      }
+      
+      if (iconHtml && text) {
+        option.innerHTML = iconHtml + text;
       }
     }.bind(this));
   }
