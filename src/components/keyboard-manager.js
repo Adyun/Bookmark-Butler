@@ -342,7 +342,6 @@ KeyboardManager.prototype.getSelectedIndex = function () {
  * @param {number} index - 选中索引
  */
 KeyboardManager.prototype.setSelectedIndex = function (index) {
-  // 添加额外的验证和调试信息
   if (typeof index !== 'number') {
     console.warn('Invalid index type:', typeof index, index);
     this.selectedIndex = -1;

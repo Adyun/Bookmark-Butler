@@ -30,11 +30,13 @@ UIManager.prototype.createModal = function () {
     '<div class="smart-bookmark-modal-header">' +
     '<h2 class="smart-bookmark-modal-title">搜索书签</h2>' +
     '<div class="smart-bookmark-header-controls">' +
+    '<div class="smart-bookmark-theme-toggle-container">' +
     '<button id="' + window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_TOGGLE_ID + '" class="smart-bookmark-dark-mode-toggle" title="深色模式设置">🌙</button>' +
     '<div id="smart-bookmark-dark-mode-dropdown" class="smart-bookmark-dark-mode-dropdown">' +
     '<div class="smart-bookmark-dark-mode-option" data-mode="auto">跟随系统</div>' +
     '<div class="smart-bookmark-dark-mode-option" data-mode="light">浅色模式</div>' +
     '<div class="smart-bookmark-dark-mode-option" data-mode="dark">深色模式</div>' +
+    '</div>' +
     '</div>' +
     '</div>' +
     '</div>' +

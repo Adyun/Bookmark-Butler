@@ -108,6 +108,13 @@ VirtualScroller.prototype.render = function () {
     return;
   }
 
+  // 记录当前选中项目的ID，用于重新渲染后恢复选中状态
+  var currentActiveItem = this.contentContainer.querySelector('.smart-bookmark-folder-item.active, .smart-bookmark-bookmark-item.active');
+  var activeItemId = null;
+  if (currentActiveItem) {
+    activeItemId = currentActiveItem.getAttribute('data-folder-id') || currentActiveItem.getAttribute('data-bookmark-id');
+  }
+
   // 清空内容容器
   this.contentContainer.innerHTML = '';
 
@@ -168,6 +175,15 @@ VirtualScroller.prototype.render = function () {
     this.hasMeasuredItemHeight = true;
     if (measuredMax && Math.abs(measuredMax - this.itemHeight) > 1) {
       this.setItemHeight(measuredMax);
+    }
+  }
+
+  // 恢复之前的选中状态（如果有的话）
+  if (activeItemId) {
+    var restoredItem = this.contentContainer.querySelector('[data-folder-id="' + activeItemId + '"], [data-bookmark-id="' + activeItemId + '"]');
+    if (restoredItem) {
+      restoredItem.classList.add('active');
+      console.log('Restored active state for item:', activeItemId);
     }
   }
 };

@@ -505,7 +505,7 @@ ModalManager.prototype.handleSearch = function (query) {
         self.keyboardManager.setSelectedIndex(-1);
       }
     }
-  }, 100); // 100ms延迟，确保虚拟滚动器完全准备好
+  }, 100); // 确保虚拟滚动器完全准备好
 
   var endTime = performance.now();
   console.log('Search took ' + (endTime - startTime) + ' milliseconds');
@@ -576,16 +576,8 @@ ModalManager.prototype.renderFolderListWithVirtualScroll = function (folderList,
 ModalManager.prototype.renderFolderItem = function (folder, index, hasSearchQuery) {
   if (!folder) return null;
 
+  // 移除匹配度样式，保持统一简约风格
   var matchClass = '';
-  if (hasSearchQuery && folder.score !== undefined) {
-    if (folder.score >= 0.8) {
-      matchClass = 'high-match';
-    } else if (folder.score >= 0.5) {
-      matchClass = 'medium-match';
-    } else if (folder.score > 0) {
-      matchClass = 'low-match';
-    }
-  }
 
   var item = document.createElement('div');
   item.className = 'smart-bookmark-folder-item ' + matchClass;
@@ -678,16 +670,8 @@ ModalManager.prototype.renderBookmarkListWithVirtualScroll = function (bookmarkL
 ModalManager.prototype.renderBookmarkItem = function (bookmark, index, hasSearchQuery) {
   if (!bookmark) return null;
 
+  // 移除匹配度样式，保持统一简约风格
   var matchClass = '';
-  if (hasSearchQuery && bookmark.score !== undefined) {
-    if (bookmark.score >= 0.8) {
-      matchClass = 'high-match';
-    } else if (bookmark.score >= 0.5) {
-      matchClass = 'medium-match';
-    } else if (bookmark.score > 0) {
-      matchClass = 'low-match';
-    }
-  }
 
   var item = document.createElement('div');
   item.className = 'smart-bookmark-bookmark-item ' + matchClass;
