@@ -16,6 +16,7 @@ function VirtualScroller(container, itemHeight, totalItems, renderItem) {
   this.scrollTop = 0;
   this.contentContainer = null;
   this.scrollHandler = null;
+  this.hasMeasuredItemHeight = false; // 是否已自动测量真实高度
 
   this.init();
 }
@@ -116,6 +117,7 @@ VirtualScroller.prototype.render = function () {
   this.contentContainer.style.height = totalHeight + 'px';
 
   // 渲染可见项目
+  var measuredMax = 0;
   for (var i = this.startIndex; i <= this.endIndex && i < this.items.length; i++) {
     var item = this.items[i];
     if (!item) continue;
@@ -130,11 +132,23 @@ VirtualScroller.prototype.render = function () {
       // 正确计算top位置：每个项目的位置 = (索引 * (项目高度 + 间距))
       itemElement.style.top = (i * (this.itemHeight + itemMarginBottom)) + 'px';
       itemElement.style.width = 'calc(100% - ' + itemMarginRight + 'px)';
-      itemElement.style.height = this.itemHeight + 'px'; // 使用完整高度
+      // 在未测量真实高度前，不强制设置高度，避免测量被干扰
+      if (this.hasMeasuredItemHeight) {
+        itemElement.style.height = this.itemHeight + 'px';
+      } else {
+        itemElement.style.height = '';
+      }
       itemElement.style.boxSizing = 'border-box';
       itemElement.style.left = '0';
       
+      // 追加到DOM
+      this.contentContainer.appendChild(itemElement);
 
+      // 首次渲染时，自动测量真实高度（取可见窗口中的最大值，处理不同类型项高度差异）
+      if (!this.hasMeasuredItemHeight) {
+        var measured = itemElement.offsetHeight;
+        if (measured > measuredMax) measuredMax = measured;
+      }
 
       // 确保项目有正确的ID属性，以便键盘导航时能够找到
       if (item.id) {
@@ -145,7 +159,15 @@ VirtualScroller.prototype.render = function () {
         }
       }
 
-      this.contentContainer.appendChild(itemElement);
+      // 已在上方 append
+    }
+  }
+
+  // 渲染后统一更新测量高度，避免只测到第一项过小的问题
+  if (!this.hasMeasuredItemHeight) {
+    this.hasMeasuredItemHeight = true;
+    if (measuredMax && Math.abs(measuredMax - this.itemHeight) > 1) {
+      this.setItemHeight(measuredMax);
     }
   }
 };
@@ -157,6 +179,12 @@ VirtualScroller.prototype.render = function () {
 VirtualScroller.prototype.updateData = function (items) {
   this.items = items || [];
   this.totalItems = this.items.length;
+  // 数据变化后允许再次自动测量高度
+  this.hasMeasuredItemHeight = false;
+  // 高度归一化：在搜索清空或返回初始状态时，重置到默认高度，避免因上次测量残留
+  if (this.totalItems === 0) {
+    this.itemHeight = this.itemHeight || 58;
+  }
   
   // 重新计算可见范围
   this.updateVisibleRange();
@@ -198,7 +226,7 @@ VirtualScroller.prototype.scrollToIndex = function (index) {
  * 获取当前第一个可见项目的索引
  */
 VirtualScroller.prototype.getFirstVisibleIndex = function () {
-  return Math.floor(this.container.scrollTop / this.itemHeight);
+  return Math.floor(this.container.scrollTop / (this.itemHeight + 8));
 };
 
 /**
@@ -206,7 +234,7 @@ VirtualScroller.prototype.getFirstVisibleIndex = function () {
  */
 VirtualScroller.prototype.getLastVisibleIndex = function () {
   var firstVisible = this.getFirstVisibleIndex();
-  var visibleCount = Math.ceil(this.containerHeight / this.itemHeight);
+  var visibleCount = Math.ceil(this.containerHeight / (this.itemHeight + 8));
   return Math.min(firstVisible + visibleCount - 1, this.totalItems - 1);
 };
 
@@ -217,6 +245,19 @@ VirtualScroller.prototype.forceUpdate = function () {
   this.updateContainerHeight();
   this.updateVisibleRange();
   this.render();
+};
+
+/**
+ * 外部更新项目高度并重算
+ * @param {number} newHeight
+ */
+VirtualScroller.prototype.setItemHeight = function (newHeight) {
+  if (typeof newHeight === 'number' && newHeight > 0) {
+    this.itemHeight = newHeight;
+    this.updateContainerHeight();
+    this.updateVisibleRange();
+    this.render();
+  }
 };
 
 /**

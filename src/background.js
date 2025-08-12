@@ -110,7 +110,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               id: node.id,
               title: node.title || '未命名文件夹',
               children: node.children || [],
-              bookmarkCount: bookmarkCount
+              bookmarkCount: bookmarkCount,
+              parentId: node.parentId
             });
           }
         }

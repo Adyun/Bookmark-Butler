@@ -11,6 +11,9 @@ function ModalManager() {
   this.filteredBookmarks = [];
   this.searchEngine = new window.SearchEngine();
   this.itemHeight = 58; // 每个项目的高度（像素）- 与CSS min-height保持一致（文件夹52px+书签56px的平均值）
+  
+  // 面包屑缓存，避免重复计算
+  this.breadcrumbCache = new Map();
 
   // 组件实例
   this.uiManager = new window.UIManager();
@@ -18,6 +21,7 @@ function ModalManager() {
   this.keyboardManager = new window.KeyboardManager();
   this.folderVirtualScroller = null;
   this.bookmarkVirtualScroller = null;
+  this.foldersPrefetched = false; // 首次进入为书签模式时的文件夹预取标记
 
   // 用户交互状态追踪
   this.lastUserInteraction = Date.now();
@@ -260,6 +264,9 @@ ModalManager.prototype.loadFolders = function () {
 
       self.allFolders = foldersWithActivity;
 
+      // 清理面包屑缓存，因为文件夹数据已更新
+      self.clearBreadcrumbCache();
+
       // 构建搜索索引
       if (self.searchEngine && typeof self.searchEngine.buildIndexes === 'function') {
         self.searchEngine.buildIndexes(self.allFolders, self.allBookmarks);
@@ -277,6 +284,8 @@ ModalManager.prototype.loadFolders = function () {
 
       // 更新显示
       self.updateFolderList();
+
+      // 进入模式不自动选中，只有搜索后才默认选中
 
       var endTime = performance.now();
       console.log('Load folders took ' + (endTime - startTime) + ' milliseconds');
@@ -296,7 +305,27 @@ ModalManager.prototype.loadBookmarks = function () {
 
   this.uiManager.showLoadingState('bookmarks');
 
-  window.SMART_BOOKMARK_API.getAllBookmarks()
+  // 首次进入如果还未加载过文件夹，为书签面包屑预取文件夹信息
+  var foldersPromise;
+  if (!this.foldersPrefetched && (!this.allFolders || this.allFolders.length === 0)) {
+    foldersPromise = window.SMART_BOOKMARK_API.getAllFolders()
+      .then(function (folders) {
+        if (folders && Array.isArray(folders)) {
+          self.allFolders = folders;
+          self.foldersPrefetched = true;
+          // 预取后清理面包屑缓存，保证后续生成正确
+          self.clearBreadcrumbCache();
+        }
+      })
+      .catch(function () { /* 忽略预取失败，不影响书签加载 */ });
+  } else {
+    foldersPromise = Promise.resolve();
+  }
+
+  Promise.resolve(foldersPromise)
+    .then(function () {
+      return window.SMART_BOOKMARK_API.getAllBookmarks();
+    })
     .then(function (bookmarks) {
       if (!bookmarks || !Array.isArray(bookmarks)) {
         throw new Error('Invalid bookmarks data received');
@@ -311,6 +340,9 @@ ModalManager.prototype.loadBookmarks = function () {
       }
 
       self.filteredBookmarks = self.allBookmarks;
+      
+      // 清理面包屑缓存，因为数据已更新
+      self.clearBreadcrumbCache();
 
       // 构建搜索索引
       if (self.searchEngine && typeof self.searchEngine.buildIndexes === 'function') {
@@ -322,6 +354,8 @@ ModalManager.prototype.loadBookmarks = function () {
 
       // 更新显示
       self.updateBookmarkList();
+
+      // 进入模式不自动选中，只有搜索后才默认选中
 
       var endTime = performance.now();
       console.log('Load bookmarks took ' + (endTime - startTime) + ' milliseconds');
@@ -556,10 +590,19 @@ ModalManager.prototype.renderFolderItem = function (folder, index, hasSearchQuer
   var item = document.createElement('div');
   item.className = 'smart-bookmark-folder-item ' + matchClass;
   item.setAttribute('data-folder-id', folder.id);
+  
+  // 生成面包屑
+  var breadcrumb = this.generateBreadcrumb(folder.parentId);
+  
   item.innerHTML =
     '<span class="smart-bookmark-folder-icon">📁</span>' +
+    '<div class="smart-bookmark-folder-content">' +
+    '<div class="smart-bookmark-folder-main">' +
     '<span class="smart-bookmark-folder-name">' + folder.title + '</span>' +
-    '<span class="smart-bookmark-folder-count">' + (folder.bookmarkCount || 0) + '</span>';
+    '<span class="smart-bookmark-folder-count">' + (folder.bookmarkCount || 0) + '</span>' +
+    '</div>' +
+    (breadcrumb ? breadcrumb : '') +
+    '</div>';
 
   // 绑定点击事件
   var self = this;
@@ -651,6 +694,9 @@ ModalManager.prototype.renderBookmarkItem = function (bookmark, index, hasSearch
   item.setAttribute('data-bookmark-id', bookmark.id);
   item.setAttribute('data-bookmark-url', bookmark.url);
 
+  // 生成面包屑
+  var breadcrumb = this.generateBreadcrumb(bookmark.parentId);
+  
   // 重构为上下布局 - 参考文件夹模式的完美样式
   item.innerHTML =
     '<div class="smart-bookmark-bookmark-content">' +
@@ -660,6 +706,7 @@ ModalManager.prototype.renderBookmarkItem = function (bookmark, index, hasSearch
     '<span class="smart-bookmark-bookmark-title">' + bookmark.title + '</span>' +
     '</div>' +
     '<div class="smart-bookmark-bookmark-url" title="' + bookmark.url + '">' + this.formatUrlForDisplay(bookmark.url) + '</div>' +
+    (breadcrumb ? breadcrumb : '') +
     '</div>' +
     '</div>';
 
@@ -866,6 +913,82 @@ ModalManager.prototype.isModalVisible = function () {
 };
 
 /**
+ * 生成面包屑路径
+ * @param {string} parentId - 父文件夹ID
+ * @returns {string} 面包屑HTML字符串
+ */
+ModalManager.prototype.generateBreadcrumb = function (parentId) {
+  if (!parentId || parentId === '0') {
+    return ''; // 根目录不显示面包屑
+  }
+  
+  // 检查缓存
+  if (this.breadcrumbCache.has(parentId)) {
+    return this.breadcrumbCache.get(parentId);
+  }
+  
+  var path = [];
+  var currentId = parentId;
+  var maxDepth = 10; // 防止无限循环
+  var depth = 0;
+  
+  // 向上追溯路径
+  while (currentId && currentId !== '0' && depth < maxDepth) {
+    var folder = this.findFolderById(currentId);
+    if (folder) {
+      path.unshift(folder.title);
+      currentId = folder.parentId;
+    } else {
+      break;
+    }
+    depth++;
+  }
+  
+  // 生成面包屑HTML：不再按层级数量截断，交给CSS根据容器宽度省略
+  var breadcrumbHtml = '';
+  if (path.length > 0) {
+    var displayPath = path.join(' › ');
+    breadcrumbHtml = '<div class="breadcrumb" title="' + displayPath + '">' + displayPath + '</div>';
+  }
+  
+  // 缓存结果
+  this.breadcrumbCache.set(parentId, breadcrumbHtml);
+  return breadcrumbHtml;
+};
+
+/**
+ * 根据ID查找文件夹
+ * @param {string} folderId - 文件夹ID
+ * @returns {Object|null} 文件夹对象
+ */
+ModalManager.prototype.findFolderById = function (folderId) {
+  // 优先从当前加载的文件夹列表中查找
+  for (var i = 0; i < this.allFolders.length; i++) {
+    if (this.allFolders[i].id === folderId) {
+      return this.allFolders[i];
+    }
+  }
+  
+  // 如果找不到，可能是根文件夹或系统文件夹
+  if (folderId === '1') {
+    return { id: '1', title: '书签栏', parentId: '0' };
+  } else if (folderId === '2') {
+    return { id: '2', title: '其他书签', parentId: '0' };
+  } else if (folderId === '3') {
+    return { id: '3', title: '移动设备书签', parentId: '0' };
+  }
+  
+  return null;
+};
+
+/**
+ * 清理面包屑缓存
+ */
+ModalManager.prototype.clearBreadcrumbCache = function () {
+  this.breadcrumbCache.clear();
+};
+
+/**
  * 清理Modal管理器
  */
 ModalManager.prototype.cleanup = function () {
@@ -907,6 +1030,9 @@ ModalManager.prototype.cleanup = function () {
   this.filteredFolders = [];
   this.allBookmarks = [];
   this.filteredBookmarks = [];
+  
+  // 清理面包屑缓存
+  this.clearBreadcrumbCache();
 };
 
 // 将类附加到全局window对象
