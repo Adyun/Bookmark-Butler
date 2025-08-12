@@ -6,6 +6,7 @@
  */
 function ThemeManager() {
   this.darkMode = window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_AUTO; // 当前深色模式设置
+  this.themeColor = 'default'; // 当前主题色设置
   this.systemThemeListener = null; // 系统主题变化监听器
   this.eventListeners = []; // 事件监听器列表
   this.isInitialized = false; // 初始化状态
@@ -29,6 +30,10 @@ ThemeManager.prototype.init = function () {
   console.log('Loading dark mode setting...');
   this.loadDarkModeSetting();
   console.log('Dark mode loaded:', this.darkMode);
+  
+  console.log('Loading theme color setting...');
+  this.loadThemeColorSetting();
+  console.log('Theme color loaded:', this.themeColor);
   
   // 设置系统主题监听
   console.log('Setting up system theme listener...');
@@ -74,6 +79,54 @@ ThemeManager.prototype.saveDarkModeSetting = function (mode) {
     
   } catch (e) {
     console.warn('Failed to save theme setting:', e);
+  }
+};
+
+/**
+ * 从存储中加载主题色设置
+ */
+ThemeManager.prototype.loadThemeColorSetting = function () {
+  try {
+    var themeColor = localStorage.getItem('smart-bookmark-theme-color');
+    this.themeColor = themeColor || 'default';
+  } catch (e) {
+    this.themeColor = 'default';
+  }
+};
+
+/**
+ * 保存主题色设置
+ * @param {string} themeColor - 主题色名称
+ */
+ThemeManager.prototype.saveThemeColorSetting = function (themeColor) {
+  try {
+    localStorage.setItem('smart-bookmark-theme-color', themeColor);
+    this.themeColor = themeColor;
+    
+    // 立即应用主题色
+    this.applyThemeColor();
+    
+    // 更新下拉菜单选中状态
+    this.updateDropdownSelection();
+    
+  } catch (e) {
+    console.warn('Failed to save theme color setting:', e);
+  }
+};
+
+/**
+ * 应用主题色
+ */
+ThemeManager.prototype.applyThemeColor = function () {
+  var modalElement = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.MODAL_ID);
+  if (!modalElement) return;
+
+  // 移除所有主题色类
+  modalElement.classList.remove('theme-red', 'theme-green', 'theme-pink', 'theme-purple');
+  
+  // 添加当前主题色类
+  if (this.themeColor !== 'default') {
+    modalElement.classList.add('theme-' + this.themeColor);
   }
 };
 
@@ -184,29 +237,48 @@ ThemeManager.prototype.applyDarkMode = function () {
   
   // 更新深色模式切换按钮图标
   this.updateDarkModeToggleIcon();
+  
+  // 应用主题色
+  this.applyThemeColor();
 };
 
 /**
- * 更新深色模式下拉菜单中的选中状态
+ * 更新下拉菜单中的选中状态（包括深色模式和主题色）
  */
-ThemeManager.prototype.updateDarkModeDropdownSelection = function () {
+ThemeManager.prototype.updateDropdownSelection = function () {
   var options = document.querySelectorAll('.smart-bookmark-dark-mode-option');
   var currentMode = this.darkMode;
+  var currentTheme = this.themeColor;
 
   for (var i = 0; i < options.length; i++) {
     var option = options[i];
     var optionMode = option.getAttribute('data-mode');
+    var optionTheme = option.getAttribute('data-theme');
     
     // 移除所有active类
     option.classList.remove('active');
 
-    // 添加对应的active类
-    if ((currentMode === window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_AUTO && optionMode === 'auto') ||
-        (currentMode === window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_LIGHT && optionMode === 'light') ||
-        (currentMode === window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_DARK && optionMode === 'dark')) {
+    // 检查深色模式选项
+    if (optionMode) {
+      if ((currentMode === window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_AUTO && optionMode === 'auto') ||
+          (currentMode === window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_LIGHT && optionMode === 'light') ||
+          (currentMode === window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_DARK && optionMode === 'dark')) {
+        option.classList.add('active');
+      }
+    }
+    
+    // 检查主题色选项
+    if (optionTheme && optionTheme === currentTheme) {
       option.classList.add('active');
     }
   }
+};
+
+/**
+ * 更新深色模式下拉菜单中的选中状态（向后兼容）
+ */
+ThemeManager.prototype.updateDarkModeDropdownSelection = function () {
+  this.updateDropdownSelection();
 };
 
 /**
@@ -337,6 +409,20 @@ ThemeManager.prototype.handleDarkModeSelect = function (mode) {
 };
 
 /**
+ * 处理主题色选择
+ * @param {string} themeColor - 主题色名称
+ */
+ThemeManager.prototype.handleThemeColorSelect = function (themeColor) {
+  this.saveThemeColorSetting(themeColor);
+
+  // 关闭下拉菜单
+  var dropdown = document.getElementById('smart-bookmark-dark-mode-dropdown');
+  if (dropdown) {
+    dropdown.classList.remove('show');
+  }
+};
+
+/**
  * 绑定主题相关的事件监听器 - 重写版本
  * @param {Function} addEventListenerFn - 添加事件监听器的函数
  */
@@ -413,11 +499,19 @@ ThemeManager.prototype.tryBindEvents = function (addEventListenerFn, retryCount)
       var option = options[i];
       var optionClickHandler = (function(opt) {
         return function (e) {
-          console.log('Option clicked:', opt.getAttribute('data-mode'));
           e.preventDefault();
           e.stopPropagation();
+          
           var mode = opt.getAttribute('data-mode');
-          self.handleDarkModeSelect(mode);
+          var theme = opt.getAttribute('data-theme');
+          
+          if (mode) {
+            console.log('Mode option clicked:', mode);
+            self.handleDarkModeSelect(mode);
+          } else if (theme) {
+            console.log('Theme option clicked:', theme);
+            self.handleThemeColorSelect(theme);
+          }
         };
       })(option);
       

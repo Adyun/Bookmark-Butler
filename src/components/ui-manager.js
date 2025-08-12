@@ -36,6 +36,12 @@ UIManager.prototype.createModal = function () {
     '<div class="smart-bookmark-dark-mode-option" data-mode="auto">跟随系统</div>' +
     '<div class="smart-bookmark-dark-mode-option" data-mode="light">浅色模式</div>' +
     '<div class="smart-bookmark-dark-mode-option" data-mode="dark">深色模式</div>' +
+    '<div class="smart-bookmark-dropdown-separator"></div>' +
+    '<div class="smart-bookmark-dark-mode-option" data-theme="default">🔵 默认蓝色</div>' +
+    '<div class="smart-bookmark-dark-mode-option" data-theme="red">🔴 经典红色</div>' +
+    '<div class="smart-bookmark-dark-mode-option" data-theme="green">🟢 清新绿色</div>' +
+    '<div class="smart-bookmark-dark-mode-option" data-theme="pink">🌸 温馨粉色</div>' +
+    '<div class="smart-bookmark-dark-mode-option" data-theme="purple">🟣 优雅紫色</div>' +
     '</div>' +
     '</div>' +
     '</div>' +

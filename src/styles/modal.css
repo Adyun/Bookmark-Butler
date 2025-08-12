@@ -17,6 +17,7 @@
   --sb-destructive: #ef4444;
   --sb-destructive-foreground: #fef2f2;
   --sb-ring: #3b82f6;
+  --sb-ring-light: rgba(59, 130, 246, 0.08);
   --sb-radius: 8px;
 }
 
@@ -36,6 +37,83 @@
   --sb-destructive: #ef4444;
   --sb-destructive-foreground: #1e293b;
   --sb-ring: #3b82f6;
+  --sb-ring-light: rgba(59, 130, 246, 0.15);
+}
+
+/* Red Theme */
+.theme-red {
+  --sb-ring: #dc2626;
+  --sb-ring-light: rgba(220, 38, 38, 0.08);
+  --sb-accent: #fef2f2;
+  --sb-accent-foreground: #991b1b;
+  --sb-primary: #dc2626;
+  --sb-primary-foreground: #ffffff;
+}
+
+.theme-red.dark-mode {
+  --sb-ring: #ef4444;
+  --sb-ring-light: rgba(239, 68, 68, 0.15);
+  --sb-accent: #7f1d1d;
+  --sb-accent-foreground: #fca5a5;
+  --sb-primary: #ef4444;
+  --sb-primary-foreground: #0f172a;
+}
+
+/* Green Theme */
+.theme-green {
+  --sb-ring: #16a34a;
+  --sb-ring-light: rgba(22, 163, 74, 0.08);
+  --sb-accent: #f0fdf4;
+  --sb-accent-foreground: #14532d;
+  --sb-primary: #16a34a;
+  --sb-primary-foreground: #ffffff;
+}
+
+.theme-green.dark-mode {
+  --sb-ring: #22c55e;
+  --sb-ring-light: rgba(34, 197, 94, 0.15);
+  --sb-accent: #14532d;
+  --sb-accent-foreground: #86efac;
+  --sb-primary: #22c55e;
+  --sb-primary-foreground: #0f172a;
+}
+
+/* Pink Theme */
+.theme-pink {
+  --sb-ring: #db2777;
+  --sb-ring-light: rgba(219, 39, 119, 0.08);
+  --sb-accent: #fdf2f8;
+  --sb-accent-foreground: #9d174d;
+  --sb-primary: #db2777;
+  --sb-primary-foreground: #ffffff;
+}
+
+.theme-pink.dark-mode {
+  --sb-ring: #ec4899;
+  --sb-ring-light: rgba(236, 72, 153, 0.15);
+  --sb-accent: #831843;
+  --sb-accent-foreground: #f9a8d4;
+  --sb-primary: #ec4899;
+  --sb-primary-foreground: #0f172a;
+}
+
+/* Purple Theme */
+.theme-purple {
+  --sb-ring: #7c3aed;
+  --sb-ring-light: rgba(124, 58, 237, 0.08);
+  --sb-accent: #f5f3ff;
+  --sb-accent-foreground: #5b21b6;
+  --sb-primary: #7c3aed;
+  --sb-primary-foreground: #ffffff;
+}
+
+.theme-purple.dark-mode {
+  --sb-ring: #8b5cf6;
+  --sb-ring-light: rgba(139, 92, 246, 0.15);
+  --sb-accent: #581c87;
+  --sb-accent-foreground: #c4b5fd;
+  --sb-primary: #8b5cf6;
+  --sb-primary-foreground: #0f172a;
 }
 
 /* Modal Backdrop */
@@ -214,7 +292,7 @@
 }
 
 .smart-bookmark-folder-item.active {
-  background: rgba(59, 130, 246, 0.08);
+  background: var(--sb-ring-light);
   border-color: var(--sb-ring);
   border-width: 1px;
   border-style: solid;
@@ -284,7 +362,7 @@
 }
 
 .smart-bookmark-bookmark-item.active {
-  background: rgba(59, 130, 246, 0.08);
+  background: var(--sb-ring-light);
   border-color: var(--sb-ring);
   border-width: 1px;
   border-style: solid;
@@ -562,6 +640,31 @@
   font-weight: 500;
 }
 
+/* Dropdown Separator */
+.smart-bookmark-dropdown-separator {
+  height: 1px;
+  background: var(--sb-border);
+  margin: 4px 0;
+}
+
+/* Theme Color Options */
+.smart-bookmark-dark-mode-option[data-theme] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.smart-bookmark-dark-mode-option[data-theme]:hover {
+  background: var(--sb-accent);
+}
+
+.smart-bookmark-dark-mode-option[data-theme].active {
+  background: var(--sb-accent);
+  color: var(--sb-ring);
+  font-weight: 500;
+}
+
 /* Responsive Design */
 @media (max-width: 600px) {
   .smart-bookmark-modal {
@@ -632,12 +735,7 @@
   }
 }
 
-/* Dark Mode Active States */
-.dark-mode .smart-bookmark-folder-item.active,
-.dark-mode .smart-bookmark-bookmark-item.active {
-  background: rgba(59, 130, 246, 0.15);
-  border-color: #60a5fa;
-}
+/* Dark Mode Active States - Now handled via CSS variables */
 
 /* Reduced Motion Support */
 @media (prefers-reduced-motion: reduce) {

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>面包屑导航测试</title>
+    <title>面包屑导航 & 主题色测试</title>
     <link rel="stylesheet" href="src/styles/modal.css">
     <style>
         body {
@@ -46,10 +46,17 @@
             font-weight: 500;
         }
         
-        .dark-mode-toggle {
+        .theme-controls {
             position: fixed;
             top: 20px;
             right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 1000;
+        }
+        
+        .dark-mode-toggle {
             background: transparent;
             border: 1px solid #e2e8f0;
             border-radius: 6px;
@@ -60,6 +67,36 @@
         
         .dark-mode-toggle:hover {
             background: #f1f5f9;
+        }
+        
+        .theme-colors {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            max-width: 150px;
+        }
+        
+        .color-button {
+            width: 28px;
+            height: 28px;
+            border: 2px solid #e2e8f0;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            background: white;
+            transition: all 0.2s ease;
+        }
+        
+        .color-button:hover {
+            transform: scale(1.1);
+        }
+        
+        .color-button.active {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
         }
         
         body.dark-mode {
@@ -88,11 +125,25 @@
         body.dark-mode .dark-mode-toggle:hover {
             background: #334155;
         }
+        
+        body.dark-mode .color-button {
+            background: #1e293b;
+            border-color: #334155;
+        }
+        
+        body.dark-mode .color-button:hover {
+            border-color: #475569;
+        }
+        
+        body.dark-mode .color-button.active {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+        }
     </style>
 </head>
 <body>
     <div class="test-container">
-        <div class="test-title">面包屑导航测试</div>
+        <div class="test-title">面包屑导航 & 主题色测试</div>
         
         <div class="test-section">
             <h3>书签模式 - 带面包屑</h3>
@@ -171,7 +222,16 @@
         </div>
     </div>
     
-    <button class="dark-mode-toggle" onclick="toggleDarkMode()">🌙</button>
+    <div class="theme-controls">
+        <button class="dark-mode-toggle" onclick="toggleDarkMode()">🌙</button>
+        <div class="theme-colors">
+            <button class="color-button active" data-theme="default" onclick="setTheme('default')" title="默认蓝色">🔵</button>
+            <button class="color-button" data-theme="red" onclick="setTheme('red')" title="经典红色">🔴</button>
+            <button class="color-button" data-theme="green" onclick="setTheme('green')" title="清新绿色">🟢</button>
+            <button class="color-button" data-theme="pink" onclick="setTheme('pink')" title="温馨粉色">🌸</button>
+            <button class="color-button" data-theme="purple" onclick="setTheme('purple')" title="优雅紫色">🟣</button>
+        </div>
+    </div>
     
     <script>
         function toggleDarkMode() {
@@ -182,6 +242,24 @@
             } else {
                 toggle.textContent = '🌙';
             }
+        }
+        
+        function setTheme(themeName) {
+            const testContainer = document.querySelector('.test-container');
+            
+            // 移除所有主题类
+            testContainer.classList.remove('theme-red', 'theme-green', 'theme-pink', 'theme-purple');
+            
+            // 移除所有active状态
+            document.querySelectorAll('.color-button').forEach(btn => btn.classList.remove('active'));
+            
+            // 添加新主题类
+            if (themeName !== 'default') {
+                testContainer.classList.add('theme-' + themeName);
+            }
+            
+            // 设置active状态
+            document.querySelector(`[data-theme="${themeName}"]`).classList.add('active');
         }
     </script>
 </body>
