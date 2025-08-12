@@ -17,6 +17,7 @@ function VirtualScroller(container, itemHeight, totalItems, renderItem) {
   this.contentContainer = null;
   this.scrollHandler = null;
   this.hasMeasuredItemHeight = false; // 是否已自动测量真实高度
+  this.shouldAnimateOnNextRender = true; // 仅在首次或数据更新后为true
 
   this.init();
 }
@@ -125,6 +126,7 @@ VirtualScroller.prototype.render = function () {
 
   // 渲染可见项目
   var measuredMax = 0;
+  
   for (var i = this.startIndex; i <= this.endIndex && i < this.items.length; i++) {
     var item = this.items[i];
     if (!item) continue;
@@ -147,6 +149,11 @@ VirtualScroller.prototype.render = function () {
       }
       itemElement.style.boxSizing = 'border-box';
       itemElement.style.left = '0';
+      
+      // 添加出现动画：仅在允许动画时触发
+      if (this.shouldAnimateOnNextRender) {
+        this.addItemAnimation(itemElement, i - this.startIndex);
+      }
       
       // 追加到DOM
       this.contentContainer.appendChild(itemElement);
@@ -178,6 +185,9 @@ VirtualScroller.prototype.render = function () {
     }
   }
 
+  // 本轮渲染后，关闭自动动画
+  this.shouldAnimateOnNextRender = false;
+
   // 恢复之前的选中状态（如果有的话）
   if (activeItemId) {
     var restoredItem = this.contentContainer.querySelector('[data-folder-id="' + activeItemId + '"], [data-bookmark-id="' + activeItemId + '"]');
@@ -201,6 +211,10 @@ VirtualScroller.prototype.updateData = function (items) {
   if (this.totalItems === 0) {
     this.itemHeight = this.itemHeight || 58;
   }
+  
+  // 数据更新：标记下一次渲染需要动画，并重置动画状态
+  this.shouldAnimateOnNextRender = true;
+  this.resetAnimations();
   
   // 重新计算可见范围
   this.updateVisibleRange();
@@ -277,9 +291,78 @@ VirtualScroller.prototype.setItemHeight = function (newHeight) {
 };
 
 /**
+ * 为列表项添加出现动画
+ * @param {HTMLElement} itemElement - 列表项元素
+ * @param {number} relativeIndex - 在当前可见区域的相对索引
+ */
+VirtualScroller.prototype.addItemAnimation = function(itemElement, relativeIndex) {
+  // 如果用户设置了减少动画，跳过动画
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    itemElement.style.opacity = '1';
+    itemElement.style.transform = 'none';
+    return;
+  }
+  
+  // 检查元素是否已经有动画类，避免重复添加
+  var hasAnimation = itemElement.classList.contains('animate-in') ||
+                    itemElement.classList.contains('animate-slide') ||
+                    itemElement.classList.contains('animate-scale');
+  
+  if (hasAnimation) {
+    return;
+  }
+  
+  // 根据列表项类型选择不同的动画效果
+  var animationType = 'animate-in'; // 默认向上淡入动画
+  
+  // 文件夹和书签都使用相同的从下到上动画
+  if (itemElement.classList.contains('smart-bookmark-folder-item')) {
+    animationType = 'animate-in'; // 文件夹也用向上淡入
+  } else if (itemElement.classList.contains('smart-bookmark-bookmark-item')) {
+    animationType = 'animate-in'; // 书签向上淡入
+  }
+  
+  // 添加动画类
+  itemElement.classList.add(animationType);
+  
+  // 设置动画延迟，创建交错效果
+  var baseDelay = Math.min(relativeIndex * 30, 300); // 最大延迟不超过300ms
+  itemElement.style.animationDelay = baseDelay + 'ms';
+  
+  // 动画完成后清理
+  var self = this;
+  itemElement.addEventListener('animationend', function() {
+    itemElement.classList.remove(animationType);
+    itemElement.style.animationDelay = '';
+    // 确保最终状态正确
+    itemElement.style.opacity = '1';
+    itemElement.style.transform = 'none';
+  }, { once: true });
+};
+
+/**
+ * 重置所有动画状态
+ */
+VirtualScroller.prototype.resetAnimations = function() {
+  if (!this.contentContainer) return;
+  
+  var items = this.contentContainer.querySelectorAll('.smart-bookmark-folder-item, .smart-bookmark-bookmark-item');
+  for (var i = 0; i < items.length; i++) {
+    var item = items[i];
+    item.classList.remove('animate-in', 'animate-slide', 'animate-scale');
+    item.style.animationDelay = '';
+    item.style.opacity = '1';
+    item.style.transform = 'none';
+  }
+};
+
+/**
  * 销毁虚拟滚动器
  */
 VirtualScroller.prototype.destroy = function () {
+  // 清理动画
+  this.resetAnimations();
+  
   if (this.scrollHandler) {
     this.container.removeEventListener('scroll', this.scrollHandler);
     this.scrollHandler = null;

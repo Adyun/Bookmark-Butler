@@ -423,16 +423,30 @@ ThemeManager.prototype.handleThemeColorSelect = function (themeColor) {
 };
 
 /**
- * 绑定主题相关的事件监听器 - 重写版本
+ * 设置深色模式（新方法）
+ * @param {string} mode - 深色模式设置 ('auto', 'light', 'dark')
+ */
+ThemeManager.prototype.setDarkMode = function (mode) {
+  console.log('设置深色模式:', mode);
+  this.saveDarkModeSetting(mode);
+};
+
+/**
+ * 设置主题颜色（新方法）
+ * @param {string} theme - 主题名称 ('default', 'red', 'green', 'pink', 'purple')
+ */
+ThemeManager.prototype.setTheme = function (theme) {
+  console.log('设置主题颜色:', theme);
+  this.saveThemeColorSetting(theme);
+};
+
+/**
+ * 绑定主题相关的事件监听器 - 重写版本（已禁用）
  * @param {Function} addEventListenerFn - 添加事件监听器的函数
  */
 ThemeManager.prototype.bindEvents = function (addEventListenerFn) {
-  var self = this;
-
-  console.log('ThemeManager.bindEvents called');
-
-  // 立即尝试绑定，如果失败则延迟重试
-  this.tryBindEvents(addEventListenerFn, 0);
+  // 已禁用旧版事件绑定，由ModalManager统一管理
+  console.log('ThemeManager.bindEvents called (已禁用)');
 };
 
 /**

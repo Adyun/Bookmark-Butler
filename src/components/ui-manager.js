@@ -30,19 +30,39 @@ UIManager.prototype.createModal = function () {
     '<div class="smart-bookmark-modal-header">' +
     '<h2 class="smart-bookmark-modal-title">搜索书签</h2>' +
     '<div class="smart-bookmark-header-controls">' +
-    '<div class="smart-bookmark-theme-toggle-container">' +
-    '<button id="' + window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_TOGGLE_ID + '" class="smart-bookmark-dark-mode-toggle" title="深色模式设置">🌙</button>' +
-    '<div id="smart-bookmark-dark-mode-dropdown" class="smart-bookmark-dark-mode-dropdown">' +
-    '<div class="smart-bookmark-dark-mode-option" data-mode="auto">跟随系统</div>' +
-    '<div class="smart-bookmark-dark-mode-option" data-mode="light">浅色模式</div>' +
-    '<div class="smart-bookmark-dark-mode-option" data-mode="dark">深色模式</div>' +
-    '<div class="smart-bookmark-dropdown-separator"></div>' +
-    '<div class="smart-bookmark-dark-mode-option" data-theme="default">🔵 默认蓝色</div>' +
-    '<div class="smart-bookmark-dark-mode-option" data-theme="red">🔴 经典红色</div>' +
-    '<div class="smart-bookmark-dark-mode-option" data-theme="green">🟢 清新绿色</div>' +
-    '<div class="smart-bookmark-dark-mode-option" data-theme="pink">🌸 温馨粉色</div>' +
-    '<div class="smart-bookmark-dark-mode-option" data-theme="purple">🟣 优雅紫色</div>' +
+    '<div class="smart-bookmark-header-controls-container">' +
+    
+    // 语言设置按钮和下拉
+    '<div class="smart-bookmark-control-group">' +
+    '<button id="smart-bookmark-language-toggle" class="smart-bookmark-control-toggle" title="语言设置">🌐</button>' +
+    '<div id="smart-bookmark-language-dropdown" class="smart-bookmark-control-dropdown">' +
+    '<div class="smart-bookmark-control-option" data-language="zh">🇨🇳 中文</div>' +
+    '<div class="smart-bookmark-control-option" data-language="en">🇺🇸 English</div>' +
     '</div>' +
+    '</div>' +
+    
+    // 深浅色模式按钮和下拉
+    '<div class="smart-bookmark-control-group">' +
+    '<button id="smart-bookmark-mode-toggle" class="smart-bookmark-control-toggle" title="深浅色模式">🌙</button>' +
+    '<div id="smart-bookmark-mode-dropdown" class="smart-bookmark-control-dropdown">' +
+    '<div class="smart-bookmark-control-option" data-mode="auto">跟随系统</div>' +
+    '<div class="smart-bookmark-control-option" data-mode="light">浅色模式</div>' +
+    '<div class="smart-bookmark-control-option" data-mode="dark">深色模式</div>' +
+    '</div>' +
+    '</div>' +
+    
+    // 主题颜色按钮和下拉
+    '<div class="smart-bookmark-control-group">' +
+    '<button id="smart-bookmark-theme-toggle" class="smart-bookmark-control-toggle" title="主题颜色">🎨</button>' +
+    '<div id="smart-bookmark-theme-dropdown" class="smart-bookmark-control-dropdown">' +
+    '<div class="smart-bookmark-control-option" data-theme="default">🔵 默认蓝色</div>' +
+    '<div class="smart-bookmark-control-option" data-theme="red">🔴 经典红色</div>' +
+    '<div class="smart-bookmark-control-option" data-theme="green">🟢 清新绿色</div>' +
+    '<div class="smart-bookmark-control-option" data-theme="pink">🌸 温馨粉色</div>' +
+    '<div class="smart-bookmark-control-option" data-theme="purple">🟣 优雅紫色</div>' +
+    '</div>' +
+    '</div>' +
+    
     '</div>' +
     '</div>' +
     '</div>' +
@@ -239,16 +259,14 @@ UIManager.prototype.setMode = function (mode) {
   if (mode === window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH) {
     modal.classList.add(window.SMART_BOOKMARK_CONSTANTS.BOOKMARK_SEARCH_MODE_CLASS);
 
-    if (title) title.textContent = '打开书签';
-    if (searchInput) searchInput.placeholder = '搜索书签...';
+    // UI显示状态切换（文本由语言管理器处理）
     if (bookmarkList) bookmarkList.style.display = 'block';
     if (folderList) folderList.style.display = 'none';
     if (confirmBtn) confirmBtn.style.display = 'none';
   } else {
     modal.classList.add(window.SMART_BOOKMARK_CONSTANTS.FOLDER_SELECT_MODE_CLASS);
 
-    if (title) title.textContent = '添加书签';
-    if (searchInput) searchInput.placeholder = '搜索文件夹...';
+    // UI显示状态切换（文本由语言管理器处理）
     if (bookmarkList) bookmarkList.style.display = 'none';
     if (folderList) folderList.style.display = 'block';
     if (confirmBtn) confirmBtn.style.display = 'inline-block';
@@ -257,6 +275,11 @@ UIManager.prototype.setMode = function (mode) {
   // 清空搜索框
   if (searchInput) {
     searchInput.value = '';
+  }
+  
+  // 立即更新语言文本（如果存在语言管理器）
+  if (window.modalManager && window.modalManager.languageManager) {
+    window.modalManager.languageManager.updateUI();
   }
 
   // 延迟重新计算布局，让动画效果可见

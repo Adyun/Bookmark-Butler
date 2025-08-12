@@ -33,6 +33,9 @@ const memoryManager = {
       // 创建Modal管理器实例
       this.modalManager = new window.ModalManager();
       console.log("ModalManager created successfully");
+      
+      // 暴露到全局，供其他组件使用
+      window.modalManager = this.modalManager;
 
       // 设置定期清理
       this.setupPeriodicCleanup();

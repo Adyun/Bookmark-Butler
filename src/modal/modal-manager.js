@@ -19,6 +19,7 @@ function ModalManager() {
   this.uiManager = new window.UIManager();
   this.themeManager = new window.ThemeManager();
   this.keyboardManager = new window.KeyboardManager();
+  this.languageManager = new window.LanguageManager();
   this.folderVirtualScroller = null;
   this.bookmarkVirtualScroller = null;
   this.foldersPrefetched = false; // 首次进入为书签模式时的文件夹预取标记
@@ -88,16 +89,55 @@ ModalManager.prototype.bindEvents = function () {
   var addEventListenerFn = function (element, event, handler) {
     return self.uiManager.addEventListener(element, event, handler);
   };
+  
+  // 禁用主题管理器的旧事件绑定以避免冲突
+  // this.themeManager.bindEvents(addEventListenerFn);
 
   // 点击取消按钮或模态框外部关闭模态框
   var handleClickOutside = function (e) {
     var modal = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.MODAL_ID);
     if (!modal) return;
 
-    // 检查点击是否在深色模式下拉菜单内
-    var dropdown = document.getElementById('smart-bookmark-dark-mode-dropdown');
-    if (dropdown && dropdown.contains(e.target)) {
-      return; // 如果点击在下拉菜单内，不关闭模态框
+    // 检查是否点击在下拉菜单内
+    var dropdowns = [
+      document.getElementById('smart-bookmark-language-dropdown'),
+      document.getElementById('smart-bookmark-mode-dropdown'),
+      document.getElementById('smart-bookmark-theme-dropdown'),
+      document.getElementById('smart-bookmark-dark-mode-dropdown') // 兼容性
+    ];
+    
+    var clickedInDropdown = false;
+    for (var i = 0; i < dropdowns.length; i++) {
+      if (dropdowns[i] && dropdowns[i].contains(e.target)) {
+        clickedInDropdown = true;
+        break;
+      }
+    }
+    
+    // 检查是否点击在控制按钮上
+    var controlButtons = [
+      document.getElementById('smart-bookmark-language-toggle'),
+      document.getElementById('smart-bookmark-mode-toggle'),
+      document.getElementById('smart-bookmark-theme-toggle'),
+      document.getElementById(window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_TOGGLE_ID) // 兼容性
+    ];
+    
+    var clickedOnButton = false;
+    for (var j = 0; j < controlButtons.length; j++) {
+      if (controlButtons[j] && controlButtons[j].contains(e.target)) {
+        clickedOnButton = true;
+        break;
+      }
+    }
+    
+    // 如果点击在下拉菜单外部且不在控制按钮上，关闭所有下拉菜单
+    if (!clickedInDropdown && !clickedOnButton) {
+      self.closeAllDropdowns();
+    }
+    
+    // 如果点击在下拉菜单或控制按钮上，不关闭模态框
+    if (clickedInDropdown || clickedOnButton) {
+      return;
     }
 
     // 点击取消按钮关闭
@@ -124,6 +164,9 @@ ModalManager.prototype.bindEvents = function () {
   if (searchInput) {
     var debouncedSearch = this.debounce(function (query) {
       self.handleSearch(query);
+      // 搜索输入触发：下一次渲染需要动画
+      if (self.folderVirtualScroller) self.folderVirtualScroller.shouldAnimateOnNextRender = true;
+      if (self.bookmarkVirtualScroller) self.bookmarkVirtualScroller.shouldAnimateOnNextRender = true;
     }, 300);
 
     addEventListenerFn(searchInput, 'input', function (e) {
@@ -137,6 +180,84 @@ ModalManager.prototype.bindEvents = function () {
     });
     addEventListenerFn(searchInput, 'focus', function () {
       self.updateUserActivity();
+    });
+  }
+
+  // 语言切换按钮事件
+  var languageToggle = document.getElementById('smart-bookmark-language-toggle');
+  if (languageToggle) {
+    console.log('绑定语言切换按钮事件');
+    addEventListenerFn(languageToggle, 'click', function (e) {
+      console.log('语言切换按钮被点击');
+      e.stopPropagation();
+      self.toggleDropdown('smart-bookmark-language-dropdown');
+    });
+  } else {
+    console.warn('找不到语言切换按钮:', 'smart-bookmark-language-toggle');
+  }
+
+  // 深浅色模式切换按钮事件
+  var modeToggle = document.getElementById('smart-bookmark-mode-toggle');
+  if (modeToggle) {
+    console.log('绑定深浅色模式切换按钮事件');
+    addEventListenerFn(modeToggle, 'click', function (e) {
+      console.log('深浅色模式切换按钮被点击');
+      e.stopPropagation();
+      self.toggleDropdown('smart-bookmark-mode-dropdown');
+    });
+  } else {
+    console.warn('找不到深浅色模式切换按钮:', 'smart-bookmark-mode-toggle');
+  }
+
+  // 主题颜色切换按钮事件
+  var themeToggle = document.getElementById('smart-bookmark-theme-toggle');
+  if (themeToggle) {
+    console.log('绑定主题颜色切换按钮事件');
+    addEventListenerFn(themeToggle, 'click', function (e) {
+      console.log('主题颜色切换按钮被点击');
+      e.stopPropagation();
+      self.toggleDropdown('smart-bookmark-theme-dropdown');
+    });
+  } else {
+    console.warn('找不到主题颜色切换按钮:', 'smart-bookmark-theme-toggle');
+  }
+
+  // 语言选项点击事件
+  var languageOptions = document.querySelectorAll('[data-language]');
+  for (var i = 0; i < languageOptions.length; i++) {
+    addEventListenerFn(languageOptions[i], 'click', function (e) {
+      e.stopPropagation();
+      var language = e.target.getAttribute('data-language');
+      if (language) {
+        self.languageManager.setLanguage(language);
+        self.closeAllDropdowns();
+      }
+    });
+  }
+  
+  // 深浅色模式选项点击事件
+  var modeOptions = document.querySelectorAll('[data-mode]');
+  for (var j = 0; j < modeOptions.length; j++) {
+    addEventListenerFn(modeOptions[j], 'click', function (e) {
+      e.stopPropagation();
+      var mode = e.target.getAttribute('data-mode');
+      if (mode) {
+        self.themeManager.setDarkMode(mode);
+        self.closeAllDropdowns();
+      }
+    });
+  }
+  
+  // 主题颜色选项点击事件
+  var themeOptions = document.querySelectorAll('[data-theme]');
+  for (var k = 0; k < themeOptions.length; k++) {
+    addEventListenerFn(themeOptions[k], 'click', function (e) {
+      e.stopPropagation();
+      var theme = e.target.getAttribute('data-theme');
+      if (theme) {
+        self.themeManager.setTheme(theme);
+        self.closeAllDropdowns();
+      }
     });
   }
 
@@ -213,9 +334,15 @@ ModalManager.prototype.show = function (pageInfo) {
 
   // 应用主题
   this.themeManager.applyDarkMode();
+  
+  // 更新语言
+  this.languageManager.updateUI();
 
-  // 设置当前模式
+  // 设置当前模式（触发动画）
   this.setMode(this.uiManager.currentMode);
+  // 标记：窗口出现时下一次渲染需要动画
+  if (this.folderVirtualScroller) this.folderVirtualScroller.shouldAnimateOnNextRender = true;
+  if (this.bookmarkVirtualScroller) this.bookmarkVirtualScroller.shouldAnimateOnNextRender = true;
 
   // 设置键盘管理器状态
   this.keyboardManager.setModalVisible(true);
@@ -563,6 +690,8 @@ ModalManager.prototype.renderFolderListWithVirtualScroll = function (folderList,
   this.keyboardManager.setVirtualScroller(this.folderVirtualScroller);
 
   // 更新虚拟滚动器的数据
+  // 模式切换/首次渲染/搜索后：确保本次渲染播放动画
+  this.folderVirtualScroller.shouldAnimateOnNextRender = true;
   this.folderVirtualScroller.updateData(this.filteredFolders);
 };
 
@@ -586,11 +715,17 @@ ModalManager.prototype.renderFolderItem = function (folder, index, hasSearchQuer
   // 生成面包屑
   var breadcrumb = this.generateBreadcrumb(folder.parentId);
   
+  // 获取搜索关键词并应用高亮
+  var searchInput = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
+  var searchTerm = searchInput ? searchInput.value.trim() : '';
+  var highlightedTitle = hasSearchQuery && searchTerm ? 
+    this.highlightText(folder.title, searchTerm) : folder.title;
+  
   item.innerHTML =
     '<span class="smart-bookmark-folder-icon">📁</span>' +
     '<div class="smart-bookmark-folder-content">' +
     '<div class="smart-bookmark-folder-main">' +
-    '<span class="smart-bookmark-folder-name">' + folder.title + '</span>' +
+    '<span class="smart-bookmark-folder-name">' + highlightedTitle + '</span>' +
     '<span class="smart-bookmark-folder-count">' + (folder.bookmarkCount || 0) + '</span>' +
     '</div>' +
     (breadcrumb ? breadcrumb : '') +
@@ -657,6 +792,8 @@ ModalManager.prototype.renderBookmarkListWithVirtualScroll = function (bookmarkL
   this.keyboardManager.setVirtualScroller(this.bookmarkVirtualScroller);
 
   // 更新虚拟滚动器的数据
+  // 模式切换/首次渲染/搜索后：确保本次渲染播放动画
+  this.bookmarkVirtualScroller.shouldAnimateOnNextRender = true;
   this.bookmarkVirtualScroller.updateData(this.filteredBookmarks);
 };
 
@@ -681,15 +818,24 @@ ModalManager.prototype.renderBookmarkItem = function (bookmark, index, hasSearch
   // 生成面包屑
   var breadcrumb = this.generateBreadcrumb(bookmark.parentId);
   
+  // 获取搜索关键词并应用高亮
+  var searchInput = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
+  var searchTerm = searchInput ? searchInput.value.trim() : '';
+  var highlightedTitle = hasSearchQuery && searchTerm ? 
+    this.highlightText(bookmark.title, searchTerm) : bookmark.title;
+  var displayUrl = this.formatUrlForDisplay(bookmark.url);
+  var highlightedUrl = hasSearchQuery && searchTerm ? 
+    this.highlightText(displayUrl, searchTerm) : displayUrl;
+  
   // 重构为上下布局 - 参考文件夹模式的完美样式
   item.innerHTML =
     '<div class="smart-bookmark-bookmark-content">' +
     '<span class="smart-bookmark-bookmark-icon">🔗</span>' +
     '<div class="smart-bookmark-bookmark-text">' +
     '<div class="smart-bookmark-bookmark-title-container">' +
-    '<span class="smart-bookmark-bookmark-title">' + bookmark.title + '</span>' +
+    '<span class="smart-bookmark-bookmark-title">' + highlightedTitle + '</span>' +
     '</div>' +
-    '<div class="smart-bookmark-bookmark-url" title="' + bookmark.url + '">' + this.formatUrlForDisplay(bookmark.url) + '</div>' +
+    '<div class="smart-bookmark-bookmark-url" title="' + bookmark.url + '">' + highlightedUrl + '</div>' +
     (breadcrumb ? breadcrumb : '') +
     '</div>' +
     '</div>';
@@ -701,6 +847,102 @@ ModalManager.prototype.renderBookmarkItem = function (bookmark, index, hasSearch
   });
 
   return item;
+};
+
+/**
+ * 高亮匹配文本
+ * @param {string} text - 原始文本
+ * @param {string} searchTerm - 搜索关键词
+ * @returns {string} 包含高亮标签的HTML文本
+ */
+ModalManager.prototype.highlightText = function (text, searchTerm) {
+  if (!text || !searchTerm) return this.escapeHtml(text || '');
+  
+  var escapedText = this.escapeHtml(text);
+  var escapedSearchTerm = this.escapeHtml(searchTerm);
+  var lowerText = text.toLowerCase();
+  var lowerSearchTerm = searchTerm.toLowerCase();
+  
+  // 1. 完全匹配
+  if (lowerText === lowerSearchTerm) {
+    return '<span class="smart-bookmark-highlight">' + escapedText + '</span>';
+  }
+  
+  // 2. 前缀匹配
+  if (lowerText.indexOf(lowerSearchTerm) === 0) {
+    var matchLength = searchTerm.length;
+    var highlighted = '<span class="smart-bookmark-highlight">' + 
+      this.escapeHtml(text.substring(0, matchLength)) + '</span>';
+    var remaining = this.escapeHtml(text.substring(matchLength));
+    return highlighted + remaining;
+  }
+  
+  // 3. 包含匹配
+  var index = lowerText.indexOf(lowerSearchTerm);
+  if (index > -1) {
+    var before = this.escapeHtml(text.substring(0, index));
+    var match = '<span class="smart-bookmark-highlight">' + 
+      this.escapeHtml(text.substring(index, index + searchTerm.length)) + '</span>';
+    var after = this.escapeHtml(text.substring(index + searchTerm.length));
+    return before + match + after;
+  }
+  
+  // 4. 模糊匹配（逐字符高亮）
+  var result = [];
+  var textChars = text.split('');
+  var searchChars = searchTerm.toLowerCase().split('');
+  var searchIndex = 0;
+  var isInHighlight = false;
+  
+  for (var i = 0; i < textChars.length; i++) {
+    var char = textChars[i];
+    var lowerChar = char.toLowerCase();
+    
+    if (searchIndex < searchChars.length && lowerChar === searchChars[searchIndex]) {
+      // 匹配的字符
+      if (!isInHighlight) {
+        result.push('<span class="smart-bookmark-highlight">');
+        isInHighlight = true;
+      }
+      result.push(this.escapeHtml(char));
+      searchIndex++;
+      
+      // 检查是否需要关闭高亮
+      if (searchIndex >= searchChars.length || 
+          (i + 1 < textChars.length && 
+           searchIndex < searchChars.length && 
+           textChars[i + 1].toLowerCase() !== searchChars[searchIndex])) {
+        result.push('</span>');
+        isInHighlight = false;
+      }
+    } else {
+      // 非匹配字符
+      if (isInHighlight) {
+        result.push('</span>');
+        isInHighlight = false;
+      }
+      result.push(this.escapeHtml(char));
+    }
+  }
+  
+  // 确保关闭未闭合的高亮标签
+  if (isInHighlight) {
+    result.push('</span>');
+  }
+  
+  return result.join('');
+};
+
+/**
+ * HTML转义函数
+ * @param {string} text - 需要转义的文本
+ * @returns {string} 转义后的文本
+ */
+ModalManager.prototype.escapeHtml = function (text) {
+  if (!text) return '';
+  var div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 };
 
 /**
@@ -780,7 +1022,7 @@ ModalManager.prototype.selectBookmark = function (bookmarkItem) {
     if (!this.isSpecialUrl(url)) {
       window.open(url, '_blank');
     } else {
-      window.SMART_BOOKMARK_HELPERS.showToast('无法打开特殊URL，请手动在浏览器中访问', true);
+      window.SMART_BOOKMARK_HELPERS.showToast(this.languageManager.t('specialUrlWarning'), true);
     }
     this.hide();
   }
@@ -817,9 +1059,9 @@ ModalManager.prototype.handleConfirm = function () {
     if (selectedItem && selectedItem.url) {
       if (!this.isSpecialUrl(selectedItem.url)) {
         window.open(selectedItem.url, '_blank');
-      } else {
-        window.SMART_BOOKMARK_HELPERS.showToast('无法打开特殊URL，请手动在浏览器中访问', true);
-      }
+          } else {
+      window.SMART_BOOKMARK_HELPERS.showToast(this.languageManager.t('specialUrlWarning'), true);
+    }
       this.hide();
     }
   } else {
@@ -837,12 +1079,12 @@ ModalManager.prototype.handleConfirm = function () {
       .then(function () {
         var endTime = performance.now();
         console.log('Create bookmark took ' + (endTime - startTime) + ' milliseconds');
-        window.SMART_BOOKMARK_HELPERS.showToast('书签添加成功！');
+        window.SMART_BOOKMARK_HELPERS.showToast(self.languageManager.t('bookmarkAdded'));
         self.hide();
       })
       .catch(function (error) {
         console.error('Failed to create bookmark:', error);
-        window.SMART_BOOKMARK_HELPERS.showToast('添加书签失败，请重试', true);
+        window.SMART_BOOKMARK_HELPERS.showToast(self.languageManager.t('bookmarkAddFailed'), true);
       });
   }
 };
@@ -860,6 +1102,13 @@ ModalManager.prototype.setMode = function (mode) {
   } else {
     this.loadFolders();
   }
+  
+  // 模式设置时也需要动画标记
+  var self = this;
+  requestAnimationFrame(function () {
+    if (self.folderVirtualScroller) self.folderVirtualScroller.shouldAnimateOnNextRender = true;
+    if (self.bookmarkVirtualScroller) self.bookmarkVirtualScroller.shouldAnimateOnNextRender = true;
+  });
 };
 
 /**
@@ -874,6 +1123,14 @@ ModalManager.prototype.toggleMode = function () {
   } else {
     this.loadFolders();
   }
+  // 延迟一帧，确保UI切换完成且列表可见，再设置动画标记
+  var self = this;
+  requestAnimationFrame(function () {
+    // 更新语言管理器的界面文本
+    self.languageManager.updateUI();
+    if (self.folderVirtualScroller) self.folderVirtualScroller.shouldAnimateOnNextRender = true;
+    if (self.bookmarkVirtualScroller) self.bookmarkVirtualScroller.shouldAnimateOnNextRender = true;
+  });
 };
 
 /**
@@ -963,6 +1220,52 @@ ModalManager.prototype.findFolderById = function (folderId) {
   }
   
   return null;
+};
+
+/**
+ * 切换下拉菜单显示状态
+ * @param {string} dropdownId - 下拉菜单ID
+ */
+ModalManager.prototype.toggleDropdown = function (dropdownId) {
+  console.log('切换下拉菜单:', dropdownId);
+  
+  // 先关闭所有其他下拉菜单
+  this.closeAllDropdowns();
+  
+  // 切换目标下拉菜单
+  var dropdown = document.getElementById(dropdownId);
+  if (dropdown) {
+    var hasShowClass = dropdown.classList.contains('show');
+    if (hasShowClass) {
+      dropdown.classList.remove('show');
+      console.log('下拉菜单', dropdownId, '已关闭');
+    } else {
+      dropdown.classList.add('show');
+      console.log('下拉菜单', dropdownId, '已打开');
+    }
+  } else {
+    console.warn('找不到下拉菜单:', dropdownId);
+  }
+};
+
+/**
+ * 关闭所有下拉菜单
+ */
+ModalManager.prototype.closeAllDropdowns = function () {
+  var dropdowns = [
+    'smart-bookmark-language-dropdown',
+    'smart-bookmark-mode-dropdown',
+    'smart-bookmark-theme-dropdown',
+    'smart-bookmark-dark-mode-dropdown' // 兼容性
+  ];
+  
+  dropdowns.forEach(function (id) {
+    var dropdown = document.getElementById(id);
+    if (dropdown) {
+      dropdown.classList.remove('show');
+      dropdown.style.display = 'none';
+    }
+  });
 };
 
 /**

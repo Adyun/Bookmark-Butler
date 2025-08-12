@@ -84,9 +84,22 @@
     }
 
     if (allCharsFound && searchTerm.length > 0) {
-      // 根据搜索词长度和匹配度给分
+      // 更宽松的评分：让更多弱匹配被包含，参考书签模式
       var ratio = searchTerm.length / name.length;
-      return Math.max(0.1, ratio * 0.3);
+      return Math.max(0.15, ratio * 0.4); // 提高最低分和比例系数
+    }
+
+    // 额外的宽松匹配：如果包含任意字符，给予很低但非零的分数
+    var hasAnyChar = false;
+    for (var j = 0; j < searchTermChars.length; j++) {
+      if (name.indexOf(searchTermChars[j]) > -1) {
+        hasAnyChar = true;
+        break;
+      }
+    }
+    
+    if (hasAnyChar && searchTerm.length > 0) {
+      return 0.05; // 很低的分数，但足以被包含
     }
 
     return 0;

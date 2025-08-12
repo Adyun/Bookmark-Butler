@@ -32,6 +32,7 @@
         "src/components/ui-manager.js",
         "src/components/theme-manager.js",
         "src/components/keyboard-manager.js",
+        "src/components/language-manager.js",
         "src/modal/modal-manager.js",
         "src/content-script.js"
       ],

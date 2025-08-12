@@ -14,6 +14,8 @@
   --sb-secondary-foreground: #0f172a;
   --sb-accent: #f1f5f9;
   --sb-accent-foreground: #0f172a;
+  --sb-popover: #ffffff;
+  --sb-popover-foreground: #0f172a;
   --sb-destructive: #ef4444;
   --sb-destructive-foreground: #fef2f2;
   --sb-ring: #3b82f6;
@@ -34,6 +36,8 @@
   --sb-secondary-foreground: #f8fafc;
   --sb-accent: #1e293b;
   --sb-accent-foreground: #f8fafc;
+  --sb-popover: #1e293b;
+  --sb-popover-foreground: #f8fafc;
   --sb-destructive: #ef4444;
   --sb-destructive-foreground: #1e293b;
   --sb-ring: #3b82f6;
@@ -272,6 +276,40 @@
   position: relative;
 }
 
+/* 列表项出现动画关键帧 */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInFromLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 /* Folder Items */
 .smart-bookmark-folder-item {
   padding: 12px;
@@ -279,7 +317,7 @@
   cursor: pointer;
   display: flex;
   align-items: flex-start;
-  transition: background-color 0.2s ease;
+  transition: all 0.2s ease;
   background: transparent;
   border: 1px solid transparent;
   position: relative;
@@ -349,7 +387,7 @@
   cursor: pointer;
   display: flex;
   align-items: flex-start;
-  transition: background-color 0.2s ease;
+  transition: all 0.2s ease;
   background: transparent;
   border: 1px solid transparent;
   position: relative;
@@ -584,6 +622,92 @@
   background: transparent;
 }
 
+/* 动画相关类 */
+.smart-bookmark-folder-item.animate-in,
+.smart-bookmark-bookmark-item.animate-in {
+  animation: fadeInUp 0.3s ease forwards;
+}
+
+.smart-bookmark-folder-item.animate-slide,
+.smart-bookmark-bookmark-item.animate-slide {
+  animation: slideInFromLeft 0.3s ease forwards;
+}
+
+.smart-bookmark-folder-item.animate-scale,
+.smart-bookmark-bookmark-item.animate-scale {
+  animation: scaleIn 0.25s ease forwards;
+}
+
+/* 为不同位置的列表项添加交错延迟 */
+.smart-bookmark-folder-item:nth-child(1) { animation-delay: 0ms; }
+.smart-bookmark-folder-item:nth-child(2) { animation-delay: 30ms; }
+.smart-bookmark-folder-item:nth-child(3) { animation-delay: 60ms; }
+.smart-bookmark-folder-item:nth-child(4) { animation-delay: 90ms; }
+.smart-bookmark-folder-item:nth-child(5) { animation-delay: 120ms; }
+.smart-bookmark-folder-item:nth-child(6) { animation-delay: 150ms; }
+.smart-bookmark-folder-item:nth-child(7) { animation-delay: 180ms; }
+.smart-bookmark-folder-item:nth-child(8) { animation-delay: 210ms; }
+.smart-bookmark-folder-item:nth-child(9) { animation-delay: 240ms; }
+.smart-bookmark-folder-item:nth-child(10) { animation-delay: 270ms; }
+
+.smart-bookmark-bookmark-item:nth-child(1) { animation-delay: 0ms; }
+.smart-bookmark-bookmark-item:nth-child(2) { animation-delay: 30ms; }
+.smart-bookmark-bookmark-item:nth-child(3) { animation-delay: 60ms; }
+.smart-bookmark-bookmark-item:nth-child(4) { animation-delay: 90ms; }
+.smart-bookmark-bookmark-item:nth-child(5) { animation-delay: 120ms; }
+.smart-bookmark-bookmark-item:nth-child(6) { animation-delay: 150ms; }
+.smart-bookmark-bookmark-item:nth-child(7) { animation-delay: 180ms; }
+.smart-bookmark-bookmark-item:nth-child(8) { animation-delay: 210ms; }
+.smart-bookmark-bookmark-item:nth-child(9) { animation-delay: 240ms; }
+.smart-bookmark-bookmark-item:nth-child(10) { animation-delay: 270ms; }
+
+/* 对于更多项目，使用更小的延迟增量 */
+.smart-bookmark-folder-item:nth-child(n+11) { animation-delay: 300ms; }
+.smart-bookmark-bookmark-item:nth-child(n+11) { animation-delay: 300ms; }
+
+/* 减少过度动画，保持性能 */
+@media (prefers-reduced-motion: reduce) {
+  .smart-bookmark-folder-item,
+  .smart-bookmark-bookmark-item {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+}
+
+/* 搜索高亮样式 */
+.smart-bookmark-highlight {
+  background: var(--sb-ring-light);
+  color: var(--sb-ring);
+  padding: 1px 2px;
+  border-radius: 3px;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+/* 深色模式下的高亮增强 */
+.dark-mode .smart-bookmark-highlight {
+  background: var(--sb-ring-light);
+  color: var(--sb-ring);
+}
+
+/* 高亮在文件夹名称中 */
+.smart-bookmark-folder-name .smart-bookmark-highlight {
+  font-weight: 700;
+}
+
+/* 高亮在书签标题中 */
+.smart-bookmark-bookmark-title .smart-bookmark-highlight {
+  font-weight: 700;
+}
+
+/* 高亮在URL中（较为低调） */
+.smart-bookmark-bookmark-url .smart-bookmark-highlight {
+  background: var(--sb-muted);
+  color: var(--sb-ring);
+  font-weight: 500;
+}
+
 /* Permission Container */
 .smart-bookmark-permission-container {
   padding: 24px;
@@ -595,74 +719,171 @@
   display: inline-flex;
 }
 
-/* Dark Mode Dropdown */
-.smart-bookmark-dark-mode-dropdown {
+/* Header Controls Container */
+.smart-bookmark-header-controls-container {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Control Group */
+.smart-bookmark-control-group {
+  position: relative;
+  display: inline-block;
+}
+
+/* Control Toggle Buttons - shadcn风格 */
+.smart-bookmark-control-toggle {
+  background: transparent;
+  border: none;
+  font-size: 15px;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  color: var(--sb-muted-foreground);
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 36px;
+  position: relative;
+}
+
+.smart-bookmark-control-toggle:hover {
+  background: var(--sb-accent);
+  color: var(--sb-accent-foreground);
+}
+
+.smart-bookmark-control-toggle:focus-visible {
+  outline: 2px solid var(--sb-ring);
+  outline-offset: 2px;
+}
+
+/* Control Dropdowns - shadcn风格 */
+.smart-bookmark-control-dropdown {
   position: absolute;
-  top: calc(100% + 4px); /* 在按钮下方，添加4px间距 */
-  right: 0; /* 与按钮右对齐 */
-  background: var(--sb-background);
+  top: calc(100% + 6px);
+  right: 0;
+  background: var(--sb-popover);
   border: 1px solid var(--sb-border);
-  border-radius: var(--sb-radius);
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
   z-index: 999999;
-  min-width: 150px;
+  min-width: 180px;
+  padding: 4px;
   display: none;
   opacity: 0;
-  transform: translateY(-8px);
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transform: translateY(-4px) scale(0.95);
+  transition: all 0.15s ease;
   pointer-events: none;
   visibility: hidden;
 }
 
-.smart-bookmark-dark-mode-dropdown.show {
+.dark-mode .smart-bookmark-control-dropdown {
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.3),
+    0 2px 4px -1px rgba(0, 0, 0, 0.2);
+}
+
+.smart-bookmark-dark-mode-dropdown.show,
+.smart-bookmark-control-dropdown.show {
   display: block !important;
   opacity: 1 !important;
-  transform: translateY(0) !important;
+  transform: translateY(0) scale(1) !important;
   pointer-events: auto !important;
   visibility: visible !important;
 }
 
+/* Control Options - shadcn风格统一样式 */
+.smart-bookmark-control-option,
 .smart-bookmark-dark-mode-option {
-  padding: 8px 12px;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-  font-size: 14px;
-  color: var(--sb-foreground);
-}
-
-.smart-bookmark-dark-mode-option:hover {
-  background: var(--sb-accent);
-}
-
-.smart-bookmark-dark-mode-option.active {
-  background: var(--sb-accent);
-  color: var(--sb-ring);
-  font-weight: 500;
-}
-
-/* Dropdown Separator */
-.smart-bookmark-dropdown-separator {
-  height: 1px;
-  background: var(--sb-border);
-  margin: 4px 0;
-}
-
-/* Theme Color Options */
-.smart-bookmark-dark-mode-option[data-theme] {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-radius: 6px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--sb-popover-foreground);
+  transition: all 0.15s ease;
+  margin: 1px 0;
+  position: relative;
 }
 
-.smart-bookmark-dark-mode-option[data-theme]:hover {
+.smart-bookmark-control-option:hover,
+.smart-bookmark-dark-mode-option:hover {
   background: var(--sb-accent);
+  color: var(--sb-accent-foreground);
 }
 
-.smart-bookmark-dark-mode-option[data-theme].active {
+.smart-bookmark-control-option:focus,
+.smart-bookmark-dark-mode-option:focus {
   background: var(--sb-accent);
-  color: var(--sb-ring);
+  color: var(--sb-accent-foreground);
+  outline: none;
+}
+
+.smart-bookmark-control-option.active,
+.smart-bookmark-dark-mode-option.active {
+  background: var(--sb-accent);
+  color: var(--sb-accent-foreground);
   font-weight: 500;
+}
+
+.smart-bookmark-control-option.active::after,
+.smart-bookmark-dark-mode-option.active::after {
+  content: "✓";
+  margin-left: auto;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+/* Dropdown Separator - shadcn风格 */
+.smart-bookmark-dropdown-separator {
+  height: 1px;
+  background: var(--sb-border);
+  margin: 4px -4px;
+  opacity: 0.6;
+}
+
+/* Language Options */
+.smart-bookmark-control-option[data-language] {
+  font-size: 14px;
+  font-weight: 400;
+}
+
+/* Mode Options */
+.smart-bookmark-control-option[data-mode] {
+  font-size: 14px;
+  font-weight: 400;
+}
+
+/* Theme Color Options */
+.smart-bookmark-control-option[data-theme],
+.smart-bookmark-dark-mode-option[data-theme] {
+  font-size: 14px;
+  font-weight: 400;
+}
+
+/* 改进emoji和文字的间距 */
+.smart-bookmark-control-option[data-theme] {
+  gap: 10px;
+}
+
+/* 深色模式下的特殊样式 */
+.dark-mode .smart-bookmark-control-option,
+.dark-mode .smart-bookmark-dark-mode-option {
+  color: var(--sb-popover-foreground);
+}
+
+.dark-mode .smart-bookmark-control-option:hover,
+.dark-mode .smart-bookmark-dark-mode-option:hover {
+  background: var(--sb-accent);
+  color: var(--sb-accent-foreground);
 }
 
 /* Responsive Design */
