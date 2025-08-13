@@ -230,9 +230,18 @@ function createBookmark(folderId, title, url) {
         }
 
         if (response && response.bookmark) {
-          // 清除缓存，因为书签结构可能已更改
-          cache.folders = null;
-          cache.lastFetch = 0;
+          // 清除缓存（使用统一方法），以确保后续读取到最新数据
+          try {
+            if (typeof window !== 'undefined' && window.SMART_BOOKMARK_API && window.SMART_BOOKMARK_API.clearCache) {
+              window.SMART_BOOKMARK_API.clearCache();
+            } else {
+              // 直接操作内部缓存作为兜底
+              cache.memory.folders = null;
+              cache.memory.bookmarks = null;
+              cache.memory.lastFetch = 0;
+              cache.memory.version = (cache.memory.version || 0) + 1;
+            }
+          } catch (e) {}
 
           console.log('Bookmark created successfully via background script');
           resolve(response.bookmark);

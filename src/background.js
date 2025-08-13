@@ -287,6 +287,32 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
+// 监听书签变化事件，并广播到前台页面，提示刷新缓存与数据
+function broadcastBookmarksChanged(reason, payload) {
+  try {
+    chrome.tabs.query({}, (tabs) => {
+      for (const tab of tabs) {
+        try {
+          chrome.tabs.sendMessage(tab.id, { action: 'bookmarksChanged', reason, payload });
+        } catch (e) {
+          // 忽略不可达的标签页
+        }
+      }
+    });
+  } catch (e) {
+    console.warn('Failed to broadcast bookmarksChanged:', e);
+  }
+}
+
+if (chrome.bookmarks && chrome.bookmarks.onCreated) {
+  chrome.bookmarks.onCreated.addListener((id, node) => broadcastBookmarksChanged('created', { id, node }));
+  chrome.bookmarks.onRemoved.addListener((id, removeInfo) => broadcastBookmarksChanged('removed', { id, removeInfo }));
+  chrome.bookmarks.onChanged.addListener((id, changeInfo) => broadcastBookmarksChanged('changed', { id, changeInfo }));
+  chrome.bookmarks.onMoved.addListener((id, moveInfo) => broadcastBookmarksChanged('moved', { id, moveInfo }));
+  if (chrome.bookmarks.onImportBegan) chrome.bookmarks.onImportBegan.addListener(() => broadcastBookmarksChanged('importBegan'));
+  if (chrome.bookmarks.onImportEnded) chrome.bookmarks.onImportEnded.addListener(() => broadcastBookmarksChanged('importEnded'));
+}
+
 /**
  * 向内容脚本发送消息，带重试机制
  */

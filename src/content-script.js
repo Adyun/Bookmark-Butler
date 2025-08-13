@@ -271,6 +271,32 @@ function handleMessage(request, sender, sendResponse) {
   console.log("Content script received message:", request);
   
   try {
+    // 后台广播：书签数据变更
+    if (request.action === 'bookmarksChanged') {
+      try {
+        if (window.SMART_BOOKMARK_API && window.SMART_BOOKMARK_API.clearCache) {
+          window.SMART_BOOKMARK_API.clearCache();
+        }
+        if (memoryManager.modalManager && memoryManager.modalManager.isModalVisible && memoryManager.modalManager.isModalVisible()) {
+          // 根据当前模式增量刷新
+          if (memoryManager.modalManager.uiManager && memoryManager.modalManager.uiManager.currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH) {
+            memoryManager.modalManager.loadBookmarks();
+          } else {
+            memoryManager.modalManager.loadFolders();
+          }
+          // 若当前有查询词，重跑一次搜索
+          const input = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
+          if (input && typeof memoryManager.modalManager.handleSearch === 'function') {
+            const q = (input.value || '').trim();
+            if (q) memoryManager.modalManager.handleSearch(q);
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to refresh after bookmarksChanged:', e);
+      }
+      sendResponse && sendResponse({ status: 'ok' });
+      return true;
+    }
     // 简单的ping响应，用于检测脚本是否加载
     if (request.action === "ping") {
       console.log("Responding to ping");

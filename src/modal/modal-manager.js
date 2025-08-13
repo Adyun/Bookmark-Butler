@@ -396,6 +396,21 @@ ModalManager.prototype.show = function (pageInfo) {
   // 设置键盘管理器状态
   this.keyboardManager.setModalVisible(true);
 
+  // 打开时做数据新鲜度检查：缓存年龄超过10秒则刷新
+  try {
+    if (window.SMART_BOOKMARK_API && typeof window.SMART_BOOKMARK_API.getCacheStatus === 'function') {
+      var status = window.SMART_BOOKMARK_API.getCacheStatus();
+      var isStale = status && status.memoryCache && (Date.now() - (status.memoryCache.lastFetch || 0) > 10000);
+      if (isStale) {
+        if (this.uiManager.currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH) {
+          this.loadBookmarks();
+        } else {
+          this.loadFolders();
+        }
+      }
+    }
+  } catch (e) {}
+
   var endTime = performance.now();
   console.log('Modal show took ' + (endTime - startTime) + ' milliseconds');
 };

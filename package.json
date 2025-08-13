@@ -6,8 +6,10 @@
   "scripts": {
     "test": "jest",
     "test:watch": "jest --watch",
-    "build": "node scripts/build.js",
-    "pack": "node scripts/pack.js",
+    "build:dev": "node scripts/build.js dev",
+    "build:prod": "node scripts/build.js prod",
+    "pack:dev": "node scripts/pack.js dev",
+    "pack:prod": "node scripts/pack.js prod",
     "lint": "eslint src/"
   },
   "keywords": [
