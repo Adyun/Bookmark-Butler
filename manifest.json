@@ -19,6 +19,10 @@
     "service_worker": "src/background.js"
   },
   
+  "chrome_url_overrides": {
+    "newtab": "src/newtab/newtab.html"
+  },
+  
   "content_scripts": [
     {
       "matches": ["<all_urls>"],

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>新标签页</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- 复用现有样式 -->
+    <link rel="stylesheet" href="../styles/modal.css" />
+    <link rel="stylesheet" href="newtab.css" />
+  </head>
+  <body>
+    <div class="newtab-container">
+      <!-- Modal 将被插入到 body 中 -->
+      <div id="newtab-modal-anchor"></div>
+    </div>
+
+    <!-- Toast元素 -->
+    <div id="smart-bookmark-toast" class="smart-bookmark-toast"></div>
+
+    <!-- 复用现有脚本（在页面中直接渲染UI；我们通过CSS把它从弹窗样式改为页面布局） -->
+    <script src="../utils/constants.js"></script>
+    <script src="../utils/helpers.js"></script>
+    <script src="../utils/bookmark-api.js"></script>
+    <script src="../utils/sorting-algorithm.js"></script>
+    <script src="../utils/search-engine.js"></script>
+    <script src="../components/virtual-scroller.js"></script>
+    <script src="../components/ui-manager.js"></script>
+    <script src="../components/theme-manager.js"></script>
+    <script src="../components/keyboard-manager.js"></script>
+    <script src="../components/language-manager.js"></script>
+    <script src="../modal/modal-manager.js"></script>
+
+    <!-- 新标签页专用脚本 -->
+    <script src="newtab.js"></script>
+  </body>
+</html>

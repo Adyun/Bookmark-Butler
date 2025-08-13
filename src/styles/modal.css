@@ -24,24 +24,25 @@
 }
 
 .dark-mode {
-  --sb-background: #0f172a;
+  /* 用户定制的深色主题变量 */
+  --sb-background: #212735;
   --sb-foreground: #f8fafc;
-  --sb-muted: #1e293b;
-  --sb-muted-foreground: #94a3b8;
-  --sb-border: #334155;
-  --sb-input: #1e293b;
-  --sb-primary: #f8fafc;
+  --sb-muted: #414b58;
+  --sb-muted-foreground: #a2acba;
+  --sb-border: #374151;
+  --sb-input: #2e3544;
+  --sb-primary: #e5e7eb;
   --sb-primary-foreground: #0f172a;
-  --sb-secondary: #1e293b;
-  --sb-secondary-foreground: #f8fafc;
-  --sb-accent: #1e293b;
-  --sb-accent-foreground: #f8fafc;
-  --sb-popover: #1e293b;
+  --sb-secondary: #1f2937;
+  --sb-secondary-foreground: #e5e7eb;
+  --sb-accent: #1f2937;
+  --sb-accent-foreground: #e5e7eb;
+  --sb-popover: #111827;
   --sb-popover-foreground: #f8fafc;
   --sb-destructive: #ef4444;
-  --sb-destructive-foreground: #1e293b;
-  --sb-ring: #3b82f6;
-  --sb-ring-light: rgba(59, 130, 246, 0.15);
+  --sb-destructive-foreground: #111827;
+  --sb-ring: #5b7ee5;
+  --sb-ring-light: rgba(91, 126, 229, 0.12);
 }
 
 /* Red Theme */
@@ -150,8 +151,8 @@
   border: 1px solid var(--sb-border);
   border-radius: var(--sb-radius);
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  width: 520px;
-  max-width: 90vw;
+  width: 760px;           /* 更接近 newtab 的宽度 */
+  max-width: 95vw;
   max-height: 80vh;
   height: auto;
   min-height: 400px;
@@ -444,6 +445,7 @@
   white-space: nowrap;
   display: inline-block;
   width: max-content;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 .smart-bookmark-bookmark-url {

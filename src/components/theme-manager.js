@@ -35,6 +35,10 @@ ThemeManager.prototype.init = function () {
   this.loadThemeColorSetting();
   console.log('Theme color loaded:', this.themeColor);
   
+  // 与 chrome.storage 同步（确保各上下文共享设置）
+  this.setupStorageChangeListener();
+  this.syncFromChromeStorage();
+  
   // 设置系统主题监听
   console.log('Setting up system theme listener...');
   this.setupSystemThemeListener();
@@ -67,6 +71,11 @@ ThemeManager.prototype.saveDarkModeSetting = function (mode) {
     // 直接使用localStorage，简化逻辑
     localStorage.setItem(window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_STORAGE_KEY, mode);
     this.darkMode = mode;
+    
+    // 同步到 chrome.storage，作为跨上下文的单一事实来源
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.set({ [window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_STORAGE_KEY]: mode });
+    }
     
     // 立即应用主题
     this.applyDarkMode();
@@ -103,6 +112,11 @@ ThemeManager.prototype.saveThemeColorSetting = function (themeColor) {
     localStorage.setItem('smart-bookmark-theme-color', themeColor);
     this.themeColor = themeColor;
     
+    // 同步到 chrome.storage，保持与新tab/弹窗一致
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.set({ 'smart-bookmark-theme-color': themeColor });
+    }
+    
     // 立即应用主题色
     this.applyThemeColor();
     
@@ -112,6 +126,62 @@ ThemeManager.prototype.saveThemeColorSetting = function (themeColor) {
   } catch (e) {
     console.warn('Failed to save theme color setting:', e);
   }
+};
+
+/**
+ * 从 chrome.storage 同步设置（异步修正不同上下文的差异）
+ */
+ThemeManager.prototype.syncFromChromeStorage = function () {
+  if (!(typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local)) {
+    return;
+  }
+  var self = this;
+  chrome.storage.local.get([
+    window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_STORAGE_KEY,
+    'smart-bookmark-theme-color'
+  ], function (result) {
+    var updated = false;
+    if (result && result[window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_STORAGE_KEY] &&
+        result[window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_STORAGE_KEY] !== self.darkMode) {
+      self.darkMode = result[window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_STORAGE_KEY];
+      updated = true;
+    }
+    if (result && typeof result['smart-bookmark-theme-color'] === 'string' &&
+        result['smart-bookmark-theme-color'] !== self.themeColor) {
+      self.themeColor = result['smart-bookmark-theme-color'];
+      updated = true;
+    }
+    if (updated) {
+      self.applyDarkMode();
+      self.applyThemeColor();
+      self.updateToggleButtonDisplay();
+      self.updateDropdownSelection();
+    }
+  });
+};
+
+/**
+ * 监听 chrome.storage 变化，实时应用到当前页面
+ */
+ThemeManager.prototype.setupStorageChangeListener = function () {
+  if (!(typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged)) {
+    return;
+  }
+  var self = this;
+  chrome.storage.onChanged.addListener(function (changes, areaName) {
+    if (areaName !== 'local') return;
+    var dmKey = window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_STORAGE_KEY;
+    if (changes && changes[dmKey] && typeof changes[dmKey].newValue !== 'undefined') {
+      self.darkMode = changes[dmKey].newValue;
+      self.applyDarkMode();
+      self.updateToggleButtonDisplay();
+    }
+    if (changes && changes['smart-bookmark-theme-color'] && typeof changes['smart-bookmark-theme-color'].newValue !== 'undefined') {
+      self.themeColor = changes['smart-bookmark-theme-color'].newValue;
+      self.applyThemeColor();
+      self.updateDropdownSelection();
+    }
+  });
 };
 
 /**

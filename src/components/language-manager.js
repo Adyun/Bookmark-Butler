@@ -8,7 +8,7 @@ function LanguageManager() {
   this.translations = {
     zh: {
       // 模态框标题和按钮
-      modalTitle: '搜索书签',
+      modalTitle: '打开书签',
       addBookmarkTitle: '添加书签',
       searchPlaceholder: '搜索书签...',
       searchFolderPlaceholder: '搜索文件夹...',
@@ -85,11 +85,11 @@ function LanguageManager() {
       followSystem: 'Follow System',
       lightMode: 'Light Mode',
       darkMode: 'Dark Mode',
-      defaultBlue: '🔵 Default Blue',
-      classicRed: '🔴 Classic Red',
-      freshGreen: '🟢 Fresh Green',
-      warmPink: '🌸 Warm Pink',
-      elegantPurple: '🟣 Elegant Purple',
+      defaultBlue: 'Default Blue',
+      classicRed: 'Classic Red',
+      freshGreen: 'Fresh Green',
+      warmPink: 'Warm Pink',
+      elegantPurple: 'Elegant Purple',
       
       // Permission related
       permissionTitle: 'Bookmark Permission Required',
@@ -107,6 +107,9 @@ function LanguageManager() {
 LanguageManager.prototype.init = function () {
   // 从存储中恢复语言设置
   this.loadLanguageFromStorage();
+  // 与其他上下文（弹窗/newtab）同步
+  this.setupStorageChangeListener();
+  this.syncFromChromeStorage && this.syncFromChromeStorage();
 };
 
 /**
@@ -138,10 +141,46 @@ LanguageManager.prototype.loadLanguageFromStorage = function () {
 LanguageManager.prototype.saveLanguageToStorage = function (language) {
   if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
     chrome.storage.local.set({ smartBookmarkLanguage: language });
+    // 同步一份到 localStorage，保证回退路径一致
+    try { localStorage.setItem('smartBookmarkLanguage', language); } catch (e) {}
   } else {
     // 回退到localStorage
     localStorage.setItem('smartBookmarkLanguage', language);
   }
+};
+
+/**
+ * 监听 chrome.storage 变化，跨上下文实时同步
+ */
+LanguageManager.prototype.setupStorageChangeListener = function () {
+  if (!(typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged)) return;
+  var self = this;
+  chrome.storage.onChanged.addListener(function (changes, areaName) {
+    if (areaName !== 'local') return;
+    if (changes && changes.smartBookmarkLanguage && typeof changes.smartBookmarkLanguage.newValue !== 'undefined') {
+      var newLang = changes.smartBookmarkLanguage.newValue;
+      if (newLang && newLang !== self.currentLanguage) {
+        self.currentLanguage = newLang;
+        try { localStorage.setItem('smartBookmarkLanguage', newLang); } catch (e) {}
+        self.updateUI();
+      }
+    }
+  });
+};
+
+/**
+ * 主动从 chrome.storage 拉取一次，修正可能的差异
+ */
+LanguageManager.prototype.syncFromChromeStorage = function () {
+  if (!(typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local)) return;
+  var self = this;
+  chrome.storage.local.get(['smartBookmarkLanguage'], function (result) {
+    if (result && result.smartBookmarkLanguage && result.smartBookmarkLanguage !== self.currentLanguage) {
+      self.currentLanguage = result.smartBookmarkLanguage;
+      try { localStorage.setItem('smartBookmarkLanguage', self.currentLanguage); } catch (e) {}
+      self.updateUI();
+    }
+  });
 };
 
 /**
