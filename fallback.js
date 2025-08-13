@@ -1,10 +1,10 @@
 // Fallback page script for Smart Bookmark Extension
 
 function openNewTab() {
-    // 通过消息传递与background script通信
+    // 通过消息传递与background script通信，打开浏览器默认新标签页
     chrome.runtime.sendMessage({
         action: "openNewTab",
-        url: "https://www.google.com"
+        url: "chrome://newtab/"
     }, function(response) {
         if (chrome.runtime.lastError) {
             console.error("Error sending message:", chrome.runtime.lastError);
@@ -21,9 +21,16 @@ function openNewTab() {
 }
 
 function fallbackOpenTab() {
-    // 备用方案：尝试直接打开链接
+    // 备用方案：尝试直接打开浏览器默认新标签页
     try {
-        window.open('https://www.google.com', '_blank');
+        // 尝试打开chrome://newtab/，如果失败则使用about:blank
+        var newTabUrl = 'chrome://newtab/';
+        try {
+            window.open(newTabUrl, '_blank');
+        } catch (e) {
+            // 如果chrome://newtab/失败，使用about:blank作为备选
+            window.open('about:blank', '_blank');
+        }
         closeCurrentTab();
     } catch (error) {
         console.error("Failed to open new tab:", error);
@@ -67,7 +74,7 @@ function fallbackClose() {
 // DOM加载完成后绑定事件
 document.addEventListener('DOMContentLoaded', function() {
     // 绑定按钮事件
-    const openTabButton = document.querySelector('.fallback-button:not(.secondary)');
+    const openTabButton = document.querySelector('.fallback-button.primary');
     const closeButton = document.querySelector('.fallback-button.secondary');
     
     if (openTabButton) {

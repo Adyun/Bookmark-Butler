@@ -10,6 +10,21 @@
   };
 
   var hasLoaded = false;
+  var listeners = [];
+
+  function notifyPinsUpdated() {
+    try {
+      // 回调监听列表
+      for (var i = 0; i < listeners.length; i++) {
+        try { listeners[i](inMemoryPins); } catch (e) {}
+      }
+      // 派发全局事件，供页面间通信（newtab 与 弹窗）
+      if (typeof window !== 'undefined' && window.dispatchEvent) {
+        var evt = new CustomEvent('smart-bookmark-pins-updated', { detail: inMemoryPins });
+        window.dispatchEvent(evt);
+      }
+    } catch (e) {}
+  }
 
   function getStorageArea() {
     try {
@@ -57,6 +72,8 @@
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(inMemoryPins));
       } catch (e) {}
+      // localStorage 不会触发 chrome.storage.onChanged，手动通知
+      notifyPinsUpdated();
       return Promise.resolve();
     }
     return new Promise(function(resolve) {
@@ -165,7 +182,23 @@
     applyPinOrdering: applyPinOrdering,
     hasAnyPinned: hasAnyPinned,
     promotePinnedPreserveOrder: promotePinnedPreserveOrder,
-    hasLoaded: function() { return hasLoaded; }
+    hasLoaded: function() { return hasLoaded; },
+    addChangeListener: function(cb) { if (typeof cb === 'function') listeners.push(cb); }
   };
+
+  // 全局监听 chrome.storage 变化，跨页面实时同步
+  try {
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged) {
+      chrome.storage.onChanged.addListener(function(changes, areaName) {
+        try {
+          if (areaName !== 'local') return;
+          if (!changes || !changes[STORAGE_KEY]) return;
+          var newPins = changes[STORAGE_KEY].newValue || {};
+          inMemoryPins = normalizePins(newPins);
+          notifyPinsUpdated();
+        } catch (e) {}
+      });
+    }
+  } catch (e) {}
 })();
 

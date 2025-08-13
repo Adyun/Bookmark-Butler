@@ -35,26 +35,6 @@ class NewTabPage {
             // 让 modal 在新标签页环境下运行（仅覆盖必要行为）
             this.adaptForNewTab();
             
-            // 自动聚焦搜索框
-            setTimeout(() => {
-                const searchInput = document.getElementById('smart-bookmark-search');
-                if (searchInput) {
-                    // 自动聚焦（打开 newtab 时）
-                    searchInput.focus();
-                    // 聚焦时如果没有输入，也默认展开书签列表（显示全部或最近）
-                    if (!searchInput.value.trim()) {
-                        // 触发一次空查询，让现有逻辑渲染默认列表
-                        try {
-                            if (this.modalManager && this.modalManager.handleSearch) {
-                                this.modalManager.handleSearch('');
-                            }
-                        } catch (e) {
-                            console.warn('Default open list failed:', e);
-                        }
-                    }
-                }
-            }, 300);
-            
             console.log('NewTab page initialized successfully');
         } catch (error) {
             console.error('Failed to initialize NewTab page:', error);
@@ -168,6 +148,8 @@ class NewTabPage {
             }
         }
     }
+
+
 
 
 }

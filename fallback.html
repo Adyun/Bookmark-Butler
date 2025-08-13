@@ -6,68 +6,149 @@
     <title>智能书签扩展</title>
     <link rel="stylesheet" href="src/styles/modal.css">
     <style>
+        :root {
+            --background: 0 0% 100%;
+            --foreground: 222.2 84% 4.9%;
+            --card: 0 0% 100%;
+            --card-foreground: 222.2 84% 4.9%;
+            --popover: 0 0% 100%;
+            --popover-foreground: 222.2 84% 4.9%;
+            --primary: 221.2 83.2% 53.3%;
+            --primary-foreground: 210 40% 98%;
+            --secondary: 210 40% 96%;
+            --secondary-foreground: 222.2 84% 4.9%;
+            --muted: 210 40% 96%;
+            --muted-foreground: 215.4 16.3% 46.9%;
+            --accent: 210 40% 96%;
+            --accent-foreground: 222.2 84% 4.9%;
+            --destructive: 0 84.2% 60.2%;
+            --destructive-foreground: 210 40% 98%;
+            --border: 214.3 31.8% 91.4%;
+            --input: 214.3 31.8% 91.4%;
+            --ring: 221.2 83.2% 53.3%;
+            --radius: 0.5rem;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             margin: 0;
             padding: 0;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: hsl(var(--background));
+            color: hsl(var(--foreground));
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
         }
         
         .fallback-container {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 16px;
-            padding: 40px;
-            max-width: 500px;
+            background: hsl(var(--card));
+            border: 1px solid hsl(var(--border));
+            border-radius: calc(var(--radius) * 2);
+            padding: 48px 32px;
+            max-width: 420px;
+            width: 100%;
+            margin: 16px;
             text-align: center;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 10px 25px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
         }
         
         .fallback-icon {
-            font-size: 64px;
-            margin-bottom: 20px;
+            font-size: 48px;
+            margin-bottom: 24px;
+            filter: grayscale(0.3);
         }
         
         .fallback-title {
             font-size: 24px;
-            font-weight: 700;
-            color: #1e293b;
-            margin-bottom: 16px;
+            font-weight: 600;
+            color: hsl(var(--foreground));
+            margin: 0 0 16px 0;
+            letter-spacing: -0.025em;
         }
         
         .fallback-message {
-            font-size: 16px;
-            color: #64748b;
-            line-height: 1.6;
-            margin-bottom: 30px;
-        }
-        
-        .fallback-button {
-            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            padding: 12px 24px;
             font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin: 0 10px;
+            color: hsl(var(--muted-foreground));
+            line-height: 1.5;
+            margin-bottom: 32px;
+        }
+
+        .fallback-message code {
+            background: hsl(var(--muted));
+            padding: 0.125rem 0.25rem;
+            border-radius: calc(var(--radius) * 0.5);
+            font-size: 0.875em;
+            font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
         }
         
-        .fallback-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+        .fallback-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .fallback-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+            border-radius: var(--radius);
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.15s ease-in-out;
+            cursor: pointer;
+            padding: 10px 16px;
+            height: 40px;
+            border: 1px solid transparent;
+            outline: none;
+            user-select: none;
+        }
+
+        .fallback-button:focus-visible {
+            outline: 2px solid hsl(var(--ring));
+            outline-offset: 2px;
+        }
+        
+        .fallback-button.primary {
+            background: hsl(var(--primary));
+            color: hsl(var(--primary-foreground));
+        }
+
+        .fallback-button.primary:hover {
+            background: hsl(var(--primary) / 0.9);
         }
         
         .fallback-button.secondary {
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.8) 100%);
-            color: #374151;
-            border: 1px solid rgba(209, 213, 219, 0.8);
+            background: hsl(var(--secondary));
+            color: hsl(var(--secondary-foreground));
+            border-color: hsl(var(--border));
+        }
+
+        .fallback-button.secondary:hover {
+            background: hsl(var(--secondary) / 0.8);
+        }
+
+        @media (max-width: 480px) {
+            .fallback-container {
+                padding: 32px 24px;
+                margin: 12px;
+            }
+            
+            .fallback-buttons {
+                flex-direction: column;
+            }
+            
+            .fallback-button {
+                width: 100%;
+            }
         }
     </style>
 </head>
@@ -79,8 +160,10 @@
             当前页面不支持书签管理器扩展。<br>
             请在普通网页中使用此功能，或者使用下面的快捷操作。
         </p>
-        <button class="fallback-button">打开新标签页</button>
-        <button class="fallback-button secondary">关闭</button>
+        <div class="fallback-buttons">
+            <button class="fallback-button primary">打开新标签页</button>
+            <button class="fallback-button secondary">关闭</button>
+        </div>
     </div>
 
     <script src="fallback.js"></script>

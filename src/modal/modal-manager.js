@@ -91,6 +91,38 @@ ModalManager.prototype.initializeComponents = function () {
         }
       } catch (e) {}
     });
+
+    // 监听置顶数据的跨页面实时变化（通过 chrome.storage.onChanged 或本地事件）
+    try {
+      var onPinsChanged = function() {
+        try {
+          var searchInput = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
+          var hasQuery = !!(searchInput && searchInput.value.trim());
+          if (!hasQuery) {
+            // 空查询：需要重新排序
+            if (self.uiManager.currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH) {
+              self.updateBookmarkList();
+            } else {
+              self.updateFolderList();
+            }
+          } else {
+            // 搜索中：只需刷新当前可见列表
+            if (self.uiManager.currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH && self.bookmarkVirtualScroller) {
+              self.bookmarkVirtualScroller.forceUpdate();
+            } else if (self.folderVirtualScroller) {
+              self.folderVirtualScroller.forceUpdate();
+            }
+          }
+        } catch (e) {}
+      };
+
+      if (typeof window !== 'undefined' && window.addEventListener) {
+        window.addEventListener('smart-bookmark-pins-updated', onPinsChanged);
+      }
+      if (typeof window.SMART_BOOKMARK_PINS.addChangeListener === 'function') {
+        window.SMART_BOOKMARK_PINS.addChangeListener(onPinsChanged);
+      }
+    } catch (e) {}
   }
 };
 
@@ -759,16 +791,23 @@ ModalManager.prototype.renderFolderItem = function (folder, index, hasSearchQuer
     '<div class="smart-bookmark-folder-content">' +
     '<div class="smart-bookmark-folder-main">' +
     '<span class="smart-bookmark-folder-name">' + highlightedTitle + '</span>' +
-    '<span class="smart-bookmark-folder-count">' + (folder.bookmarkCount || 0) + '</span>' +
     '</div>' +
     (breadcrumb ? breadcrumb : '') +
     '</div>';
 
-  // 右侧置顶按钮（搜索态仍显示，但不改变排序）
+  // 右侧操作区域：数量和置顶按钮
   try {
     item.classList.add('has-actions');
     var actions = document.createElement('div');
     actions.className = 'smart-bookmark-item-actions';
+    
+    // 文件夹数量
+    var countSpan = document.createElement('span');
+    countSpan.className = 'smart-bookmark-folder-count';
+    countSpan.textContent = folder.bookmarkCount || 0;
+    actions.appendChild(countSpan);
+    
+    // 置顶按钮
     var pinBtn = document.createElement('button');
     pinBtn.className = 'smart-bookmark-pin-btn';
     pinBtn.type = 'button';
