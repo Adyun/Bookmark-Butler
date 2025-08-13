@@ -75,6 +75,23 @@ ModalManager.prototype.initializeComponents = function () {
   window.addEventListener('layout-recalculated', function () {
     self.handleLayoutRecalculated();
   });
+
+  // 预加载置顶数据（与弹窗/newtab共享），以便空搜索时应用置顶排序
+  if (window.SMART_BOOKMARK_PINS && typeof window.SMART_BOOKMARK_PINS.loadPins === 'function') {
+    window.SMART_BOOKMARK_PINS.loadPins().then(function () {
+      try {
+        var searchInput = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
+        var hasQuery = !!(searchInput && searchInput.value.trim());
+        if (!hasQuery) {
+          if (self.uiManager.currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH) {
+            self.updateBookmarkList();
+          } else {
+            self.updateFolderList();
+          }
+        }
+      } catch (e) {}
+    });
+  }
 };
 
 /**
@@ -659,8 +676,22 @@ ModalManager.prototype.updateFolderList = function () {
     return;
   }
 
+  // 应用置顶规则：
+  // - 空搜索：置顶项按置顶时间倒序优先
+  // - 有搜索：若结果包含置顶项，则将置顶项提升到顶部但保留搜索相对顺序
+  var itemsToRender = this.filteredFolders ? this.filteredFolders.slice() : [];
+  if (window.SMART_BOOKMARK_PINS) {
+    if (!hasSearchQuery) {
+      itemsToRender = window.SMART_BOOKMARK_PINS.applyPinOrdering(itemsToRender, 'folders');
+    } else if (window.SMART_BOOKMARK_PINS.hasAnyPinned(itemsToRender, 'folders')) {
+      itemsToRender = window.SMART_BOOKMARK_PINS.promotePinnedPreserveOrder(itemsToRender, 'folders');
+    }
+  }
+  // 确保后续选择索引与渲染顺序一致
+  this.filteredFolders = itemsToRender.slice();
+
   // 使用虚拟滚动渲染文件夹列表
-  this.renderFolderListWithVirtualScroll(folderList, hasSearchQuery);
+  this.renderFolderListWithVirtualScroll(folderList, hasSearchQuery, itemsToRender);
 };
 
 /**
@@ -668,7 +699,7 @@ ModalManager.prototype.updateFolderList = function () {
  * @param {Element} folderList - 文件夹列表容器
  * @param {boolean} hasSearchQuery - 是否有搜索查询
  */
-ModalManager.prototype.renderFolderListWithVirtualScroll = function (folderList, hasSearchQuery) {
+ModalManager.prototype.renderFolderListWithVirtualScroll = function (folderList, hasSearchQuery, itemsToRender) {
   var self = this;
 
   // 销毁旧的虚拟滚动器
@@ -680,7 +711,7 @@ ModalManager.prototype.renderFolderListWithVirtualScroll = function (folderList,
   this.folderVirtualScroller = new window.VirtualScroller(
     folderList,
     this.itemHeight,
-    this.filteredFolders.length,
+    (itemsToRender && itemsToRender.length) || 0,
     function (folder, index) {
       return self.renderFolderItem(folder, index, hasSearchQuery);
     }
@@ -692,7 +723,9 @@ ModalManager.prototype.renderFolderListWithVirtualScroll = function (folderList,
   // 更新虚拟滚动器的数据
   // 模式切换/首次渲染/搜索后：确保本次渲染播放动画
   this.folderVirtualScroller.shouldAnimateOnNextRender = true;
-  this.folderVirtualScroller.updateData(this.filteredFolders);
+  this.folderVirtualScroller.updateData(itemsToRender);
+  // 同步键盘管理器的当前项目
+  this.keyboardManager.setCurrentItems(itemsToRender);
 };
 
 /**
@@ -731,6 +764,38 @@ ModalManager.prototype.renderFolderItem = function (folder, index, hasSearchQuer
     (breadcrumb ? breadcrumb : '') +
     '</div>';
 
+  // 右侧置顶按钮（搜索态仍显示，但不改变排序）
+  try {
+    item.classList.add('has-actions');
+    var actions = document.createElement('div');
+    actions.className = 'smart-bookmark-item-actions';
+    var pinBtn = document.createElement('button');
+    pinBtn.className = 'smart-bookmark-pin-btn';
+    pinBtn.type = 'button';
+    pinBtn.innerHTML = '<svg class="smart-bookmark-pin-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M23.9986 5L17.8856 17.4776L4 19.4911L14.0589 29.3251L11.6544 43L23.9986 36.4192L36.3454 43L33.9586 29.3251L44 19.4911L30.1913 17.4776L23.9986 5Z"/></svg>';
+    if (window.SMART_BOOKMARK_PINS && window.SMART_BOOKMARK_PINS.isPinned('folders', folder.id)) {
+      pinBtn.classList.add('pinned');
+    }
+    var selfRef = this;
+    pinBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      if (!window.SMART_BOOKMARK_PINS) return;
+      window.SMART_BOOKMARK_PINS.togglePin('folders', folder.id).then(function(pinnedNow) {
+        if (pinnedNow) pinBtn.classList.add('pinned'); else pinBtn.classList.remove('pinned');
+        // 空搜索时刷新排序，搜索态仅刷新按钮样式
+        var searchInput = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
+        var hasSearchQuery = searchInput && searchInput.value.trim() !== '';
+        if (!hasSearchQuery) {
+          selfRef.updateFolderList();
+        } else if (selfRef.folderVirtualScroller) {
+          selfRef.folderVirtualScroller.forceUpdate();
+        }
+      });
+    });
+    actions.appendChild(pinBtn);
+    item.appendChild(actions);
+  } catch (e) {}
+
   // 绑定点击事件
   var self = this;
   item.addEventListener('click', function (e) {
@@ -761,8 +826,22 @@ ModalManager.prototype.updateBookmarkList = function () {
     return;
   }
 
+  // 应用置顶规则：
+  // - 空搜索：置顶项按置顶时间倒序优先
+  // - 有搜索：若结果包含置顶项，则将置顶项提升到顶部但保留搜索相对顺序
+  var itemsToRender = this.filteredBookmarks ? this.filteredBookmarks.slice() : [];
+  if (window.SMART_BOOKMARK_PINS) {
+    if (!hasSearchQuery) {
+      itemsToRender = window.SMART_BOOKMARK_PINS.applyPinOrdering(itemsToRender, 'bookmarks');
+    } else if (window.SMART_BOOKMARK_PINS.hasAnyPinned(itemsToRender, 'bookmarks')) {
+      itemsToRender = window.SMART_BOOKMARK_PINS.promotePinnedPreserveOrder(itemsToRender, 'bookmarks');
+    }
+  }
+  // 保持键盘导航与渲染顺序一致
+  this.filteredBookmarks = itemsToRender.slice();
+
   // 使用虚拟滚动渲染书签列表
-  this.renderBookmarkListWithVirtualScroll(bookmarkList, hasSearchQuery);
+  this.renderBookmarkListWithVirtualScroll(bookmarkList, hasSearchQuery, itemsToRender);
 };
 
 /**
@@ -770,7 +849,7 @@ ModalManager.prototype.updateBookmarkList = function () {
  * @param {Element} bookmarkList - 书签列表容器
  * @param {boolean} hasSearchQuery - 是否有搜索查询
  */
-ModalManager.prototype.renderBookmarkListWithVirtualScroll = function (bookmarkList, hasSearchQuery) {
+ModalManager.prototype.renderBookmarkListWithVirtualScroll = function (bookmarkList, hasSearchQuery, itemsToRender) {
   var self = this;
 
   // 销毁旧的虚拟滚动器
@@ -782,7 +861,7 @@ ModalManager.prototype.renderBookmarkListWithVirtualScroll = function (bookmarkL
   this.bookmarkVirtualScroller = new window.VirtualScroller(
     bookmarkList,
     this.itemHeight,
-    this.filteredBookmarks.length,
+    (itemsToRender && itemsToRender.length) || 0,
     function (bookmark, index) {
       return self.renderBookmarkItem(bookmark, index, hasSearchQuery);
     }
@@ -794,7 +873,9 @@ ModalManager.prototype.renderBookmarkListWithVirtualScroll = function (bookmarkL
   // 更新虚拟滚动器的数据
   // 模式切换/首次渲染/搜索后：确保本次渲染播放动画
   this.bookmarkVirtualScroller.shouldAnimateOnNextRender = true;
-  this.bookmarkVirtualScroller.updateData(this.filteredBookmarks);
+  this.bookmarkVirtualScroller.updateData(itemsToRender);
+  // 同步键盘管理器的当前项目
+  this.keyboardManager.setCurrentItems(itemsToRender);
 };
 
 /**
@@ -839,6 +920,38 @@ ModalManager.prototype.renderBookmarkItem = function (bookmark, index, hasSearch
     (breadcrumb ? breadcrumb : '') +
     '</div>' +
     '</div>';
+
+  // 右侧置顶按钮（搜索态仍显示，但不改变排序）
+  try {
+    item.classList.add('has-actions');
+    var actions = document.createElement('div');
+    actions.className = 'smart-bookmark-item-actions';
+    var pinBtn = document.createElement('button');
+    pinBtn.className = 'smart-bookmark-pin-btn';
+    pinBtn.type = 'button';
+    pinBtn.innerHTML = '<svg class="smart-bookmark-pin-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M23.9986 5L17.8856 17.4776L4 19.4911L14.0589 29.3251L11.6544 43L23.9986 36.4192L36.3454 43L33.9586 29.3251L44 19.4911L30.1913 17.4776L23.9986 5Z"/></svg>';
+    if (window.SMART_BOOKMARK_PINS && window.SMART_BOOKMARK_PINS.isPinned('bookmarks', bookmark.id)) {
+      pinBtn.classList.add('pinned');
+    }
+    var selfRef = this;
+    pinBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      if (!window.SMART_BOOKMARK_PINS) return;
+      window.SMART_BOOKMARK_PINS.togglePin('bookmarks', bookmark.id).then(function(pinnedNow) {
+        if (pinnedNow) pinBtn.classList.add('pinned'); else pinBtn.classList.remove('pinned');
+        // 空搜索时刷新排序，搜索态仅刷新按钮样式
+        var searchInput = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
+        var hasSearchQuery = searchInput && searchInput.value.trim() !== '';
+        if (!hasSearchQuery) {
+          selfRef.updateBookmarkList();
+        } else if (selfRef.bookmarkVirtualScroller) {
+          selfRef.bookmarkVirtualScroller.forceUpdate();
+        }
+      });
+    });
+    actions.appendChild(pinBtn);
+    item.appendChild(actions);
+  } catch (e) {}
 
   // 绑定点击事件
   var self = this;

@@ -55,11 +55,12 @@ UIManager.prototype.createModal = function () {
     '<div class="smart-bookmark-control-group">' +
     '<button id="smart-bookmark-theme-toggle" class="smart-bookmark-control-toggle" title="主题颜色">🎨</button>' +
     '<div id="smart-bookmark-theme-dropdown" class="smart-bookmark-control-dropdown">' +
-    '<div class="smart-bookmark-control-option" data-theme="default"><span class="smart-bookmark-option-icon">💙</span>默认蓝色</div>' +
+    '<div class="smart-bookmark-control-option" data-theme="gray"><span class="smart-bookmark-option-icon">🩶</span>中性灰色（默认）</div>' +
     '<div class="smart-bookmark-control-option" data-theme="red"><span class="smart-bookmark-option-icon">❤️</span>经典红色</div>' +
     '<div class="smart-bookmark-control-option" data-theme="green"><span class="smart-bookmark-option-icon">💚</span>清新绿色</div>' +
     '<div class="smart-bookmark-control-option" data-theme="pink"><span class="smart-bookmark-option-icon">🩷</span>温馨粉色</div>' +
-    '<div class="smart-bookmark-control-option" data-theme="purple"><span class="smart-bookmark-option-icon">💜</span>优雅紫色</div>' +
+      '<div class="smart-bookmark-control-option" data-theme="purple"><span class="smart-bookmark-option-icon">💜</span>优雅紫色</div>' +
+      '<div class="smart-bookmark-control-option" data-theme="blue"><span class="smart-bookmark-option-icon">💙</span>经典蓝色</div>' +
     '</div>' +
     '</div>' +
     
@@ -67,7 +68,7 @@ UIManager.prototype.createModal = function () {
     '</div>' +
     '</div>' +
     '<div class="smart-bookmark-modal-body">' +
-    '<input type="text" id="' + window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID + '" class="smart-bookmark-search" placeholder="搜索书签...">' +
+    '<input type="text" id="' + window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID + '" class="smart-bookmark-search" placeholder="搜索书签..." autofocus>' +
     '<div class="smart-bookmark-list-container">' +
     '<ul id="' + window.SMART_BOOKMARK_CONSTANTS.BOOKMARK_LIST_ID + '" class="smart-bookmark-bookmark-list"></ul>' +
     '<ul id="' + window.SMART_BOOKMARK_CONSTANTS.FOLDER_LIST_ID + '" class="smart-bookmark-folder-list" style="display: none;"></ul>' +

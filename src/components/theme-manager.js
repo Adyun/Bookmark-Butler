@@ -6,7 +6,7 @@
  */
 function ThemeManager() {
   this.darkMode = window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_AUTO; // 当前深色模式设置
-  this.themeColor = 'default'; // 当前主题色设置
+  this.themeColor = 'gray'; // 当前主题色设置，默认为灰色
   this.systemThemeListener = null; // 系统主题变化监听器
   this.eventListeners = []; // 事件监听器列表
   this.isInitialized = false; // 初始化状态
@@ -97,9 +97,10 @@ ThemeManager.prototype.saveDarkModeSetting = function (mode) {
 ThemeManager.prototype.loadThemeColorSetting = function () {
   try {
     var themeColor = localStorage.getItem('smart-bookmark-theme-color');
-    this.themeColor = themeColor || 'default';
+    // 默认为灰色主题
+    this.themeColor = themeColor || 'gray';
   } catch (e) {
-    this.themeColor = 'default';
+    this.themeColor = 'gray';
   }
 };
 
@@ -192,10 +193,10 @@ ThemeManager.prototype.applyThemeColor = function () {
   if (!modalElement) return;
 
   // 移除所有主题色类
-  modalElement.classList.remove('theme-red', 'theme-green', 'theme-pink', 'theme-purple');
+  modalElement.classList.remove('theme-red', 'theme-green', 'theme-pink', 'theme-purple', 'theme-gray', 'theme-blue');
   
   // 添加当前主题色类
-  if (this.themeColor !== 'default') {
+  if (this.themeColor && this.themeColor !== 'default') {
     modalElement.classList.add('theme-' + this.themeColor);
   }
 };

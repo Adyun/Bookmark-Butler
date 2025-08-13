@@ -41,10 +41,12 @@ function LanguageManager() {
       lightMode: '浅色模式',
       darkMode: '深色模式',
       defaultBlue: '默认蓝色',
+      classicBlue: '经典蓝色',
       classicRed: '经典红色',
       freshGreen: '清新绿色',
       warmPink: '温馨粉色',
       elegantPurple: '优雅紫色',
+      neutralGray: '中性灰色',
       
       // 权限相关
       permissionTitle: '需要书签权限',
@@ -90,6 +92,8 @@ function LanguageManager() {
       freshGreen: 'Fresh Green',
       warmPink: 'Warm Pink',
       elegantPurple: 'Elegant Purple',
+      classicBlue: 'Classic Blue',
+      neutralGray: 'Neutral Gray',
       
       // Permission related
       permissionTitle: 'Bookmark Permission Required',
@@ -311,9 +315,9 @@ LanguageManager.prototype.updateThemeDropdown = function () {
     var iconHtml = '';
     var text = '';
     
-    if (theme === 'default') {
-      iconHtml = '<span class="smart-bookmark-option-icon">💙</span>';
-      text = this.t('defaultBlue');
+    if (theme === 'gray') {
+      iconHtml = '<span class="smart-bookmark-option-icon">🩶</span>';
+      text = this.t('neutralGray');
     } else if (theme === 'red') {
       iconHtml = '<span class="smart-bookmark-option-icon">❤️</span>';
       text = this.t('classicRed');
@@ -326,6 +330,9 @@ LanguageManager.prototype.updateThemeDropdown = function () {
     } else if (theme === 'purple') {
       iconHtml = '<span class="smart-bookmark-option-icon">💜</span>';
       text = this.t('elegantPurple');
+    } else if (theme === 'blue') {
+      iconHtml = '<span class="smart-bookmark-option-icon">💙</span>';
+      text = this.t('classicBlue');
     }
     
     if (iconHtml && text) {
@@ -373,9 +380,9 @@ LanguageManager.prototype.updateThemeDropdown = function () {
       } else if (mode === 'dark') {
         iconHtml = '<span class="smart-bookmark-option-icon">🌙</span>';
         text = this.t('darkMode');
-      } else if (theme === 'default') {
-        iconHtml = '<span class="smart-bookmark-option-icon">💙</span>';
-        text = this.t('defaultBlue');
+      } else if (theme === 'gray') {
+        iconHtml = '<span class="smart-bookmark-option-icon">🩶</span>';
+        text = this.t('neutralGray');
       } else if (theme === 'red') {
         iconHtml = '<span class="smart-bookmark-option-icon">❤️</span>';
         text = this.t('classicRed');
@@ -388,6 +395,9 @@ LanguageManager.prototype.updateThemeDropdown = function () {
       } else if (theme === 'purple') {
         iconHtml = '<span class="smart-bookmark-option-icon">💜</span>';
         text = this.t('elegantPurple');
+      } else if (theme === 'blue') {
+        iconHtml = '<span class="smart-bookmark-option-icon">💙</span>';
+        text = this.t('classicBlue');
       } else if (language === 'zh') {
         iconHtml = '<span class="smart-bookmark-option-icon">🇨🇳</span>';
         text = '中文';
