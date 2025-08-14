@@ -18,9 +18,25 @@ function VirtualScroller(container, itemHeight, totalItems, renderItem) {
   this.scrollHandler = null;
   this.hasMeasuredItemHeight = false; // 是否已自动测量真实高度
   this.shouldAnimateOnNextRender = true; // 仅在首次或数据更新后为true
+  this.isRenderScheduled = false; // rAF合帧标记
+  this.lastStartIndex = -1; // 上一次渲染的起始索引
+  this.lastEndIndex = -1;   // 上一次渲染的结束索引
 
   this.init();
 }
+
+/**
+ * 更新渲染函数（用于复用实例时切换不同渲染逻辑/闭包参数）
+ * @param {Function} renderItem
+ */
+VirtualScroller.prototype.setRenderItem = function(renderItem) {
+  if (typeof renderItem === 'function') {
+    this.renderItem = renderItem;
+    // 下一次渲染启用动画，且立即渲染
+    this.shouldAnimateOnNextRender = true;
+    this.render();
+  }
+};
 
 /**
  * 初始化虚拟滚动器
@@ -48,7 +64,12 @@ VirtualScroller.prototype.init = function () {
   this.scrollHandler = function () {
     self.handleScroll();
   };
-  this.container.addEventListener('scroll', this.scrollHandler);
+  // 使用被动监听与兼容处理
+  try {
+    this.container.addEventListener('scroll', this.scrollHandler, { passive: true });
+  } catch (e) {
+    this.container.addEventListener('scroll', this.scrollHandler);
+  }
 
   // 监听容器大小变化
   if (window.ResizeObserver) {
@@ -80,16 +101,22 @@ VirtualScroller.prototype.updateContainerHeight = function () {
   var itemTotalHeight = this.itemHeight + 8; // 项目高度 + 间距
   this.visibleItems = Math.ceil(this.containerHeight / itemTotalHeight) + 4; // 增加缓冲区
   
-  console.log('Virtual scroller container height:', this.containerHeight, 'visible items:', this.visibleItems);
+  // 移除高频日志，避免阻塞主线程
 };
 
 /**
  * 处理滚动事件
  */
 VirtualScroller.prototype.handleScroll = function () {
+  var self = this;
   this.scrollTop = this.container.scrollTop;
-  this.updateVisibleRange();
-  this.render();
+  if (this.isRenderScheduled) return;
+  this.isRenderScheduled = true;
+  requestAnimationFrame(function () {
+    self.isRenderScheduled = false;
+    self.updateVisibleRange();
+    self.render();
+  });
 };
 
 /**
@@ -106,6 +133,19 @@ VirtualScroller.prototype.updateVisibleRange = function () {
  */
 VirtualScroller.prototype.render = function () {
   if (!this.contentContainer || !this.items || this.items.length === 0) {
+    return;
+  }
+
+  // 确保内容容器已挂载（防止外部 innerHTML 重置导致容器被移除）
+  if (!this.contentContainer.parentNode || this.contentContainer.parentNode !== this.container) {
+    try {
+      this.container.innerHTML = '';
+      this.container.appendChild(this.contentContainer);
+    } catch (e) {}
+  }
+
+  // 如果可见范围未变化且不需要动画，跳过渲染
+  if (this.startIndex === this.lastStartIndex && this.endIndex === this.lastEndIndex && !this.shouldAnimateOnNextRender) {
     return;
   }
 
@@ -191,11 +231,13 @@ VirtualScroller.prototype.render = function () {
   // 恢复之前的选中状态（如果有的话）
   if (activeItemId) {
     var restoredItem = this.contentContainer.querySelector('[data-folder-id="' + activeItemId + '"], [data-bookmark-id="' + activeItemId + '"]');
-    if (restoredItem) {
-      restoredItem.classList.add('active');
-      console.log('Restored active state for item:', activeItemId);
-    }
+      if (restoredItem) {
+        restoredItem.classList.add('active');
+      }
   }
+  // 记录本次渲染范围
+  this.lastStartIndex = this.startIndex;
+  this.lastEndIndex = this.endIndex;
 };
 
 /**
@@ -296,6 +338,13 @@ VirtualScroller.prototype.setItemHeight = function (newHeight) {
  * @param {number} relativeIndex - 在当前可见区域的相对索引
  */
 VirtualScroller.prototype.addItemAnimation = function(itemElement, relativeIndex) {
+  // 列表很大时关闭动画，避免首屏卡顿
+  if (this.totalItems && this.totalItems > 200) {
+    itemElement.style.opacity = '1';
+    itemElement.style.transform = 'none';
+    return;
+  }
+
   // 如果用户设置了减少动画，跳过动画
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     itemElement.style.opacity = '1';
@@ -322,6 +371,13 @@ VirtualScroller.prototype.addItemAnimation = function(itemElement, relativeIndex
     animationType = 'animate-in'; // 书签向上淡入
   }
   
+  // 限制同一帧内动画的项目数量，避免过多重绘
+  if (typeof relativeIndex === 'number' && relativeIndex > 20) {
+    itemElement.style.opacity = '1';
+    itemElement.style.transform = 'none';
+    return;
+  }
+
   // 添加动画类
   itemElement.classList.add(animationType);
   

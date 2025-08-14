@@ -11,6 +11,7 @@ function ModalManager() {
   this.filteredBookmarks = [];
   this.searchEngine = new window.SearchEngine();
   this.itemHeight = 58; // 每个项目的高度（像素）- 与CSS min-height保持一致（文件夹52px+书签56px的平均值）
+  this.folderById = new Map(); // 快速查找用
   
   // 面包屑缓存，避免重复计算
   this.breadcrumbCache = new Map();
@@ -208,19 +209,19 @@ ModalManager.prototype.bindEvents = function () {
 
   addEventListenerFn(document, 'click', handleClickOutside);
 
-  // 搜索输入事件（添加防抖）
+  // 搜索输入事件（动态防抖）
   var searchInput = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
   if (searchInput) {
-    var debouncedSearch = this.debounce(function (query) {
+    var dynamicDebouncedSearch = this.debounceDynamic(function (query) {
       self.handleSearch(query);
       // 搜索输入触发：下一次渲染需要动画
       if (self.folderVirtualScroller) self.folderVirtualScroller.shouldAnimateOnNextRender = true;
       if (self.bookmarkVirtualScroller) self.bookmarkVirtualScroller.shouldAnimateOnNextRender = true;
-    }, 300);
+    }, function() { return self.getSearchDebounceDelay(); });
 
     addEventListenerFn(searchInput, 'input', function (e) {
       self.updateUserActivity(); // 记录用户活动
-      debouncedSearch(e.target.value);
+      dynamicDebouncedSearch(e.target.value);
     });
 
     // 监听其他用户交互
@@ -354,6 +355,43 @@ ModalManager.prototype.debounce = function (func, delay) {
 };
 
 /**
+ * 动态防抖：延迟由函数实时计算
+ * @param {Function} func
+ * @param {Function} getDelay - 返回delay(ms)
+ */
+ModalManager.prototype.debounceDynamic = function (func, getDelay) {
+  var timeoutId;
+  return function () {
+    var args = arguments;
+    var context = this;
+    clearTimeout(timeoutId);
+    var delay = 400;
+    try { delay = Math.max(200, Math.min(800, Number(getDelay && getDelay()) || 400)); } catch (e) {}
+    timeoutId = setTimeout(function () {
+      func.apply(context, args);
+    }, delay);
+  };
+};
+
+/**
+ * 计算搜索防抖延迟：根据数据量动态 400–500ms（大数据更高）
+ */
+ModalManager.prototype.getSearchDebounceDelay = function () {
+  var base = 400;
+  var len = 0;
+  try {
+    if (this.uiManager && this.uiManager.currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH) {
+      len = (this.allBookmarks && this.allBookmarks.length) || 0;
+    } else {
+      len = (this.allFolders && this.allFolders.length) || 0;
+    }
+  } catch (e) {}
+  if (len > 2000) return 600;
+  if (len > 1000) return 500;
+  return base; // 400ms
+};
+
+/**
  * 更新用户活动状态
  */
 ModalManager.prototype.updateUserActivity = function () {
@@ -396,20 +434,7 @@ ModalManager.prototype.show = function (pageInfo) {
   // 设置键盘管理器状态
   this.keyboardManager.setModalVisible(true);
 
-  // 打开时做数据新鲜度检查：缓存年龄超过10秒则刷新
-  try {
-    if (window.SMART_BOOKMARK_API && typeof window.SMART_BOOKMARK_API.getCacheStatus === 'function') {
-      var status = window.SMART_BOOKMARK_API.getCacheStatus();
-      var isStale = status && status.memoryCache && (Date.now() - (status.memoryCache.lastFetch || 0) > 10000);
-      if (isStale) {
-        if (this.uiManager.currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH) {
-          this.loadBookmarks();
-        } else {
-          this.loadFolders();
-        }
-      }
-    }
-  } catch (e) {}
+  // 打开时不强制刷新数据：改为缓存优先（SWR可在后台做，但此处不阻塞首屏）
 
   var endTime = performance.now();
   console.log('Modal show took ' + (endTime - startTime) + ' milliseconds');
@@ -441,6 +466,8 @@ ModalManager.prototype.loadFolders = function () {
       }
 
       self.allFolders = folders;
+      // 构建快速查找表
+      self.buildFolderIdMap();
       console.log('Retrieved ' + folders.length + ' folders');
 
       if (folders.length === 0) {
@@ -458,10 +485,8 @@ ModalManager.prototype.loadFolders = function () {
       // 清理面包屑缓存，因为文件夹数据已更新
       self.clearBreadcrumbCache();
 
-      // 构建搜索索引
-      if (self.searchEngine && typeof self.searchEngine.buildIndexes === 'function') {
-        self.searchEngine.buildIndexes(self.allFolders, self.allBookmarks);
-      }
+      // 索引后台空闲时构建（不阻塞首屏）
+      self.scheduleBuildIndexes();
 
       return window.SMART_BOOKMARK_SORTING.sortByActivity(self.allFolders);
     })
@@ -504,6 +529,8 @@ ModalManager.prototype.loadBookmarks = function () {
         if (folders && Array.isArray(folders)) {
           self.allFolders = folders;
           self.foldersPrefetched = true;
+          // 预取后构建查找表
+          self.buildFolderIdMap();
           // 预取后清理面包屑缓存，保证后续生成正确
           self.clearBreadcrumbCache();
         }
@@ -535,10 +562,8 @@ ModalManager.prototype.loadBookmarks = function () {
       // 清理面包屑缓存，因为数据已更新
       self.clearBreadcrumbCache();
 
-      // 构建搜索索引
-      if (self.searchEngine && typeof self.searchEngine.buildIndexes === 'function') {
-        self.searchEngine.buildIndexes(self.allFolders, self.allBookmarks);
-      }
+      // 索引后台空闲时构建（不阻塞首屏）
+      self.scheduleBuildIndexes();
 
       // 更新键盘管理器的当前项目
       self.keyboardManager.setCurrentItems(self.filteredBookmarks);
@@ -749,23 +774,25 @@ ModalManager.prototype.updateFolderList = function () {
 ModalManager.prototype.renderFolderListWithVirtualScroll = function (folderList, hasSearchQuery, itemsToRender) {
   var self = this;
 
-  // 销毁旧的虚拟滚动器
-  if (this.folderVirtualScroller) {
-    this.folderVirtualScroller.destroy();
+  // 首次创建，后续复用实例仅更新数据
+  if (!this.folderVirtualScroller) {
+    this.folderVirtualScroller = new window.VirtualScroller(
+      folderList,
+      this.itemHeight,
+      (itemsToRender && itemsToRender.length) || 0,
+      function (folder, index) {
+        return self.renderFolderItem(folder, index, hasSearchQuery);
+      }
+    );
+    // 设置键盘管理器的虚拟滚动器引用
+    this.keyboardManager.setVirtualScroller(this.folderVirtualScroller);
   }
-
-  // 创建新的虚拟滚动器
-  this.folderVirtualScroller = new window.VirtualScroller(
-    folderList,
-    this.itemHeight,
-    (itemsToRender && itemsToRender.length) || 0,
-    function (folder, index) {
+  // 更新渲染函数以使用最新的 hasSearchQuery 等上下文
+  if (this.folderVirtualScroller && typeof this.folderVirtualScroller.setRenderItem === 'function') {
+    this.folderVirtualScroller.setRenderItem(function (folder, index) {
       return self.renderFolderItem(folder, index, hasSearchQuery);
-    }
-  );
-
-  // 设置键盘管理器的虚拟滚动器引用
-  this.keyboardManager.setVirtualScroller(this.folderVirtualScroller);
+    });
+  }
 
   // 更新虚拟滚动器的数据
   // 模式切换/首次渲染/搜索后：确保本次渲染播放动画
@@ -906,23 +933,25 @@ ModalManager.prototype.updateBookmarkList = function () {
 ModalManager.prototype.renderBookmarkListWithVirtualScroll = function (bookmarkList, hasSearchQuery, itemsToRender) {
   var self = this;
 
-  // 销毁旧的虚拟滚动器
-  if (this.bookmarkVirtualScroller) {
-    this.bookmarkVirtualScroller.destroy();
+  // 首次创建，后续复用实例仅更新数据
+  if (!this.bookmarkVirtualScroller) {
+    this.bookmarkVirtualScroller = new window.VirtualScroller(
+      bookmarkList,
+      this.itemHeight,
+      (itemsToRender && itemsToRender.length) || 0,
+      function (bookmark, index) {
+        return self.renderBookmarkItem(bookmark, index, hasSearchQuery);
+      }
+    );
+    // 设置键盘管理器的虚拟滚动器引用
+    this.keyboardManager.setVirtualScroller(this.bookmarkVirtualScroller);
   }
-
-  // 创建新的虚拟滚动器
-  this.bookmarkVirtualScroller = new window.VirtualScroller(
-    bookmarkList,
-    this.itemHeight,
-    (itemsToRender && itemsToRender.length) || 0,
-    function (bookmark, index) {
+  // 更新渲染函数以使用最新的 hasSearchQuery 等上下文
+  if (this.bookmarkVirtualScroller && typeof this.bookmarkVirtualScroller.setRenderItem === 'function') {
+    this.bookmarkVirtualScroller.setRenderItem(function (bookmark, index) {
       return self.renderBookmarkItem(bookmark, index, hasSearchQuery);
-    }
-  );
-
-  // 设置键盘管理器的虚拟滚动器引用
-  this.keyboardManager.setVirtualScroller(this.bookmarkVirtualScroller);
+    });
+  }
 
   // 更新虚拟滚动器的数据
   // 模式切换/首次渲染/搜索后：确保本次渲染播放动画
@@ -1297,7 +1326,32 @@ ModalManager.prototype.toggleMode = function () {
     self.languageManager.updateUI();
     if (self.folderVirtualScroller) self.folderVirtualScroller.shouldAnimateOnNextRender = true;
     if (self.bookmarkVirtualScroller) self.bookmarkVirtualScroller.shouldAnimateOnNextRender = true;
+    // 空闲时构建索引
+    self.scheduleBuildIndexes();
   });
+};
+
+/**
+ * 在后台空闲时构建搜索索引（SWR）
+ */
+ModalManager.prototype.scheduleBuildIndexes = function () {
+  var self = this;
+  var runner = function () {
+    try {
+      if (self.searchEngine && typeof self.searchEngine.buildIndexes === 'function') {
+        self.searchEngine.buildIndexes(self.allFolders || [], self.allBookmarks || []);
+      }
+    } catch (e) {}
+  };
+  // 优先使用 requestIdleCallback
+  if (typeof window.requestIdleCallback === 'function') {
+    try {
+      window.requestIdleCallback(runner, { timeout: 1500 });
+      return;
+    } catch (e) {}
+  }
+  // 退化：用 setTimeout 放到事件循环后
+  setTimeout(runner, 0);
 };
 
 /**
@@ -1370,6 +1424,11 @@ ModalManager.prototype.generateBreadcrumb = function (parentId) {
  * @returns {Object|null} 文件夹对象
  */
 ModalManager.prototype.findFolderById = function (folderId) {
+  // 先用Map O(1) 查询
+  if (this.folderById && this.folderById.size > 0) {
+    var hit = this.folderById.get(folderId);
+    if (hit) return hit;
+  }
   // 优先从当前加载的文件夹列表中查找
   for (var i = 0; i < this.allFolders.length; i++) {
     if (this.allFolders[i].id === folderId) {
@@ -1387,6 +1446,21 @@ ModalManager.prototype.findFolderById = function (folderId) {
   }
   
   return null;
+};
+
+/**
+ * 构建id->folder的快速查找表
+ */
+ModalManager.prototype.buildFolderIdMap = function () {
+  try {
+    this.folderById = new Map();
+    for (var i = 0; i < (this.allFolders || []).length; i++) {
+      var f = this.allFolders[i];
+      if (f && f.id) this.folderById.set(f.id, f);
+    }
+  } catch (e) {
+    // 忽略
+  }
 };
 
 /**
