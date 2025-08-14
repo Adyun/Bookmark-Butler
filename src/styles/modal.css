@@ -192,7 +192,7 @@
   border: 1px solid var(--sb-border);
   border-radius: var(--sb-radius);
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  width: 760px;           /* 更接近 newtab 的宽度 */
+  width: 760px;
   max-width: 95vw;
   max-height: 80vh;
   height: auto;

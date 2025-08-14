@@ -1,5 +1,5 @@
 // Pin Manager for Smart Bookmark Extension
-// 负责置顶状态的加载、保存与查询（在弹窗与 newtab 模式间共享）
+// 负责置顶状态的加载、保存与查询
 
 (function() {
   var STORAGE_KEY = 'smart_bookmark_pins_v1';
@@ -18,7 +18,7 @@
       for (var i = 0; i < listeners.length; i++) {
         try { listeners[i](inMemoryPins); } catch (e) {}
       }
-      // 派发全局事件，供页面间通信（newtab 与 弹窗）
+      // 派发全局事件，供页面间通信
       if (typeof window !== 'undefined' && window.dispatchEvent) {
         var evt = new CustomEvent('smart-bookmark-pins-updated', { detail: inMemoryPins });
         window.dispatchEvent(evt);

@@ -254,7 +254,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   // 处理来自fallback页面的消息
   if (request.action === "openNewTab") {
     chrome.tabs.create({ 
-      url: request.url || 'https://www.google.com',
+      url: request.url || 'https://www.bing.com',
       active: true 
     }, function(tab) {
       if (chrome.runtime.lastError) {
@@ -545,28 +545,3 @@ chrome.action.onClicked.addListener((tab) => {
   });
 });
 
-// 监听命令
-chrome.commands.onCommand.addListener((command) => {
-  console.log(`Command received: ${command}`);
-
-  if (command === "toggle-bookmark-modal") {
-    // 获取当前活动标签页
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs.length > 0) {
-        const activeTab = tabs[0];
-        console.log("Keyboard shortcut triggered for tab:", activeTab.id, activeTab.url);
-
-        // 向内容脚本发送消息以打开书签Modal
-        sendMessageToContentScript(activeTab.id, {
-          action: "openBookmarkModal",
-          pageInfo: {
-            title: activeTab.title,
-            url: activeTab.url
-          }
-        });
-      } else {
-        console.error("No active tab found for keyboard shortcut");
-      }
-    });
-  }
-});

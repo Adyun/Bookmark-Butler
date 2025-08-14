@@ -76,7 +76,7 @@ ModalManager.prototype.initializeComponents = function () {
     self.handleLayoutRecalculated();
   });
 
-  // 预加载置顶数据（与弹窗/newtab共享），以便空搜索时应用置顶排序
+  // 预加载置顶数据，以便空搜索时应用置顶排序
   if (window.SMART_BOOKMARK_PINS && typeof window.SMART_BOOKMARK_PINS.loadPins === 'function') {
     window.SMART_BOOKMARK_PINS.loadPins().then(function () {
       try {

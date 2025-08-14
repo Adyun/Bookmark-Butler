@@ -19,10 +19,6 @@
     "service_worker": "src/background.js"
   },
   
-  "chrome_url_overrides": {
-    "newtab": "src/newtab/newtab.html"
-  },
-  
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
@@ -44,16 +40,6 @@
       "css": ["src/styles/modal.css"]
     }
   ],
-  
-  "commands": {
-    "toggle-bookmark-modal": {
-      "suggested_key": {
-        "default": "Ctrl+Shift+B",
-        "mac": "Command+Shift+B"
-      },
-      "description": "打开智能书签扩展"
-    }
-  },
   
   "action": {
     "default_title": "智能书签扩展",

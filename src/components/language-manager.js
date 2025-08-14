@@ -111,7 +111,7 @@ function LanguageManager() {
 LanguageManager.prototype.init = function () {
   // 从存储中恢复语言设置
   this.loadLanguageFromStorage();
-  // 与其他上下文（弹窗/newtab）同步
+  // 与其他上下文同步
   this.setupStorageChangeListener();
   this.syncFromChromeStorage && this.syncFromChromeStorage();
 };

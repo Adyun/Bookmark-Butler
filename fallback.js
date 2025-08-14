@@ -1,18 +1,18 @@
 // Fallback page script for Smart Bookmark Extension
 
 function openNewTab() {
-    // 通过消息传递与background script通信，打开浏览器默认新标签页
+    // 通过消息传递与background script通信，打开Bing搜索
     chrome.runtime.sendMessage({
         action: "openNewTab",
-        url: "chrome://newtab/"
+        url: "https://www.bing.com"
     }, function(response) {
         if (chrome.runtime.lastError) {
             console.error("Error sending message:", chrome.runtime.lastError);
             // 如果消息传递失败，尝试其他方式
             fallbackOpenTab();
         } else {
-            console.log("New tab request sent successfully");
-            // 延迟关闭，确保新标签页已打开
+            console.log("Bing tab request sent successfully");
+            // 延迟关闭，确保Bing页面已打开
             setTimeout(function() {
                 closeCurrentTab();
             }, 100);
@@ -21,20 +21,20 @@ function openNewTab() {
 }
 
 function fallbackOpenTab() {
-    // 备用方案：尝试直接打开浏览器默认新标签页
+    // 备用方案：尝试直接打开Bing搜索
     try {
-        // 尝试打开chrome://newtab/，如果失败则使用about:blank
-        var newTabUrl = 'chrome://newtab/';
+        // 尝试打开Bing搜索，如果失败则使用about:blank
+        var newTabUrl = 'https://www.bing.com';
         try {
             window.open(newTabUrl, '_blank');
         } catch (e) {
-            // 如果chrome://newtab/失败，使用about:blank作为备选
+            // 如果Bing失败，使用about:blank作为备选
             window.open('about:blank', '_blank');
         }
         closeCurrentTab();
     } catch (error) {
-        console.error("Failed to open new tab:", error);
-        alert("无法打开新标签页，请手动打开");
+        console.error("Failed to open Bing:", error);
+        alert("无法打开Bing搜索，请手动打开");
     }
 }
 
