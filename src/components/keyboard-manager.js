@@ -10,17 +10,25 @@ function KeyboardManager() {
   this.isModalVisible = false;
   this.virtualScroller = null;
   this.eventListeners = [];
-  
+
   // 防抖相关
   this.navigationTimeout = null;
   this.isNavigating = false;
   this.lastNavigationTime = 0;
-  
+
   // 回调函数
   this.onConfirm = null;
   this.onModeToggle = null;
   this.onModalClose = null;
 }
+
+/**
+ * 获取 Shadow Root（辅助方法）
+ * @returns {ShadowRoot|Document}
+ */
+KeyboardManager.prototype.getRoot = function () {
+  return window.getSmartBookmarkRoot();
+};
 
 /**
  * 初始化键盘管理器
@@ -34,7 +42,7 @@ KeyboardManager.prototype.init = function () {
  */
 KeyboardManager.prototype.bindKeyboardEvents = function () {
   var self = this;
-  
+
   var handleKeyDown = function (e) {
     self.handleKeyDown(e);
   };
@@ -51,8 +59,8 @@ KeyboardManager.prototype.handleKeyDown = function (e) {
   // 如果模态框不可见，不处理键盘事件
   if (!this.isModalVisible) return;
 
-  var searchInput = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
-  
+  var searchInput = this.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
+
   // 如果焦点在搜索框中，且按下了Escape键，关闭模态框
   if (document.activeElement === searchInput && e.key === 'Escape') {
     if (this.onModalClose) {
@@ -132,14 +140,14 @@ KeyboardManager.prototype.navigateSelection = function (direction) {
   // 防抖处理：防止快速按键时出现双重选择
   var now = Date.now();
   var debounceDelay = 50; // 50ms防抖
-  
+
   if (this.isNavigating && (now - this.lastNavigationTime) < debounceDelay) {
     // 如果正在导航且时间间隔太短，重置定时器
     if (this.navigationTimeout) {
       clearTimeout(this.navigationTimeout);
     }
   }
-  
+
   this.isNavigating = true;
   this.lastNavigationTime = now;
 
@@ -153,9 +161,9 @@ KeyboardManager.prototype.navigateSelection = function (direction) {
 
   // 立即更新选择，但延迟结束导航状态
   this.updateSelection();
-  
+
   var self = this;
-  this.navigationTimeout = setTimeout(function() {
+  this.navigationTimeout = setTimeout(function () {
     self.isNavigating = false;
   }, debounceDelay);
 };
@@ -165,7 +173,7 @@ KeyboardManager.prototype.navigateSelection = function (direction) {
  */
 KeyboardManager.prototype.navigateToFirst = function () {
   if (this.currentItems.length === 0) return;
-  
+
   this.selectedIndex = 0;
   this.updateSelection();
 };
@@ -175,7 +183,7 @@ KeyboardManager.prototype.navigateToFirst = function () {
  */
 KeyboardManager.prototype.navigateToLast = function () {
   if (this.currentItems.length === 0) return;
-  
+
   this.selectedIndex = this.currentItems.length - 1;
   this.updateSelection();
 };
@@ -188,14 +196,14 @@ KeyboardManager.prototype.navigateByPage = function (direction) {
   if (this.currentItems.length === 0) return;
 
   // 计算每页的项目数（基于虚拟滚动器的可见项目数）
-  var pageSize = this.virtualScroller ? 
+  var pageSize = this.virtualScroller ?
     Math.floor(this.virtualScroller.visibleItems * 0.8) : 10; // 默认10项
-  
+
   var newIndex = this.selectedIndex + (direction * pageSize);
-  
+
   // 确保索引在有效范围内
   newIndex = Math.max(0, Math.min(newIndex, this.currentItems.length - 1));
-  
+
   this.selectedIndex = newIndex;
   this.updateSelection();
 };
@@ -205,7 +213,7 @@ KeyboardManager.prototype.navigateByPage = function (direction) {
  */
 KeyboardManager.prototype.updateSelection = function () {
   // 移除所有选中状态
-  var activeItems = document.querySelectorAll('.smart-bookmark-bookmark-item.active, .smart-bookmark-folder-item.active');
+  var activeItems = this.getRoot().querySelectorAll('.smart-bookmark-bookmark-item.active, .smart-bookmark-folder-item.active');
   for (var i = 0; i < activeItems.length; i++) {
     activeItems[i].classList.remove('active');
   }
@@ -213,7 +221,7 @@ KeyboardManager.prototype.updateSelection = function () {
   // 如果有有效的选中项
   if (this.selectedIndex >= 0 && this.selectedIndex < this.currentItems.length) {
     var selectedItem = this.currentItems[this.selectedIndex];
-    
+
     // 使用虚拟滚动器滚动到选中项，添加边界检查
     if (this.virtualScroller && selectedItem) {
       // 确保索引在虚拟滚动器的有效范围内
@@ -226,19 +234,19 @@ KeyboardManager.prototype.updateSelection = function () {
 
     // 延迟添加选中状态，确保虚拟滚动器已渲染且没有其他选中项
     var self = this;
-    setTimeout(function() {
+    setTimeout(function () {
       // 再次清除所有选中状态，确保唯一性
-      var allActiveItems = document.querySelectorAll('.smart-bookmark-bookmark-item.active, .smart-bookmark-folder-item.active');
+      var allActiveItems = self.getRoot().querySelectorAll('.smart-bookmark-bookmark-item.active, .smart-bookmark-folder-item.active');
       for (var j = 0; j < allActiveItems.length; j++) {
         allActiveItems[j].classList.remove('active');
       }
-      
-      var currentItem = document.querySelector(
+
+      var currentItem = self.getRoot().querySelector(
         '[data-folder-id="' + selectedItem.id + '"], [data-bookmark-id="' + selectedItem.id + '"]'
       );
       if (currentItem) {
         currentItem.classList.add('active');
-        
+
         // 确保选中项在视口中可见
         self.ensureItemVisible(currentItem);
       }
@@ -246,7 +254,7 @@ KeyboardManager.prototype.updateSelection = function () {
 
     // 如果是文件夹选择模式，启用确认按钮
     if (this.currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_FOLDER_SELECT) {
-      var confirmBtn = document.getElementById('smart-bookmark-confirm');
+      var confirmBtn = this.getRoot().getElementById('smart-bookmark-confirm');
       if (confirmBtn) {
         confirmBtn.disabled = false;
       }
@@ -347,7 +355,7 @@ KeyboardManager.prototype.setSelectedIndex = function (index) {
     this.selectedIndex = -1;
     return;
   }
-  
+
   if (index >= 0 && index < this.currentItems.length) {
     this.selectedIndex = index;
     this.updateSelection();
@@ -375,9 +383,9 @@ KeyboardManager.prototype.setCallbacks = function (callbacks) {
 KeyboardManager.prototype.reset = function () {
   this.selectedIndex = -1;
   this.currentItems = [];
-  
+
   // 移除所有选中状态
-  var activeItems = document.querySelectorAll('.smart-bookmark-bookmark-item.active, .smart-bookmark-folder-item.active');
+  var activeItems = this.getRoot().querySelectorAll('.smart-bookmark-bookmark-item.active, .smart-bookmark-folder-item.active');
   for (var i = 0; i < activeItems.length; i++) {
     activeItems[i].classList.remove('active');
   }
@@ -398,12 +406,12 @@ KeyboardManager.prototype.cleanup = function () {
   }
 
   this.eventListeners = [];
-  
+
   // 重置状态
   this.reset();
   this.virtualScroller = null;
   this.isModalVisible = false;
-  
+
   // 清除回调函数
   this.onConfirm = null;
   this.onModeToggle = null;

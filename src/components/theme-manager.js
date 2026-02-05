@@ -14,13 +14,21 @@ function ThemeManager() {
 }
 
 /**
+ * 获取 Shadow Root（辅助方法）
+ * @returns {ShadowRoot|Document}
+ */
+ThemeManager.prototype.getRoot = function () {
+  return window.getSmartBookmarkRoot();
+};
+
+/**
  * 初始化主题管理器 - 重写版本
  */
 ThemeManager.prototype.init = function () {
   var self = this;
-  
+
   console.log('ThemeManager.init called, isInitialized:', this.isInitialized);
-  
+
   if (this.isInitialized) {
     console.log('ThemeManager already initialized, skipping');
     return;
@@ -30,19 +38,19 @@ ThemeManager.prototype.init = function () {
   console.log('Loading dark mode setting...');
   this.loadDarkModeSetting();
   console.log('Dark mode loaded:', this.darkMode);
-  
+
   console.log('Loading theme color setting...');
   this.loadThemeColorSetting();
   console.log('Theme color loaded:', this.themeColor);
-  
+
   // 与 chrome.storage 同步（确保各上下文共享设置）
   this.setupStorageChangeListener();
   this.syncFromChromeStorage();
-  
+
   // 设置系统主题监听
   console.log('Setting up system theme listener...');
   this.setupSystemThemeListener();
-  
+
   // 标记初始化完成
   this.isInitialized = true;
   console.log('ThemeManager initialization completed');
@@ -71,21 +79,21 @@ ThemeManager.prototype.saveDarkModeSetting = function (mode) {
     // 直接使用localStorage，简化逻辑
     localStorage.setItem(window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_STORAGE_KEY, mode);
     this.darkMode = mode;
-    
+
     // 同步到 chrome.storage，作为跨上下文的单一事实来源
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
       chrome.storage.local.set({ [window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_STORAGE_KEY]: mode });
     }
-    
+
     // 立即应用主题
     this.applyDarkMode();
-    
+
     // 更新切换按钮显示
     this.updateToggleButtonDisplay();
-    
+
     // 处理系统主题监听
     this.handleSystemThemeListening(mode);
-    
+
   } catch (e) {
     console.warn('Failed to save theme setting:', e);
   }
@@ -112,18 +120,18 @@ ThemeManager.prototype.saveThemeColorSetting = function (themeColor) {
   try {
     localStorage.setItem('smart-bookmark-theme-color', themeColor);
     this.themeColor = themeColor;
-    
+
     // 同步到 chrome.storage，保持与新tab/弹窗一致
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
       chrome.storage.local.set({ 'smart-bookmark-theme-color': themeColor });
     }
-    
+
     // 立即应用主题色
     this.applyThemeColor();
-    
+
     // 更新下拉菜单选中状态
     this.updateDropdownSelection();
-    
+
   } catch (e) {
     console.warn('Failed to save theme color setting:', e);
   }
@@ -143,12 +151,12 @@ ThemeManager.prototype.syncFromChromeStorage = function () {
   ], function (result) {
     var updated = false;
     if (result && result[window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_STORAGE_KEY] &&
-        result[window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_STORAGE_KEY] !== self.darkMode) {
+      result[window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_STORAGE_KEY] !== self.darkMode) {
       self.darkMode = result[window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_STORAGE_KEY];
       updated = true;
     }
     if (result && typeof result['smart-bookmark-theme-color'] === 'string' &&
-        result['smart-bookmark-theme-color'] !== self.themeColor) {
+      result['smart-bookmark-theme-color'] !== self.themeColor) {
       self.themeColor = result['smart-bookmark-theme-color'];
       updated = true;
     }
@@ -189,12 +197,12 @@ ThemeManager.prototype.setupStorageChangeListener = function () {
  * 应用主题色
  */
 ThemeManager.prototype.applyThemeColor = function () {
-  var modalElement = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.MODAL_ID);
+  var modalElement = this.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.MODAL_ID);
   if (!modalElement) return;
 
   // 移除所有主题色类
   modalElement.classList.remove('theme-red', 'theme-green', 'theme-pink', 'theme-purple', 'theme-gray', 'theme-blue');
-  
+
   // 添加当前主题色类
   if (this.themeColor && this.themeColor !== 'default') {
     modalElement.classList.add('theme-' + this.themeColor);
@@ -208,7 +216,7 @@ ThemeManager.prototype.applyThemeColor = function () {
 ThemeManager.prototype.handleSystemThemeListening = function (mode) {
   // 清除现有监听器
   this.stopSystemThemeListener();
-  
+
   // 如果是自动模式，添加系统主题监听
   if (mode === window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_AUTO) {
     this.setupSystemThemeListener();
@@ -222,16 +230,16 @@ ThemeManager.prototype.setupSystemThemeListener = function () {
   if (!window.matchMedia) {
     return;
   }
-  
+
   var self = this;
   var mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-  
-  this.systemThemeListener = function(e) {
+
+  this.systemThemeListener = function (e) {
     if (self.darkMode === window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_AUTO) {
       self.applyDarkMode();
     }
   };
-  
+
   // 添加监听器
   if (mediaQuery.addEventListener) {
     mediaQuery.addEventListener('change', this.systemThemeListener);
@@ -248,16 +256,16 @@ ThemeManager.prototype.stopSystemThemeListener = function () {
   if (!this.systemThemeListener || !window.matchMedia) {
     return;
   }
-  
+
   var mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-  
+
   if (mediaQuery.removeEventListener) {
     mediaQuery.removeEventListener('change', this.systemThemeListener);
   } else {
     // 兼容旧版本浏览器
     mediaQuery.removeListener(this.systemThemeListener);
   }
-  
+
   this.systemThemeListener = null;
 };
 
@@ -279,8 +287,8 @@ ThemeManager.prototype.isSystemDarkMode = function () {
  * 应用深色模式
  */
 ThemeManager.prototype.applyDarkMode = function () {
-  var modal = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.MODAL_ID);
-  var backdrop = document.querySelector('.smart-bookmark-modal-backdrop');
+  var modal = this.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.MODAL_ID);
+  var backdrop = this.getRoot().querySelector('.smart-bookmark-modal-backdrop');
   if (!modal) return;
 
   var isDark = false;
@@ -305,10 +313,10 @@ ThemeManager.prototype.applyDarkMode = function () {
 
   // 更新深色模式下拉菜单中的选中状态
   this.updateDarkModeDropdownSelection();
-  
+
   // 更新深色模式切换按钮图标
   this.updateDarkModeToggleIcon();
-  
+
   // 应用主题色
   this.applyThemeColor();
 };
@@ -317,7 +325,7 @@ ThemeManager.prototype.applyDarkMode = function () {
  * 更新下拉菜单中的选中状态（包括深色模式和主题色）
  */
 ThemeManager.prototype.updateDropdownSelection = function () {
-  var options = document.querySelectorAll('.smart-bookmark-dark-mode-option');
+  var options = this.getRoot().querySelectorAll('.smart-bookmark-dark-mode-option');
   var currentMode = this.darkMode;
   var currentTheme = this.themeColor;
 
@@ -325,19 +333,19 @@ ThemeManager.prototype.updateDropdownSelection = function () {
     var option = options[i];
     var optionMode = option.getAttribute('data-mode');
     var optionTheme = option.getAttribute('data-theme');
-    
+
     // 移除所有active类
     option.classList.remove('active');
 
     // 检查深色模式选项
     if (optionMode) {
       if ((currentMode === window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_AUTO && optionMode === 'auto') ||
-          (currentMode === window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_LIGHT && optionMode === 'light') ||
-          (currentMode === window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_DARK && optionMode === 'dark')) {
+        (currentMode === window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_LIGHT && optionMode === 'light') ||
+        (currentMode === window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_DARK && optionMode === 'dark')) {
         option.classList.add('active');
       }
     }
-    
+
     // 检查主题色选项
     if (optionTheme && optionTheme === currentTheme) {
       option.classList.add('active');
@@ -356,7 +364,7 @@ ThemeManager.prototype.updateDarkModeDropdownSelection = function () {
  * 更新深色模式切换按钮图标
  */
 ThemeManager.prototype.updateDarkModeToggleIcon = function () {
-  var toggle = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_TOGGLE_ID);
+  var toggle = this.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_TOGGLE_ID);
   if (!toggle) return;
 
   var currentMode = this.darkMode;
@@ -377,9 +385,9 @@ ThemeManager.prototype.updateDarkModeToggleIcon = function () {
  * 确保下拉菜单初始状态正确
  */
 ThemeManager.prototype.ensureDropdownInitialState = function () {
-  var dropdown = document.getElementById('smart-bookmark-dark-mode-dropdown');
+  var dropdown = this.getRoot().getElementById('smart-bookmark-dark-mode-dropdown');
   if (!dropdown) return;
-  
+
   // 强制移除show类，确保初始状态是隐藏的
   dropdown.classList.remove('show');
   console.log('Dropdown initial state ensured - show class removed');
@@ -390,9 +398,9 @@ ThemeManager.prototype.ensureDropdownInitialState = function () {
  */
 ThemeManager.prototype.toggleDarkModeDropdown = function () {
   console.log('ThemeManager.toggleDarkModeDropdown called');
-  
-  var dropdown = document.getElementById('smart-bookmark-dark-mode-dropdown');
-  
+
+  var dropdown = this.getRoot().getElementById('smart-bookmark-dark-mode-dropdown');
+
   if (!dropdown) {
     console.error('Dropdown element not found!');
     return;
@@ -417,13 +425,13 @@ ThemeManager.prototype.toggleDarkModeDropdown = function () {
   } else {
     console.log('Showing dropdown...');
     dropdown.classList.add('show');
-    
+
     // 强制重新计算样式
     dropdown.offsetHeight;
-    
+
     // 更新选中状态
     this.updateDarkModeDropdownSelection();
-    
+
     // 调试信息
     console.log('Dropdown after show:', {
       classList: dropdown.classList.toString(),
@@ -433,20 +441,20 @@ ThemeManager.prototype.toggleDarkModeDropdown = function () {
       transform: window.getComputedStyle(dropdown).transform,
       zIndex: window.getComputedStyle(dropdown).zIndex
     });
-    
+
     // 点击其他地方时关闭下拉菜单
     var self = this;
     var closeDropdown = function (e) {
       // 检查点击是否在下拉菜单或切换按钮内
-      var toggle = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_TOGGLE_ID);
+      var toggle = self.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_TOGGLE_ID);
       if (!dropdown.contains(e.target) && e.target !== toggle) {
         console.log('Closing dropdown due to outside click');
         dropdown.classList.remove('show');
         document.removeEventListener('click', closeDropdown);
       }
     };
-    
-    setTimeout(function() {
+
+    setTimeout(function () {
       document.addEventListener('click', closeDropdown);
       console.log('Outside click handler registered');
     }, 0);
@@ -473,7 +481,7 @@ ThemeManager.prototype.handleDarkModeSelect = function (mode) {
   }
 
   // 关闭下拉菜单
-  var dropdown = document.getElementById('smart-bookmark-dark-mode-dropdown');
+  var dropdown = this.getRoot().getElementById('smart-bookmark-dark-mode-dropdown');
   if (dropdown) {
     dropdown.classList.remove('show');
   }
@@ -487,7 +495,7 @@ ThemeManager.prototype.handleThemeColorSelect = function (themeColor) {
   this.saveThemeColorSetting(themeColor);
 
   // 关闭下拉菜单
-  var dropdown = document.getElementById('smart-bookmark-dark-mode-dropdown');
+  var dropdown = this.getRoot().getElementById('smart-bookmark-dark-mode-dropdown');
   if (dropdown) {
     dropdown.classList.remove('show');
   }
@@ -527,35 +535,35 @@ ThemeManager.prototype.bindEvents = function (addEventListenerFn) {
  */
 ThemeManager.prototype.tryBindEvents = function (addEventListenerFn, retryCount) {
   var self = this;
-  
+
   console.log('ThemeManager.tryBindEvents called, retryCount:', retryCount);
-  
+
   // 查找元素
-  var toggleButton = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_TOGGLE_ID);
-  var dropdown = document.getElementById('smart-bookmark-dark-mode-dropdown');
-  var options = document.querySelectorAll('.smart-bookmark-dark-mode-option');
-  
+  var toggleButton = this.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_TOGGLE_ID);
+  var dropdown = this.getRoot().getElementById('smart-bookmark-dark-mode-dropdown');
+  var options = this.getRoot().querySelectorAll('.smart-bookmark-dark-mode-option');
+
   console.log('DOM elements found:', {
     toggleButton: !!toggleButton,
     dropdown: !!dropdown,
     optionsCount: options.length,
     toggleId: window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_TOGGLE_ID
   });
-  
+
   console.log('Constants check:', {
     constants: !!window.SMART_BOOKMARK_CONSTANTS,
     darkModeToggleId: window.SMART_BOOKMARK_CONSTANTS ? window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_TOGGLE_ID : 'undefined'
   });
-  
+
   // 如果元素还没有创建且重试次数小于10，延迟重试
   if ((!toggleButton || !dropdown || options.length === 0) && retryCount < 10) {
     console.log('Some elements not found, retrying in 50ms...');
-    setTimeout(function() {
+    setTimeout(function () {
       self.tryBindEvents(addEventListenerFn, retryCount + 1);
     }, 50);
     return;
   }
-  
+
   // 绑定切换按钮事件
   if (toggleButton) {
     console.log('Binding click event to toggle button');
@@ -566,7 +574,7 @@ ThemeManager.prototype.tryBindEvents = function (addEventListenerFn, retryCount)
       self.toggleDarkModeDropdown();
     };
     addEventListenerFn(toggleButton, 'click', clickHandler);
-    
+
     // 同时保存事件监听器引用，便于调试
     this.eventListeners.push({
       element: toggleButton,
@@ -576,20 +584,20 @@ ThemeManager.prototype.tryBindEvents = function (addEventListenerFn, retryCount)
   } else {
     console.warn('Toggle button not found after retries');
   }
-  
+
   // 绑定选项点击事件
   if (options.length > 0) {
     console.log('Binding click events to', options.length, 'options');
     for (var i = 0; i < options.length; i++) {
       var option = options[i];
-      var optionClickHandler = (function(opt) {
+      var optionClickHandler = (function (opt) {
         return function (e) {
           e.preventDefault();
           e.stopPropagation();
-          
+
           var mode = opt.getAttribute('data-mode');
           var theme = opt.getAttribute('data-theme');
-          
+
           if (mode) {
             console.log('Mode option clicked:', mode);
             self.handleDarkModeSelect(mode);
@@ -599,9 +607,9 @@ ThemeManager.prototype.tryBindEvents = function (addEventListenerFn, retryCount)
           }
         };
       })(option);
-      
+
       addEventListenerFn(option, 'click', optionClickHandler);
-      
+
       // 保存事件监听器引用
       this.eventListeners.push({
         element: option,
@@ -612,11 +620,11 @@ ThemeManager.prototype.tryBindEvents = function (addEventListenerFn, retryCount)
   } else {
     console.warn('No theme options found after retries');
   }
-  
+
   // 保存下拉菜单元素引用
   this.dropdownElement = dropdown;
   console.log('Dropdown element cached:', !!this.dropdownElement);
-  
+
   // 更新按钮显示
   console.log('Updating toggle button display...');
   this.updateToggleButtonDisplay();
@@ -640,8 +648,8 @@ ThemeManager.prototype.updateToggleButtonDisplay = function () {
 ThemeManager.prototype.getCurrentThemeState = function () {
   return {
     mode: this.darkMode,
-    isDark: this.darkMode === window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_DARK || 
-            (this.darkMode === window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_AUTO && this.isSystemDarkMode()),
+    isDark: this.darkMode === window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_DARK ||
+      (this.darkMode === window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_AUTO && this.isSystemDarkMode()),
     isAuto: this.darkMode === window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_AUTO,
     systemDark: this.isSystemDarkMode()
   };
@@ -663,10 +671,10 @@ ThemeManager.prototype.forceReapplyTheme = function () {
 ThemeManager.prototype.cleanup = function () {
   // 停止监听系统主题变化
   this.stopSystemThemeListener();
-  
+
   // 清理事件监听器
   this.eventListeners = [];
-  
+
   // 重置状态
   this.darkMode = null;
   this.isInitialized = false;

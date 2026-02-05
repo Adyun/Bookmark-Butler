@@ -14,26 +14,26 @@ function LanguageManager() {
       searchFolderPlaceholder: '搜索文件夹...',
       cancelBtn: '取消',
       confirmBtn: '添加书签',
-      
+
       // 键盘提示
       keyboardHintSelect: '↑↓ 选择',
-      keyboardHintConfirm: 'Enter 确认', 
+      keyboardHintConfirm: 'Enter 确认',
       keyboardHintToggle: 'Space 切换模式',
-      
+
       // 状态提示
       loadingText: '加载中...',
       emptyBookmarks: '暂无书签',
       emptyFolders: '暂无文件夹',
       noResults: '无搜索结果',
       errorText: '加载失败',
-      
+
       // Toast消息
       bookmarkAdded: '书签添加成功！',
       bookmarkAddFailed: '添加书签失败，请重试',
       specialUrlWarning: '无法打开特殊URL，请手动在浏览器中访问',
       permissionFailed: '权限获取失败，请手动在扩展管理页面授予权限',
       permissionRequestFailed: '权限请求失败，请手动在扩展管理页面授予权限',
-      
+
       // 主题和语言设置
       themeSettings: '主题设置',
       languageSettings: '语言设置',
@@ -47,7 +47,7 @@ function LanguageManager() {
       warmPink: '温馨粉色',
       elegantPurple: '优雅紫色',
       neutralGray: '中性灰色',
-      
+
       // 权限相关
       permissionTitle: '需要书签权限',
       permissionDescription: '请授予书签访问权限以使用此功能',
@@ -61,26 +61,26 @@ function LanguageManager() {
       searchFolderPlaceholder: 'Search folders...',
       cancelBtn: 'Cancel',
       confirmBtn: 'Add Bookmark',
-      
+
       // Keyboard hints
       keyboardHintSelect: '↑↓ Select',
       keyboardHintConfirm: 'Enter Confirm',
       keyboardHintToggle: 'Space Toggle Mode',
-      
+
       // Status messages
       loadingText: 'Loading...',
       emptyBookmarks: 'No bookmarks',
       emptyFolders: 'No folders',
       noResults: 'No search results',
       errorText: 'Failed to load',
-      
+
       // Toast messages
       bookmarkAdded: 'Bookmark added successfully!',
       bookmarkAddFailed: 'Failed to add bookmark, please try again',
       specialUrlWarning: 'Cannot open special URL, please visit manually in browser',
       permissionFailed: 'Permission request failed, please grant manually in extension management page',
       permissionRequestFailed: 'Permission request failed, please grant manually in extension management page',
-      
+
       // Theme and language settings
       themeSettings: 'Theme Settings',
       languageSettings: 'Language Settings',
@@ -94,16 +94,24 @@ function LanguageManager() {
       elegantPurple: 'Elegant Purple',
       classicBlue: 'Classic Blue',
       neutralGray: 'Neutral Gray',
-      
+
       // Permission related
       permissionTitle: 'Bookmark Permission Required',
       permissionDescription: 'Please grant bookmark access permission to use this feature',
       grantPermission: 'Grant Permission'
     }
   };
-  
+
   this.init();
 }
+
+/**
+ * 获取 Shadow Root（辅助方法）
+ * @returns {ShadowRoot|Document}
+ */
+LanguageManager.prototype.getRoot = function () {
+  return window.getSmartBookmarkRoot();
+};
 
 /**
  * 初始化语言管理器
@@ -146,7 +154,7 @@ LanguageManager.prototype.saveLanguageToStorage = function (language) {
   if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
     chrome.storage.local.set({ smartBookmarkLanguage: language });
     // 同步一份到 localStorage，保证回退路径一致
-    try { localStorage.setItem('smartBookmarkLanguage', language); } catch (e) {}
+    try { localStorage.setItem('smartBookmarkLanguage', language); } catch (e) { }
   } else {
     // 回退到localStorage
     localStorage.setItem('smartBookmarkLanguage', language);
@@ -165,7 +173,7 @@ LanguageManager.prototype.setupStorageChangeListener = function () {
       var newLang = changes.smartBookmarkLanguage.newValue;
       if (newLang && newLang !== self.currentLanguage) {
         self.currentLanguage = newLang;
-        try { localStorage.setItem('smartBookmarkLanguage', newLang); } catch (e) {}
+        try { localStorage.setItem('smartBookmarkLanguage', newLang); } catch (e) { }
         self.updateUI();
       }
     }
@@ -181,7 +189,7 @@ LanguageManager.prototype.syncFromChromeStorage = function () {
   chrome.storage.local.get(['smartBookmarkLanguage'], function (result) {
     if (result && result.smartBookmarkLanguage && result.smartBookmarkLanguage !== self.currentLanguage) {
       self.currentLanguage = result.smartBookmarkLanguage;
-      try { localStorage.setItem('smartBookmarkLanguage', self.currentLanguage); } catch (e) {}
+      try { localStorage.setItem('smartBookmarkLanguage', self.currentLanguage); } catch (e) { }
       self.updateUI();
     }
   });
@@ -218,17 +226,17 @@ LanguageManager.prototype.t = function (key) {
  */
 LanguageManager.prototype.updateUI = function () {
   console.log('更新界面语言文本');
-  
+
   // 更新模态框标题
-  var modalTitle = document.querySelector('.smart-bookmark-modal-title');
+  var modalTitle = this.getRoot().querySelector('.smart-bookmark-modal-title');
   if (modalTitle) {
     // 获取当前模式状态
-    var currentMode = window.modalManager && window.modalManager.uiManager ? 
-      window.modalManager.uiManager.currentMode : 
+    var currentMode = window.modalManager && window.modalManager.uiManager ?
+      window.modalManager.uiManager.currentMode :
       window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH;
-    
+
     console.log('当前模式:', currentMode);
-    
+
     if (currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_FOLDER_SELECT) {
       modalTitle.textContent = this.t('addBookmarkTitle');
       console.log('设置为文件夹模式标题:', this.t('addBookmarkTitle'));
@@ -240,15 +248,15 @@ LanguageManager.prototype.updateUI = function () {
   } else {
     console.warn('找不到模态框标题元素');
   }
-  
+
   // 更新搜索框占位符
-  var searchInput = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
+  var searchInput = this.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
   if (searchInput) {
     // 获取当前模式状态
-    var currentMode = window.modalManager && window.modalManager.uiManager ? 
-      window.modalManager.uiManager.currentMode : 
+    var currentMode = window.modalManager && window.modalManager.uiManager ?
+      window.modalManager.uiManager.currentMode :
       window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH;
-    
+
     if (currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_FOLDER_SELECT) {
       searchInput.placeholder = this.t('searchFolderPlaceholder');
       console.log('设置为文件夹模式搜索占位符:', this.t('searchFolderPlaceholder'));
@@ -257,26 +265,26 @@ LanguageManager.prototype.updateUI = function () {
       console.log('设置为书签模式搜索占位符:', this.t('searchPlaceholder'));
     }
   }
-  
+
   // 更新按钮文本
-  var cancelBtn = document.getElementById('smart-bookmark-cancel');
+  var cancelBtn = this.getRoot().getElementById('smart-bookmark-cancel');
   if (cancelBtn) {
     cancelBtn.textContent = this.t('cancelBtn');
   }
-  
-  var confirmBtn = document.getElementById('smart-bookmark-confirm');
+
+  var confirmBtn = this.getRoot().getElementById('smart-bookmark-confirm');
   if (confirmBtn) {
     confirmBtn.textContent = this.t('confirmBtn');
   }
-  
+
   // 更新键盘提示
-  var hints = document.querySelectorAll('.smart-bookmark-keyboard-hint');
+  var hints = this.getRoot().querySelectorAll('.smart-bookmark-keyboard-hint');
   if (hints.length >= 3) {
     hints[0].textContent = this.t('keyboardHintSelect');
     hints[1].textContent = this.t('keyboardHintConfirm');
     hints[2].textContent = this.t('keyboardHintToggle');
   }
-  
+
   // 更新主题下拉菜单
   this.updateThemeDropdown();
 };
@@ -286,12 +294,12 @@ LanguageManager.prototype.updateUI = function () {
  */
 LanguageManager.prototype.updateThemeDropdown = function () {
   // 更新深浅色模式选项
-  var modeOptions = document.querySelectorAll('[data-mode]');
+  var modeOptions = this.getRoot().querySelectorAll('[data-mode]');
   modeOptions.forEach(function (option) {
     var mode = option.getAttribute('data-mode');
     var iconHtml = '';
     var text = '';
-    
+
     if (mode === 'auto') {
       iconHtml = '<span class="smart-bookmark-option-icon">🔄</span>';
       text = this.t('followSystem');
@@ -302,19 +310,19 @@ LanguageManager.prototype.updateThemeDropdown = function () {
       iconHtml = '<span class="smart-bookmark-option-icon">🌙</span>';
       text = this.t('darkMode');
     }
-    
+
     if (iconHtml && text) {
       option.innerHTML = iconHtml + text;
     }
   }.bind(this));
-  
+
   // 更新主题颜色选项
-  var themeOptions = document.querySelectorAll('[data-theme]');
+  var themeOptions = this.getRoot().querySelectorAll('[data-theme]');
   themeOptions.forEach(function (option) {
     var theme = option.getAttribute('data-theme');
     var iconHtml = '';
     var text = '';
-    
+
     if (theme === 'gray') {
       iconHtml = '<span class="smart-bookmark-option-icon">🩶</span>';
       text = this.t('neutralGray');
@@ -334,19 +342,19 @@ LanguageManager.prototype.updateThemeDropdown = function () {
       iconHtml = '<span class="smart-bookmark-option-icon">💙</span>';
       text = this.t('classicBlue');
     }
-    
+
     if (iconHtml && text) {
       option.innerHTML = iconHtml + text;
     }
   }.bind(this));
-  
+
   // 更新语言选项
-  var languageOptions = document.querySelectorAll('[data-language]');
+  var languageOptions = this.getRoot().querySelectorAll('[data-language]');
   languageOptions.forEach(function (option) {
     var language = option.getAttribute('data-language');
     var iconHtml = '';
     var text = '';
-    
+
     if (language === 'zh') {
       iconHtml = '<span class="smart-bookmark-option-icon">🇨🇳</span>';
       text = '中文';
@@ -354,14 +362,14 @@ LanguageManager.prototype.updateThemeDropdown = function () {
       iconHtml = '<span class="smart-bookmark-option-icon">🇺🇸</span>';
       text = 'English';
     }
-    
+
     if (iconHtml && text) {
       option.innerHTML = iconHtml + text;
     }
   }.bind(this));
-  
+
   // 兼容旧版下拉菜单
-  var legacyDropdown = document.getElementById('smart-bookmark-dark-mode-dropdown');
+  var legacyDropdown = this.getRoot().getElementById('smart-bookmark-dark-mode-dropdown');
   if (legacyDropdown) {
     var legacyOptions = legacyDropdown.querySelectorAll('.smart-bookmark-dark-mode-option');
     legacyOptions.forEach(function (option) {
@@ -370,7 +378,7 @@ LanguageManager.prototype.updateThemeDropdown = function () {
       var language = option.getAttribute('data-language');
       var iconHtml = '';
       var text = '';
-      
+
       if (mode === 'auto') {
         iconHtml = '<span class="smart-bookmark-option-icon">🔄</span>';
         text = this.t('followSystem');
@@ -405,7 +413,7 @@ LanguageManager.prototype.updateThemeDropdown = function () {
         iconHtml = '<span class="smart-bookmark-option-icon">🇺🇸</span>';
         text = 'English';
       }
-      
+
       if (iconHtml && text) {
         option.innerHTML = iconHtml + text;
       }

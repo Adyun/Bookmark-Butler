@@ -89,3 +89,12 @@ window.SMART_BOOKMARK_CONSTANTS = {
   MODE_FOLDER_SELECT: MODE_FOLDER_SELECT,
   DEFAULT_MODE: DEFAULT_MODE
 };
+
+/**
+ * 全局辅助函数：获取 Shadow Root
+ * 用于在 Shadow DOM 中查找元素，如果 Shadow Root 未初始化则回退到 document
+ * @returns {ShadowRoot|Document}
+ */
+window.getSmartBookmarkRoot = function () {
+  return window.smartBookmarkShadowRoot || document;
+};

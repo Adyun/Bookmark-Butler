@@ -12,7 +12,7 @@ function ModalManager() {
   this.searchEngine = new window.SearchEngine();
   this.itemHeight = 58; // 每个项目的高度（像素）- 与CSS min-height保持一致（文件夹52px+书签56px的平均值）
   this.folderById = new Map(); // 快速查找用
-  
+
   // 面包屑缓存，避免重复计算
   this.breadcrumbCache = new Map();
 
@@ -51,6 +51,14 @@ ModalManager.prototype.createModal = function () {
 };
 
 /**
+ * 获取 Shadow Root（辅助方法）
+ * @returns {ShadowRoot|Document}
+ */
+ModalManager.prototype.getRoot = function () {
+  return window.getSmartBookmarkRoot();
+};
+
+/**
  * 初始化各个组件
  */
 ModalManager.prototype.initializeComponents = function () {
@@ -81,7 +89,7 @@ ModalManager.prototype.initializeComponents = function () {
   if (window.SMART_BOOKMARK_PINS && typeof window.SMART_BOOKMARK_PINS.loadPins === 'function') {
     window.SMART_BOOKMARK_PINS.loadPins().then(function () {
       try {
-        var searchInput = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
+        var searchInput = self.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
         var hasQuery = !!(searchInput && searchInput.value.trim());
         if (!hasQuery) {
           if (self.uiManager.currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH) {
@@ -90,14 +98,14 @@ ModalManager.prototype.initializeComponents = function () {
             self.updateFolderList();
           }
         }
-      } catch (e) {}
+      } catch (e) { }
     });
 
     // 监听置顶数据的跨页面实时变化（通过 chrome.storage.onChanged 或本地事件）
     try {
-      var onPinsChanged = function() {
+      var onPinsChanged = function () {
         try {
-          var searchInput = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
+          var searchInput = self.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
           var hasQuery = !!(searchInput && searchInput.value.trim());
           if (!hasQuery) {
             // 空查询：需要重新排序
@@ -114,7 +122,7 @@ ModalManager.prototype.initializeComponents = function () {
               self.folderVirtualScroller.forceUpdate();
             }
           }
-        } catch (e) {}
+        } catch (e) { }
       };
 
       if (typeof window !== 'undefined' && window.addEventListener) {
@@ -123,7 +131,7 @@ ModalManager.prototype.initializeComponents = function () {
       if (typeof window.SMART_BOOKMARK_PINS.addChangeListener === 'function') {
         window.SMART_BOOKMARK_PINS.addChangeListener(onPinsChanged);
       }
-    } catch (e) {}
+    } catch (e) { }
   }
 };
 
@@ -139,23 +147,23 @@ ModalManager.prototype.bindEvents = function () {
   var addEventListenerFn = function (element, event, handler) {
     return self.uiManager.addEventListener(element, event, handler);
   };
-  
+
   // 禁用主题管理器的旧事件绑定以避免冲突
   // this.themeManager.bindEvents(addEventListenerFn);
 
   // 点击取消按钮或模态框外部关闭模态框
   var handleClickOutside = function (e) {
-    var modal = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.MODAL_ID);
+    var modal = self.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.MODAL_ID);
     if (!modal) return;
 
     // 检查是否点击在下拉菜单内
     var dropdowns = [
-      document.getElementById('smart-bookmark-language-dropdown'),
-      document.getElementById('smart-bookmark-mode-dropdown'),
-      document.getElementById('smart-bookmark-theme-dropdown'),
-      document.getElementById('smart-bookmark-dark-mode-dropdown') // 兼容性
+      self.getRoot().getElementById('smart-bookmark-language-dropdown'),
+      self.getRoot().getElementById('smart-bookmark-mode-dropdown'),
+      self.getRoot().getElementById('smart-bookmark-theme-dropdown'),
+      self.getRoot().getElementById('smart-bookmark-dark-mode-dropdown') // 兼容性
     ];
-    
+
     var clickedInDropdown = false;
     for (var i = 0; i < dropdowns.length; i++) {
       if (dropdowns[i] && dropdowns[i].contains(e.target)) {
@@ -163,15 +171,15 @@ ModalManager.prototype.bindEvents = function () {
         break;
       }
     }
-    
+
     // 检查是否点击在控制按钮上
     var controlButtons = [
-      document.getElementById('smart-bookmark-language-toggle'),
-      document.getElementById('smart-bookmark-mode-toggle'),
-      document.getElementById('smart-bookmark-theme-toggle'),
-      document.getElementById(window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_TOGGLE_ID) // 兼容性
+      self.getRoot().getElementById('smart-bookmark-language-toggle'),
+      self.getRoot().getElementById('smart-bookmark-mode-toggle'),
+      self.getRoot().getElementById('smart-bookmark-theme-toggle'),
+      self.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_TOGGLE_ID) // 兼容性
     ];
-    
+
     var clickedOnButton = false;
     for (var j = 0; j < controlButtons.length; j++) {
       if (controlButtons[j] && controlButtons[j].contains(e.target)) {
@@ -179,12 +187,12 @@ ModalManager.prototype.bindEvents = function () {
         break;
       }
     }
-    
+
     // 如果点击在下拉菜单外部且不在控制按钮上，关闭所有下拉菜单
     if (!clickedInDropdown && !clickedOnButton) {
       self.closeAllDropdowns();
     }
-    
+
     // 如果点击在下拉菜单或控制按钮上，不关闭模态框
     if (clickedInDropdown || clickedOnButton) {
       return;
@@ -198,7 +206,7 @@ ModalManager.prototype.bindEvents = function () {
 
     // 点击modal外部关闭（但不包括modal内部）
     if (modal.classList.contains(window.SMART_BOOKMARK_CONSTANTS.MODAL_ACTIVE_CLASS)) {
-      var backdrop = document.querySelector('.smart-bookmark-modal-backdrop');
+      var backdrop = self.getRoot().querySelector('.smart-bookmark-modal-backdrop');
 
       // 如果点击的是backdrop（背景）或者点击在modal外部，则关闭
       if (e.target === backdrop || (backdrop && backdrop.contains(e.target) && !modal.contains(e.target))) {
@@ -210,14 +218,14 @@ ModalManager.prototype.bindEvents = function () {
   addEventListenerFn(document, 'click', handleClickOutside);
 
   // 搜索输入事件（动态防抖）
-  var searchInput = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
+  var searchInput = this.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
   if (searchInput) {
     var dynamicDebouncedSearch = this.debounceDynamic(function (query) {
       self.handleSearch(query);
       // 搜索输入触发：下一次渲染需要动画
       if (self.folderVirtualScroller) self.folderVirtualScroller.shouldAnimateOnNextRender = true;
       if (self.bookmarkVirtualScroller) self.bookmarkVirtualScroller.shouldAnimateOnNextRender = true;
-    }, function() { return self.getSearchDebounceDelay(); });
+    }, function () { return self.getSearchDebounceDelay(); });
 
     addEventListenerFn(searchInput, 'input', function (e) {
       self.updateUserActivity(); // 记录用户活动
@@ -234,7 +242,7 @@ ModalManager.prototype.bindEvents = function () {
   }
 
   // 语言切换按钮事件
-  var languageToggle = document.getElementById('smart-bookmark-language-toggle');
+  var languageToggle = this.getRoot().getElementById('smart-bookmark-language-toggle');
   if (languageToggle) {
     console.log('绑定语言切换按钮事件');
     addEventListenerFn(languageToggle, 'click', function (e) {
@@ -247,7 +255,7 @@ ModalManager.prototype.bindEvents = function () {
   }
 
   // 深浅色模式切换按钮事件
-  var modeToggle = document.getElementById('smart-bookmark-mode-toggle');
+  var modeToggle = this.getRoot().getElementById('smart-bookmark-mode-toggle');
   if (modeToggle) {
     console.log('绑定深浅色模式切换按钮事件');
     addEventListenerFn(modeToggle, 'click', function (e) {
@@ -260,7 +268,7 @@ ModalManager.prototype.bindEvents = function () {
   }
 
   // 主题颜色切换按钮事件
-  var themeToggle = document.getElementById('smart-bookmark-theme-toggle');
+  var themeToggle = this.getRoot().getElementById('smart-bookmark-theme-toggle');
   if (themeToggle) {
     console.log('绑定主题颜色切换按钮事件');
     addEventListenerFn(themeToggle, 'click', function (e) {
@@ -273,7 +281,7 @@ ModalManager.prototype.bindEvents = function () {
   }
 
   // 语言选项点击事件
-  var languageOptions = document.querySelectorAll('[data-language]');
+  var languageOptions = this.getRoot().querySelectorAll('[data-language]');
   for (var i = 0; i < languageOptions.length; i++) {
     addEventListenerFn(languageOptions[i], 'click', function (e) {
       e.stopPropagation();
@@ -284,9 +292,9 @@ ModalManager.prototype.bindEvents = function () {
       }
     });
   }
-  
+
   // 深浅色模式选项点击事件
-  var modeOptions = document.querySelectorAll('[data-mode]');
+  var modeOptions = this.getRoot().querySelectorAll('[data-mode]');
   for (var j = 0; j < modeOptions.length; j++) {
     addEventListenerFn(modeOptions[j], 'click', function (e) {
       e.stopPropagation();
@@ -297,9 +305,9 @@ ModalManager.prototype.bindEvents = function () {
       }
     });
   }
-  
+
   // 主题颜色选项点击事件
-  var themeOptions = document.querySelectorAll('[data-theme]');
+  var themeOptions = this.getRoot().querySelectorAll('[data-theme]');
   for (var k = 0; k < themeOptions.length; k++) {
     addEventListenerFn(themeOptions[k], 'click', function (e) {
       e.stopPropagation();
@@ -312,7 +320,7 @@ ModalManager.prototype.bindEvents = function () {
   }
 
   // 监听modal内的鼠标活动
-  var modal = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.MODAL_ID);
+  var modal = this.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.MODAL_ID);
   if (modal) {
     addEventListenerFn(modal, 'mousemove', function () {
       self.updateUserActivity();
@@ -323,7 +331,7 @@ ModalManager.prototype.bindEvents = function () {
   }
 
   // 确认按钮事件
-  var confirmBtn = document.getElementById('smart-bookmark-confirm');
+  var confirmBtn = this.getRoot().getElementById('smart-bookmark-confirm');
   if (confirmBtn) {
     addEventListenerFn(confirmBtn, 'click', function () {
       self.handleConfirm();
@@ -366,7 +374,7 @@ ModalManager.prototype.debounceDynamic = function (func, getDelay) {
     var context = this;
     clearTimeout(timeoutId);
     var delay = 400;
-    try { delay = Math.max(200, Math.min(800, Number(getDelay && getDelay()) || 400)); } catch (e) {}
+    try { delay = Math.max(200, Math.min(800, Number(getDelay && getDelay()) || 400)); } catch (e) { }
     timeoutId = setTimeout(function () {
       func.apply(context, args);
     }, delay);
@@ -385,7 +393,7 @@ ModalManager.prototype.getSearchDebounceDelay = function () {
     } else {
       len = (this.allFolders && this.allFolders.length) || 0;
     }
-  } catch (e) {}
+  } catch (e) { }
   if (len > 2000) return 600;
   if (len > 1000) return 500;
   return base; // 400ms
@@ -421,7 +429,7 @@ ModalManager.prototype.show = function (pageInfo) {
 
   // 应用主题
   this.themeManager.applyDarkMode();
-  
+
   // 更新语言
   this.languageManager.updateUI();
 
@@ -558,7 +566,7 @@ ModalManager.prototype.loadBookmarks = function () {
       }
 
       self.filteredBookmarks = self.allBookmarks;
-      
+
       // 清理面包屑缓存，因为数据已更新
       self.clearBreadcrumbCache();
 
@@ -618,7 +626,7 @@ ModalManager.prototype.handleLoadError = function (type, error) {
 ModalManager.prototype.bindPermissionRequestButton = function (type) {
   var self = this;
   var buttonId = 'smart-bookmark-request-permission-' + type;
-  var permissionBtn = document.getElementById(buttonId);
+  var permissionBtn = this.getRoot().getElementById(buttonId);
 
   if (permissionBtn) {
     this.uiManager.addEventListener(permissionBtn, 'click', function () {
@@ -664,7 +672,7 @@ ModalManager.prototype.handleSearch = function (query) {
 
 
   // 记录当前高度
-  var modal = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.MODAL_ID);
+  var modal = this.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.MODAL_ID);
   var currentHeight = null;
   if (modal) {
     currentHeight = modal.offsetHeight;
@@ -731,10 +739,10 @@ ModalManager.prototype.handleSearch = function (query) {
  * 更新文件夹列表显示
  */
 ModalManager.prototype.updateFolderList = function () {
-  var folderList = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.FOLDER_LIST_ID);
+  var folderList = this.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.FOLDER_LIST_ID);
   if (!folderList) return;
 
-  var searchInput = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
+  var searchInput = this.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
   var hasSearchQuery = searchInput && searchInput.value.trim() !== '';
 
   // 检查是否有结果
@@ -818,16 +826,16 @@ ModalManager.prototype.renderFolderItem = function (folder, index, hasSearchQuer
   var item = document.createElement('div');
   item.className = 'smart-bookmark-folder-item ' + matchClass;
   item.setAttribute('data-folder-id', folder.id);
-  
+
   // 生成面包屑
   var breadcrumb = this.generateBreadcrumb(folder.parentId);
-  
+
   // 获取搜索关键词并应用高亮
-  var searchInput = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
+  var searchInput = this.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
   var searchTerm = searchInput ? searchInput.value.trim() : '';
-  var highlightedTitle = hasSearchQuery && searchTerm ? 
+  var highlightedTitle = hasSearchQuery && searchTerm ?
     this.highlightText(folder.title, searchTerm) : folder.title;
-  
+
   item.innerHTML =
     '<span class="smart-bookmark-folder-icon">📁</span>' +
     '<div class="smart-bookmark-folder-content">' +
@@ -842,13 +850,13 @@ ModalManager.prototype.renderFolderItem = function (folder, index, hasSearchQuer
     item.classList.add('has-actions');
     var actions = document.createElement('div');
     actions.className = 'smart-bookmark-item-actions';
-    
+
     // 文件夹数量
     var countSpan = document.createElement('span');
     countSpan.className = 'smart-bookmark-folder-count';
     countSpan.textContent = folder.bookmarkCount || 0;
     actions.appendChild(countSpan);
-    
+
     // 置顶按钮
     var pinBtn = document.createElement('button');
     pinBtn.className = 'smart-bookmark-pin-btn';
@@ -858,13 +866,13 @@ ModalManager.prototype.renderFolderItem = function (folder, index, hasSearchQuer
       pinBtn.classList.add('pinned');
     }
     var selfRef = this;
-    pinBtn.addEventListener('click', function(e) {
+    pinBtn.addEventListener('click', function (e) {
       e.stopPropagation();
       if (!window.SMART_BOOKMARK_PINS) return;
-      window.SMART_BOOKMARK_PINS.togglePin('folders', folder.id).then(function(pinnedNow) {
+      window.SMART_BOOKMARK_PINS.togglePin('folders', folder.id).then(function (pinnedNow) {
         if (pinnedNow) pinBtn.classList.add('pinned'); else pinBtn.classList.remove('pinned');
         // 空搜索时刷新排序，搜索态仅刷新按钮样式
-        var searchInput = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
+        var searchInput = self.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
         var hasSearchQuery = searchInput && searchInput.value.trim() !== '';
         if (!hasSearchQuery) {
           selfRef.updateFolderList();
@@ -875,7 +883,7 @@ ModalManager.prototype.renderFolderItem = function (folder, index, hasSearchQuer
     });
     actions.appendChild(pinBtn);
     item.appendChild(actions);
-  } catch (e) {}
+  } catch (e) { }
 
   // 绑定点击事件
   var self = this;
@@ -890,10 +898,10 @@ ModalManager.prototype.renderFolderItem = function (folder, index, hasSearchQuer
  * 更新书签列表显示
  */
 ModalManager.prototype.updateBookmarkList = function () {
-  var bookmarkList = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.BOOKMARK_LIST_ID);
+  var bookmarkList = this.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.BOOKMARK_LIST_ID);
   if (!bookmarkList) return;
 
-  var searchInput = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
+  var searchInput = this.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
   var hasSearchQuery = searchInput && searchInput.value.trim() !== '';
 
   // 检查是否有结果
@@ -981,16 +989,16 @@ ModalManager.prototype.renderBookmarkItem = function (bookmark, index, hasSearch
 
   // 生成面包屑
   var breadcrumb = this.generateBreadcrumb(bookmark.parentId);
-  
+
   // 获取搜索关键词并应用高亮
-  var searchInput = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
+  var searchInput = this.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
   var searchTerm = searchInput ? searchInput.value.trim() : '';
-  var highlightedTitle = hasSearchQuery && searchTerm ? 
+  var highlightedTitle = hasSearchQuery && searchTerm ?
     this.highlightText(bookmark.title, searchTerm) : bookmark.title;
   var displayUrl = this.formatUrlForDisplay(bookmark.url);
-  var highlightedUrl = hasSearchQuery && searchTerm ? 
+  var highlightedUrl = hasSearchQuery && searchTerm ?
     this.highlightText(displayUrl, searchTerm) : displayUrl;
-  
+
   // 重构为上下布局 - 参考文件夹模式的完美样式
   item.innerHTML =
     '<div class="smart-bookmark-bookmark-content">' +
@@ -1017,13 +1025,13 @@ ModalManager.prototype.renderBookmarkItem = function (bookmark, index, hasSearch
       pinBtn.classList.add('pinned');
     }
     var selfRef = this;
-    pinBtn.addEventListener('click', function(e) {
+    pinBtn.addEventListener('click', function (e) {
       e.stopPropagation();
       if (!window.SMART_BOOKMARK_PINS) return;
-      window.SMART_BOOKMARK_PINS.togglePin('bookmarks', bookmark.id).then(function(pinnedNow) {
+      window.SMART_BOOKMARK_PINS.togglePin('bookmarks', bookmark.id).then(function (pinnedNow) {
         if (pinnedNow) pinBtn.classList.add('pinned'); else pinBtn.classList.remove('pinned');
         // 空搜索时刷新排序，搜索态仅刷新按钮样式
-        var searchInput = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
+        var searchInput = selfRef.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
         var hasSearchQuery = searchInput && searchInput.value.trim() !== '';
         if (!hasSearchQuery) {
           selfRef.updateBookmarkList();
@@ -1034,7 +1042,7 @@ ModalManager.prototype.renderBookmarkItem = function (bookmark, index, hasSearch
     });
     actions.appendChild(pinBtn);
     item.appendChild(actions);
-  } catch (e) {}
+  } catch (e) { }
 
   // 绑定点击事件
   var self = this;
@@ -1053,47 +1061,47 @@ ModalManager.prototype.renderBookmarkItem = function (bookmark, index, hasSearch
  */
 ModalManager.prototype.highlightText = function (text, searchTerm) {
   if (!text || !searchTerm) return this.escapeHtml(text || '');
-  
+
   var escapedText = this.escapeHtml(text);
   var escapedSearchTerm = this.escapeHtml(searchTerm);
   var lowerText = text.toLowerCase();
   var lowerSearchTerm = searchTerm.toLowerCase();
-  
+
   // 1. 完全匹配
   if (lowerText === lowerSearchTerm) {
     return '<span class="smart-bookmark-highlight">' + escapedText + '</span>';
   }
-  
+
   // 2. 前缀匹配
   if (lowerText.indexOf(lowerSearchTerm) === 0) {
     var matchLength = searchTerm.length;
-    var highlighted = '<span class="smart-bookmark-highlight">' + 
+    var highlighted = '<span class="smart-bookmark-highlight">' +
       this.escapeHtml(text.substring(0, matchLength)) + '</span>';
     var remaining = this.escapeHtml(text.substring(matchLength));
     return highlighted + remaining;
   }
-  
+
   // 3. 包含匹配
   var index = lowerText.indexOf(lowerSearchTerm);
   if (index > -1) {
     var before = this.escapeHtml(text.substring(0, index));
-    var match = '<span class="smart-bookmark-highlight">' + 
+    var match = '<span class="smart-bookmark-highlight">' +
       this.escapeHtml(text.substring(index, index + searchTerm.length)) + '</span>';
     var after = this.escapeHtml(text.substring(index + searchTerm.length));
     return before + match + after;
   }
-  
+
   // 4. 模糊匹配（逐字符高亮）
   var result = [];
   var textChars = text.split('');
   var searchChars = searchTerm.toLowerCase().split('');
   var searchIndex = 0;
   var isInHighlight = false;
-  
+
   for (var i = 0; i < textChars.length; i++) {
     var char = textChars[i];
     var lowerChar = char.toLowerCase();
-    
+
     if (searchIndex < searchChars.length && lowerChar === searchChars[searchIndex]) {
       // 匹配的字符
       if (!isInHighlight) {
@@ -1102,12 +1110,12 @@ ModalManager.prototype.highlightText = function (text, searchTerm) {
       }
       result.push(this.escapeHtml(char));
       searchIndex++;
-      
+
       // 检查是否需要关闭高亮
-      if (searchIndex >= searchChars.length || 
-          (i + 1 < textChars.length && 
-           searchIndex < searchChars.length && 
-           textChars[i + 1].toLowerCase() !== searchChars[searchIndex])) {
+      if (searchIndex >= searchChars.length ||
+        (i + 1 < textChars.length &&
+          searchIndex < searchChars.length &&
+          textChars[i + 1].toLowerCase() !== searchChars[searchIndex])) {
         result.push('</span>');
         isInHighlight = false;
       }
@@ -1120,12 +1128,12 @@ ModalManager.prototype.highlightText = function (text, searchTerm) {
       result.push(this.escapeHtml(char));
     }
   }
-  
+
   // 确保关闭未闭合的高亮标签
   if (isInHighlight) {
     result.push('</span>');
   }
-  
+
   return result.join('');
 };
 
@@ -1183,7 +1191,7 @@ ModalManager.prototype.formatUrlForDisplay = function (url) {
  */
 ModalManager.prototype.selectFolder = function (folderItem) {
   // 移除之前选中的样式
-  var items = document.querySelectorAll('.smart-bookmark-folder-item');
+  var items = this.getRoot().querySelectorAll('.smart-bookmark-folder-item');
   for (var i = 0; i < items.length; i++) {
     items[i].classList.remove('active');
   }
@@ -1201,7 +1209,7 @@ ModalManager.prototype.selectFolder = function (folderItem) {
   }
 
   // 启用确认按钮
-  var confirmBtn = document.getElementById('smart-bookmark-confirm');
+  var confirmBtn = this.getRoot().getElementById('smart-bookmark-confirm');
   if (confirmBtn) {
     confirmBtn.disabled = false;
   }
@@ -1255,14 +1263,14 @@ ModalManager.prototype.handleConfirm = function () {
     if (selectedItem && selectedItem.url) {
       if (!this.isSpecialUrl(selectedItem.url)) {
         window.open(selectedItem.url, '_blank');
-          } else {
-      window.SMART_BOOKMARK_HELPERS.showToast(this.languageManager.t('specialUrlWarning'), true);
-    }
+      } else {
+        window.SMART_BOOKMARK_HELPERS.showToast(this.languageManager.t('specialUrlWarning'), true);
+      }
       this.hide();
     }
   } else {
     // 文件夹选择模式：添加书签到选中的文件夹
-    var selectedFolder = document.querySelector('.smart-bookmark-folder-item.active');
+    var selectedFolder = this.getRoot().querySelector('.smart-bookmark-folder-item.active');
     if (!selectedFolder || !this.currentPageInfo) {
       return;
     }
@@ -1298,7 +1306,7 @@ ModalManager.prototype.setMode = function (mode) {
   } else {
     this.loadFolders();
   }
-  
+
   // 模式设置时也需要动画标记
   var self = this;
   requestAnimationFrame(function () {
@@ -1341,14 +1349,14 @@ ModalManager.prototype.scheduleBuildIndexes = function () {
       if (self.searchEngine && typeof self.searchEngine.buildIndexes === 'function') {
         self.searchEngine.buildIndexes(self.allFolders || [], self.allBookmarks || []);
       }
-    } catch (e) {}
+    } catch (e) { }
   };
   // 优先使用 requestIdleCallback
   if (typeof window.requestIdleCallback === 'function') {
     try {
       window.requestIdleCallback(runner, { timeout: 1500 });
       return;
-    } catch (e) {}
+    } catch (e) { }
   }
   // 退化：用 setTimeout 放到事件循环后
   setTimeout(runner, 0);
@@ -1383,17 +1391,17 @@ ModalManager.prototype.generateBreadcrumb = function (parentId) {
   if (!parentId || parentId === '0') {
     return ''; // 根目录不显示面包屑
   }
-  
+
   // 检查缓存
   if (this.breadcrumbCache.has(parentId)) {
     return this.breadcrumbCache.get(parentId);
   }
-  
+
   var path = [];
   var currentId = parentId;
   var maxDepth = 10; // 防止无限循环
   var depth = 0;
-  
+
   // 向上追溯路径
   while (currentId && currentId !== '0' && depth < maxDepth) {
     var folder = this.findFolderById(currentId);
@@ -1405,14 +1413,14 @@ ModalManager.prototype.generateBreadcrumb = function (parentId) {
     }
     depth++;
   }
-  
+
   // 生成面包屑HTML：不再按层级数量截断，交给CSS根据容器宽度省略
   var breadcrumbHtml = '';
   if (path.length > 0) {
     var displayPath = path.join(' › ');
     breadcrumbHtml = '<div class="breadcrumb" title="' + displayPath + '">' + displayPath + '</div>';
   }
-  
+
   // 缓存结果
   this.breadcrumbCache.set(parentId, breadcrumbHtml);
   return breadcrumbHtml;
@@ -1435,7 +1443,7 @@ ModalManager.prototype.findFolderById = function (folderId) {
       return this.allFolders[i];
     }
   }
-  
+
   // 如果找不到，可能是根文件夹或系统文件夹
   if (folderId === '1') {
     return { id: '1', title: '书签栏', parentId: '0' };
@@ -1444,7 +1452,7 @@ ModalManager.prototype.findFolderById = function (folderId) {
   } else if (folderId === '3') {
     return { id: '3', title: '移动设备书签', parentId: '0' };
   }
-  
+
   return null;
 };
 
@@ -1469,12 +1477,12 @@ ModalManager.prototype.buildFolderIdMap = function () {
  */
 ModalManager.prototype.toggleDropdown = function (dropdownId) {
   console.log('切换下拉菜单:', dropdownId);
-  
+
   // 先关闭所有其他下拉菜单
   this.closeAllDropdowns();
-  
+
   // 切换目标下拉菜单
-  var dropdown = document.getElementById(dropdownId);
+  var dropdown = this.getRoot().getElementById(dropdownId);
   if (dropdown) {
     var hasShowClass = dropdown.classList.contains('show');
     if (hasShowClass) {
@@ -1499,14 +1507,14 @@ ModalManager.prototype.closeAllDropdowns = function () {
     'smart-bookmark-theme-dropdown',
     'smart-bookmark-dark-mode-dropdown' // 兼容性
   ];
-  
+
   dropdowns.forEach(function (id) {
-    var dropdown = document.getElementById(id);
+    var dropdown = this.getRoot().getElementById(id);
     if (dropdown) {
       dropdown.classList.remove('show');
       dropdown.style.display = 'none';
     }
-  });
+  }.bind(this));
 };
 
 /**
@@ -1542,8 +1550,8 @@ ModalManager.prototype.cleanup = function () {
   }
 
   // 移除Modal元素
-  var modal = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.MODAL_ID);
-  var toast = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.TOAST_ID);
+  var modal = this.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.MODAL_ID);
+  var toast = this.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.TOAST_ID);
 
   if (modal) {
     modal.remove();
@@ -1558,7 +1566,7 @@ ModalManager.prototype.cleanup = function () {
   this.filteredFolders = [];
   this.allBookmarks = [];
   this.filteredBookmarks = [];
-  
+
   // 清理面包屑缓存
   this.clearBreadcrumbCache();
 };

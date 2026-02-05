@@ -22,7 +22,7 @@ const memoryManager = {
 
   init() {
     console.log("Initializing memory manager");
-    
+
     try {
       // 检查必要的依赖是否存在
       if (!window.ModalManager) {
@@ -33,7 +33,7 @@ const memoryManager = {
       // 创建Modal管理器实例
       this.modalManager = new window.ModalManager();
       console.log("ModalManager created successfully");
-      
+
       // 暴露到全局，供其他组件使用
       window.modalManager = this.modalManager;
 
@@ -45,7 +45,7 @@ const memoryManager = {
 
       // 监听页面卸载
       this.setupUnloadHandlers();
-      
+
       return true;
     } catch (error) {
       console.error("Error initializing memory manager:", error);
@@ -129,7 +129,7 @@ const memoryManager = {
    */
   handleVisibilityChange() {
     let hideTimeout = null;
-    
+
     this.addEventListener(document, 'visibilitychange', () => {
       if (document.hidden) {
         // 延迟关闭Modal，避免短暂失焦导致的误关闭
@@ -142,7 +142,7 @@ const memoryManager = {
             }
             console.log('Page hidden for extended time, closing modal');
             this.modalManager.hide();
-            
+
             // 清理缓存
             if (window.SMART_BOOKMARK_API && window.SMART_BOOKMARK_API.clearCache) {
               window.SMART_BOOKMARK_API.clearCache();
@@ -269,7 +269,7 @@ function getCurrentPageInfo() {
  */
 function handleMessage(request, sender, sendResponse) {
   console.log("Content script received message:", request);
-  
+
   try {
     // 后台广播：书签数据变更
     if (request.action === 'bookmarksChanged') {
@@ -285,7 +285,7 @@ function handleMessage(request, sender, sendResponse) {
             memoryManager.modalManager.loadFolders();
           }
           // 若当前有查询词，重跑一次搜索
-          const input = document.getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
+          const input = window.getSmartBookmarkRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
           if (input && typeof memoryManager.modalManager.handleSearch === 'function') {
             const q = (input.value || '').trim();
             if (q) memoryManager.modalManager.handleSearch(q);
@@ -303,7 +303,7 @@ function handleMessage(request, sender, sendResponse) {
       sendResponse({ status: "success", message: "Content script is alive" });
       return true;
     }
-    
+
     if (request.action === "openBookmarkModal") {
       // 检查modalManager是否存在
       if (!memoryManager.modalManager) {
@@ -315,7 +315,7 @@ function handleMessage(request, sender, sendResponse) {
       // 显示Modal
       memoryManager.modalManager.show(request.pageInfo);
       sendResponse({ status: "success" });
-      
+
       console.log("Modal opened successfully");
       return true;
     }
@@ -324,7 +324,7 @@ function handleMessage(request, sender, sendResponse) {
     sendResponse({ status: "error", message: error.message });
     return true;
   }
-  
+
   // 未知的action
   sendResponse({ status: "error", message: "Unknown action: " + request.action });
   return true;
@@ -340,13 +340,13 @@ function initExtension() {
     console.log("Extension already initialized, skipping");
     return;
   }
-  
+
   console.log("Initializing Smart Bookmark Extension");
-  
+
   try {
     // 初始化内存管理器
     const initSuccess = memoryManager.init();
-    
+
     if (!initSuccess) {
       console.error("Failed to initialize memory manager");
       return;
@@ -359,7 +359,7 @@ function initExtension() {
     } else {
       console.error("chrome.runtime.onMessage not available");
     }
-    
+
     isInitialized = true;
     console.log("Smart Bookmark Extension initialized successfully");
   } catch (error) {

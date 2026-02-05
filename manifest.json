@@ -3,7 +3,6 @@
   "name": "Smart Bookmark Extension",
   "version": "1.0.0",
   "description": "智能书签扩展，提供两种模式的书签管理功能：模式一可快速搜索和打开已有书签，模式二可将当前页面快速添加到收藏文件夹中。支持深色/浅色主题切换。",
-  
   "permissions": [
     "bookmarks",
     "activeTab",
@@ -14,14 +13,14 @@
   "host_permissions": [
     "<all_urls>"
   ],
-  
   "background": {
     "service_worker": "src/background.js"
   },
-  
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": [
+        "<all_urls>"
+      ],
       "js": [
         "src/utils/constants.js",
         "src/utils/helpers.js",
@@ -36,11 +35,9 @@
         "src/components/language-manager.js",
         "src/modal/modal-manager.js",
         "src/content-script.js"
-      ],
-      "css": ["src/styles/modal.css"]
+      ]
     }
   ],
-  
   "action": {
     "default_title": "智能书签扩展",
     "default_icon": {
@@ -49,17 +46,24 @@
       "128": "icons/icon128.png"
     }
   },
-  
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  
   "web_accessible_resources": [
     {
-      "resources": ["fallback.html", "fallback.js", "src/styles/modal.css", "icons/icon16.png", "icons/icon48.png", "icons/icon128.png"],
-      "matches": ["<all_urls>"]
+      "resources": [
+        "fallback.html",
+        "fallback.js",
+        "src/styles/modal.css",
+        "icons/icon16.png",
+        "icons/icon48.png",
+        "icons/icon128.png"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ]
 }

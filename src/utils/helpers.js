@@ -3,7 +3,9 @@
 
   var showToast = function (message, isError) {
     isError = isError || false;
-    var toast = document.getElementById('smart-bookmark-toast');
+    // 优先从 Shadow Root 中查找 toast 元素
+    var root = window.smartBookmarkShadowRoot || document;
+    var toast = root.getElementById('smart-bookmark-toast');
     if (toast) {
       toast.textContent = message;
       toast.className += ' show';
@@ -97,7 +99,7 @@
         break;
       }
     }
-    
+
     if (hasAnyChar && searchTerm.length > 0) {
       return 0.05; // 很低的分数，但足以被包含
     }
