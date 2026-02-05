@@ -68,7 +68,7 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 // 监听来自内容脚本的消息
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log("Message received in background script:", request);
-  
+
   // 记录内容脚本已加载
   if (sender.tab && request.action === "contentScriptLoaded") {
     console.log(`Content script loaded in tab ${sender.tab.id}:`, request.url);
@@ -250,13 +250,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     return true; // 保持消息通道开放，以便异步发送响应
   }
-  
+
   // 处理来自fallback页面的消息
   if (request.action === "openNewTab") {
-    chrome.tabs.create({ 
+    chrome.tabs.create({
       url: request.url || 'https://www.bing.com',
-      active: true 
-    }, function(tab) {
+      active: true
+    }, function (tab) {
       if (chrome.runtime.lastError) {
         console.error("Error creating new tab:", chrome.runtime.lastError);
         sendResponse({ status: "error", message: chrome.runtime.lastError.message });
@@ -267,11 +267,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     });
     return true; // 保持消息通道开放
   }
-  
+
   if (request.action === "closeCurrentTab") {
     // 获取当前标签页ID
     if (sender.tab && sender.tab.id) {
-      chrome.tabs.remove(sender.tab.id, function() {
+      chrome.tabs.remove(sender.tab.id, function () {
         if (chrome.runtime.lastError) {
           console.error("Error closing tab:", chrome.runtime.lastError);
           sendResponse({ status: "error", message: chrome.runtime.lastError.message });
@@ -293,7 +293,11 @@ function broadcastBookmarksChanged(reason, payload) {
     chrome.tabs.query({}, (tabs) => {
       for (const tab of tabs) {
         try {
-          chrome.tabs.sendMessage(tab.id, { action: 'bookmarksChanged', reason, payload });
+          // 使用 .catch() 处理 Promise rejection，避免 Uncaught (in promise) 错误
+          chrome.tabs.sendMessage(tab.id, { action: 'bookmarksChanged', reason, payload })
+            .catch(() => {
+              // 静默忽略：content script 可能未加载或页面不支持
+            });
         } catch (e) {
           // 忽略不可达的标签页
         }
@@ -318,42 +322,42 @@ if (chrome.bookmarks && chrome.bookmarks.onCreated) {
  */
 function sendMessageToContentScript(tabId, message, maxRetries = 3) {
   let retryCount = 0;
-  
+
   // 首先检查标签页是否可以注入脚本
   chrome.tabs.get(tabId, (tab) => {
     if (chrome.runtime.lastError) {
       console.error("Failed to get tab info:", chrome.runtime.lastError);
       return;
     }
-    
+
     // 检查URL是否允许内容脚本
     if (isRestrictedUrl(tab.url)) {
       console.warn("Cannot inject content script into restricted URL:", tab.url);
       showNotificationFallback();
       return;
     }
-    
+
     // 检查内容脚本是否已加载
     if (!loadedTabs.has(tabId)) {
       console.log("Content script not loaded in tab", tabId, "- injecting first");
       injectContentScript(tabId, message);
       return;
     }
-    
+
     attemptSend();
   });
-  
+
   function attemptSend() {
     chrome.tabs.sendMessage(tabId, message, (response) => {
       if (chrome.runtime.lastError) {
         console.error(`Attempt ${retryCount + 1} failed:`, chrome.runtime.lastError.message);
-        
+
         // 如果连接失败，可能是内容脚本被卸载了
         if (chrome.runtime.lastError.message.includes("Receiving end does not exist")) {
           console.log("Content script appears to be unloaded, removing from loaded tabs");
           loadedTabs.delete(tabId);
         }
-        
+
         if (retryCount < maxRetries) {
           retryCount++;
           // 使用递增延迟策略：第一次500ms，第二次1000ms，第三次1500ms
@@ -385,7 +389,7 @@ function isRestrictedUrl(url) {
     'opera://',
     'file://'
   ];
-  
+
   return restrictedProtocols.some(protocol => url.startsWith(protocol));
 }
 
@@ -394,7 +398,7 @@ function isRestrictedUrl(url) {
  */
 function showNotificationFallback() {
   console.log("Showing notification fallback");
-  
+
   // 直接打开新标签页，避免通知图标问题
   chrome.tabs.create({
     url: chrome.runtime.getURL('fallback.html'),
@@ -403,7 +407,7 @@ function showNotificationFallback() {
     console.log("Fallback page opened successfully");
   }).catch((error) => {
     console.error("Could not open fallback page:", error);
-    
+
     // 如果连fallback页面也打不开，尝试简单的通知
     trySimpleNotification();
   });
@@ -416,13 +420,13 @@ function trySimpleNotification() {
   if (chrome.notifications) {
     // 创建一个base64编码的简单图标作为备用
     const simpleIcon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
-    
+
     chrome.notifications.create({
       type: 'basic',
       iconUrl: simpleIcon,
       title: '智能书签扩展',
       message: '当前页面不支持书签管理器。请在普通网页中使用此功能。'
-    }, function(notificationId) {
+    }, function (notificationId) {
       if (chrome.runtime.lastError) {
         console.error('Simple notification also failed:', chrome.runtime.lastError.message);
         console.log('Notification system appears to be unavailable. User will need to manually navigate to a regular webpage.');
@@ -440,22 +444,22 @@ function trySimpleNotification() {
  */
 function injectContentScript(tabId, originalMessage) {
   console.log("Attempting to inject content script into tab", tabId);
-  
+
   // 首先检查标签页是否还存在
   chrome.tabs.get(tabId, async (tab) => {
     if (chrome.runtime.lastError) {
       console.error("Tab no longer exists:", chrome.runtime.lastError);
       return;
     }
-    
+
     console.log("Tab info:", tab.url, tab.status);
-    
+
     if (isRestrictedUrl(tab.url)) {
       console.warn("Cannot inject into restricted URL:", tab.url);
       showNotificationFallback();
       return;
     }
-    
+
     // 等待页面加载完成
     if (tab.status !== 'complete') {
       console.log("Tab not ready, waiting for load completion");
@@ -469,7 +473,7 @@ function injectContentScript(tabId, originalMessage) {
     } else {
       performInjection();
     }
-    
+
     function performInjection() {
       // 先尝试简单的ping测试
       chrome.tabs.sendMessage(tabId, { action: 'ping' }, (response) => {
@@ -481,9 +485,9 @@ function injectContentScript(tabId, originalMessage) {
           }
           return;
         }
-        
+
         console.log("Content script not loaded, injecting scripts");
-        
+
         // 尝试注入脚本
         chrome.scripting.executeScript({
           target: { tabId: tabId },
@@ -492,17 +496,19 @@ function injectContentScript(tabId, originalMessage) {
             'src/utils/helpers.js',
             'src/utils/bookmark-api.js',
             'src/utils/sorting-algorithm.js',
+            'src/utils/pin-manager.js',
             'src/utils/search-engine.js',
             'src/components/virtual-scroller.js',
             'src/components/ui-manager.js',
             'src/components/theme-manager.js',
             'src/components/keyboard-manager.js',
+            'src/components/language-manager.js',
             'src/modal/modal-manager.js',
             'src/content-script.js'
           ]
         }).then(() => {
           console.log("Content script files injected successfully");
-          
+
           // 同时注入CSS
           return chrome.scripting.insertCSS({
             target: { tabId: tabId },
@@ -510,10 +516,10 @@ function injectContentScript(tabId, originalMessage) {
           });
         }).then(() => {
           console.log("CSS injected successfully");
-          
+
           // 记录脚本已加载
           loadedTabs.add(tabId);
-          
+
           // 等待脚本初始化后发送原始消息
           setTimeout(() => {
             console.log("Waiting period complete, sending original message");
