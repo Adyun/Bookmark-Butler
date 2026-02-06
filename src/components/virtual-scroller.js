@@ -29,7 +29,7 @@ function VirtualScroller(container, itemHeight, totalItems, renderItem) {
  * 更新渲染函数（用于复用实例时切换不同渲染逻辑/闭包参数）
  * @param {Function} renderItem
  */
-VirtualScroller.prototype.setRenderItem = function(renderItem) {
+VirtualScroller.prototype.setRenderItem = function (renderItem) {
   if (typeof renderItem === 'function') {
     this.renderItem = renderItem;
     // 下一次渲染启用动画，且立即渲染
@@ -46,15 +46,15 @@ VirtualScroller.prototype.init = function () {
   this.container.style.position = 'relative';
   this.container.style.overflowY = 'auto';
   this.container.style.overflowX = 'hidden';
-  
+
   // 计算容器高度 - 修复高度计算问题
   this.updateContainerHeight();
-  
+
   // 创建内容容器
   this.contentContainer = document.createElement('div');
   this.contentContainer.style.position = 'relative';
   this.contentContainer.style.width = '100%';
-  
+
   // 清空容器并添加内容容器
   this.container.innerHTML = '';
   this.container.appendChild(this.contentContainer);
@@ -73,7 +73,7 @@ VirtualScroller.prototype.init = function () {
 
   // 监听容器大小变化
   if (window.ResizeObserver) {
-    this.resizeObserver = new ResizeObserver(function() {
+    this.resizeObserver = new ResizeObserver(function () {
       self.updateContainerHeight();
       self.render();
     });
@@ -91,16 +91,16 @@ VirtualScroller.prototype.updateContainerHeight = function () {
   // 获取容器的实际可用高度
   var containerRect = this.container.getBoundingClientRect();
   this.containerHeight = containerRect.height;
-  
+
   // 如果高度为0，使用默认值
   if (this.containerHeight <= 0) {
     this.containerHeight = 400; // 默认高度
   }
-  
+
   // 计算可见项目数量，添加缓冲区（考虑间距）
   var itemTotalHeight = this.itemHeight + 8; // 项目高度 + 间距
   this.visibleItems = Math.ceil(this.containerHeight / itemTotalHeight) + 4; // 增加缓冲区
-  
+
   // 移除高频日志，避免阻塞主线程
 };
 
@@ -132,16 +132,22 @@ VirtualScroller.prototype.updateVisibleRange = function () {
  * 渲染可见项目
  */
 VirtualScroller.prototype.render = function () {
-  if (!this.contentContainer || !this.items || this.items.length === 0) {
+  // 如果没有内容容器，直接返回
+  if (!this.contentContainer) {
     return;
   }
 
-  // 确保内容容器已挂载（防止外部 innerHTML 重置导致容器被移除）
-  if (!this.contentContainer.parentNode || this.contentContainer.parentNode !== this.container) {
-    try {
-      this.container.innerHTML = '';
-      this.container.appendChild(this.contentContainer);
-    } catch (e) {}
+  // 如果没有数据，清空内容容器并返回（让外部显示 "无结果" 消息）
+  if (!this.items || this.items.length === 0) {
+    this.contentContainer.innerHTML = '';
+    this.contentContainer.style.height = '0px';
+    return;
+  }
+
+  // 检查内容容器是否被外部移除（用于显示 "无结果" 等消息）
+  // 注意：这里不自动重新挂载，让 updateData() 时重新挂载
+  if (!this.contentContainer.parentNode) {
+    return;
   }
 
   // 如果可见范围未变化且不需要动画，跳过渲染
@@ -166,7 +172,7 @@ VirtualScroller.prototype.render = function () {
 
   // 渲染可见项目
   var measuredMax = 0;
-  
+
   for (var i = this.startIndex; i <= this.endIndex && i < this.items.length; i++) {
     var item = this.items[i];
     if (!item) continue;
@@ -176,7 +182,7 @@ VirtualScroller.prototype.render = function () {
       // 设置项目位置和样式，正确计算间距
       var itemMarginBottom = 8; // 底部间距
       var itemMarginRight = 8; // 右边距
-      
+
       itemElement.style.position = 'absolute';
       // 正确计算top位置：每个项目的位置 = (索引 * (项目高度 + 间距))
       itemElement.style.top = (i * (this.itemHeight + itemMarginBottom)) + 'px';
@@ -189,12 +195,12 @@ VirtualScroller.prototype.render = function () {
       }
       itemElement.style.boxSizing = 'border-box';
       itemElement.style.left = '0';
-      
+
       // 添加出现动画：仅在允许动画时触发
       if (this.shouldAnimateOnNextRender) {
         this.addItemAnimation(itemElement, i - this.startIndex);
       }
-      
+
       // 追加到DOM
       this.contentContainer.appendChild(itemElement);
 
@@ -231,9 +237,9 @@ VirtualScroller.prototype.render = function () {
   // 恢复之前的选中状态（如果有的话）
   if (activeItemId) {
     var restoredItem = this.contentContainer.querySelector('[data-folder-id="' + activeItemId + '"], [data-bookmark-id="' + activeItemId + '"]');
-      if (restoredItem) {
-        restoredItem.classList.add('active');
-      }
+    if (restoredItem) {
+      restoredItem.classList.add('active');
+    }
   }
   // 记录本次渲染范围
   this.lastStartIndex = this.startIndex;
@@ -253,14 +259,22 @@ VirtualScroller.prototype.updateData = function (items) {
   if (this.totalItems === 0) {
     this.itemHeight = this.itemHeight || 58;
   }
-  
+
   // 数据更新：标记下一次渲染需要动画，并重置动画状态
   this.shouldAnimateOnNextRender = true;
   this.resetAnimations();
-  
+
+  // 如果有数据且内容容器未挂载，重新挂载
+  if (this.totalItems > 0 && this.contentContainer && !this.contentContainer.parentNode) {
+    try {
+      this.container.innerHTML = '';
+      this.container.appendChild(this.contentContainer);
+    } catch (e) { }
+  }
+
   // 重新计算可见范围
   this.updateVisibleRange();
-  
+
   // 重新渲染
   this.render();
 };
@@ -273,16 +287,16 @@ VirtualScroller.prototype.scrollToIndex = function (index) {
   if (index >= 0 && index < this.totalItems) {
     var itemTotalHeight = this.itemHeight + 8; // 项目高度 + 间距
     var targetScrollTop = index * itemTotalHeight;
-    
+
     // 确保目标项目在可视区域内，并添加一些缓冲区
     var viewportTop = this.container.scrollTop;
     var viewportBottom = viewportTop + this.containerHeight;
     var itemTop = targetScrollTop;
     var itemBottom = itemTop + this.itemHeight;
-    
+
     // 添加缓冲区，确保项目完全可见
     var buffer = this.itemHeight * 0.5; // 半个项目高度的缓冲区
-    
+
     if (itemTop < viewportTop + buffer) {
       // 项目在视口上方或太接近顶部，滚动到项目顶部有缓冲区
       this.container.scrollTop = Math.max(0, itemTop - buffer);
@@ -337,7 +351,7 @@ VirtualScroller.prototype.setItemHeight = function (newHeight) {
  * @param {HTMLElement} itemElement - 列表项元素
  * @param {number} relativeIndex - 在当前可见区域的相对索引
  */
-VirtualScroller.prototype.addItemAnimation = function(itemElement, relativeIndex) {
+VirtualScroller.prototype.addItemAnimation = function (itemElement, relativeIndex) {
   // 列表很大时关闭动画，避免首屏卡顿
   if (this.totalItems && this.totalItems > 200) {
     itemElement.style.opacity = '1';
@@ -351,26 +365,26 @@ VirtualScroller.prototype.addItemAnimation = function(itemElement, relativeIndex
     itemElement.style.transform = 'none';
     return;
   }
-  
+
   // 检查元素是否已经有动画类，避免重复添加
   var hasAnimation = itemElement.classList.contains('animate-in') ||
-                    itemElement.classList.contains('animate-slide') ||
-                    itemElement.classList.contains('animate-scale');
-  
+    itemElement.classList.contains('animate-slide') ||
+    itemElement.classList.contains('animate-scale');
+
   if (hasAnimation) {
     return;
   }
-  
+
   // 根据列表项类型选择不同的动画效果
   var animationType = 'animate-in'; // 默认向上淡入动画
-  
+
   // 文件夹和书签都使用相同的从下到上动画
   if (itemElement.classList.contains('smart-bookmark-folder-item')) {
     animationType = 'animate-in'; // 文件夹也用向上淡入
   } else if (itemElement.classList.contains('smart-bookmark-bookmark-item')) {
     animationType = 'animate-in'; // 书签向上淡入
   }
-  
+
   // 限制同一帧内动画的项目数量，避免过多重绘
   if (typeof relativeIndex === 'number' && relativeIndex > 20) {
     itemElement.style.opacity = '1';
@@ -380,14 +394,14 @@ VirtualScroller.prototype.addItemAnimation = function(itemElement, relativeIndex
 
   // 添加动画类
   itemElement.classList.add(animationType);
-  
+
   // 设置动画延迟，创建交错效果
   var baseDelay = Math.min(relativeIndex * 30, 300); // 最大延迟不超过300ms
   itemElement.style.animationDelay = baseDelay + 'ms';
-  
+
   // 动画完成后清理
   var self = this;
-  itemElement.addEventListener('animationend', function() {
+  itemElement.addEventListener('animationend', function () {
     itemElement.classList.remove(animationType);
     itemElement.style.animationDelay = '';
     // 确保最终状态正确
@@ -399,9 +413,9 @@ VirtualScroller.prototype.addItemAnimation = function(itemElement, relativeIndex
 /**
  * 重置所有动画状态
  */
-VirtualScroller.prototype.resetAnimations = function() {
+VirtualScroller.prototype.resetAnimations = function () {
   if (!this.contentContainer) return;
-  
+
   var items = this.contentContainer.querySelectorAll('.smart-bookmark-folder-item, .smart-bookmark-bookmark-item');
   for (var i = 0; i < items.length; i++) {
     var item = items[i];
@@ -418,21 +432,21 @@ VirtualScroller.prototype.resetAnimations = function() {
 VirtualScroller.prototype.destroy = function () {
   // 清理动画
   this.resetAnimations();
-  
+
   if (this.scrollHandler) {
     this.container.removeEventListener('scroll', this.scrollHandler);
     this.scrollHandler = null;
   }
-  
+
   if (this.resizeObserver) {
     this.resizeObserver.disconnect();
     this.resizeObserver = null;
   }
-  
+
   if (this.container) {
     this.container.innerHTML = '';
   }
-  
+
   this.contentContainer = null;
   this.items = [];
 };

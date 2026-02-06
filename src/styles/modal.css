@@ -1,7 +1,7 @@
 /* Smart Bookmark Extension - Modern Minimal Styles */
 
-/* CSS Variables */
-:root {
+/* CSS Variables - 使用 .smart-bookmark-modal 而非 :root，因为 :root 在 Shadow DOM 中不起作用 */
+.smart-bookmark-modal {
   --sb-background: #ffffff;
   --sb-foreground: #0f172a;
   --sb-muted: #f8fafc;
@@ -9,7 +9,8 @@
   --sb-border: #e2e8f0;
   --sb-input: #ffffff;
   /* 默认主题改为中性灰 */
-  --sb-primary: #334155; /* slate-700 */
+  --sb-primary: #334155;
+  /* slate-700 */
   --sb-primary-foreground: #ffffff;
   --sb-secondary: #f1f5f9;
   --sb-secondary-foreground: #0f172a;
@@ -19,10 +20,12 @@
   --sb-popover-foreground: #0f172a;
   --sb-destructive: #ef4444;
   --sb-destructive-foreground: #fef2f2;
-  --sb-ring: #64748b; /* slate-500 */
+  --sb-ring: #64748b;
+  /* slate-500 */
   --sb-ring-light: rgba(100, 116, 139, 0.08);
   --sb-radius: 8px;
-  --sb-primary-hover: #1f2a37; /* 深一阶 */
+  --sb-primary-hover: #1f2a37;
+  /* 深一阶 */
 }
 
 .dark-mode {
@@ -33,7 +36,8 @@
   --sb-muted-foreground: #a2acba;
   --sb-border: #374151;
   --sb-input: #2e3544;
-  --sb-primary: #cbd5e1; /* slate-300 */
+  --sb-primary: #cbd5e1;
+  /* slate-300 */
   --sb-primary-foreground: #0f172a;
   --sb-secondary: #1f2937;
   --sb-secondary-foreground: #e5e7eb;
@@ -43,9 +47,11 @@
   --sb-popover-foreground: #f8fafc;
   --sb-destructive: #ef4444;
   --sb-destructive-foreground: #111827;
-  --sb-ring: #94a3b8; /* slate-400 */
+  --sb-ring: #94a3b8;
+  /* slate-400 */
   --sb-ring-light: rgba(148, 163, 184, 0.18);
-  --sb-primary-hover: #475569; /* slate-600 */
+  --sb-primary-hover: #475569;
+  /* slate-600 */
 }
 
 /* Red Theme */
@@ -126,20 +132,27 @@
 
 /* Gray Theme (Default) */
 .theme-gray {
-  --sb-ring: #64748b; /* slate-500 */
+  --sb-ring: #64748b;
+  /* slate-500 */
   --sb-ring-light: rgba(100, 116, 139, 0.12);
-  --sb-accent: #f1f5f9; /* slate-100 */
-  --sb-accent-foreground: #0f172a; /* slate-900 */
-  --sb-primary: #334155; /* slate-700 */
+  --sb-accent: #f1f5f9;
+  /* slate-100 */
+  --sb-accent-foreground: #0f172a;
+  /* slate-900 */
+  --sb-primary: #334155;
+  /* slate-700 */
   --sb-primary-foreground: #ffffff;
 }
 
 .theme-gray.dark-mode {
-  --sb-ring: #94a3b8; /* slate-400 */
+  --sb-ring: #94a3b8;
+  /* slate-400 */
   --sb-ring-light: rgba(148, 163, 184, 0.18);
-  --sb-accent: #1f2937; /* grayish surface */
+  --sb-accent: #1f2937;
+  /* grayish surface */
   --sb-accent-foreground: #e5e7eb;
-  --sb-primary: #cbd5e1; /* slate-300 */
+  --sb-primary: #cbd5e1;
+  /* slate-300 */
   --sb-primary-foreground: #0f172a;
 }
 
@@ -236,7 +249,8 @@
 
 /* Theme Toggle Container */
 .smart-bookmark-theme-toggle-container {
-  position: relative; /* 为下拉菜单提供定位上下文 */
+  position: relative;
+  /* 为下拉菜单提供定位上下文 */
   display: flex;
   align-items: center;
 }
@@ -324,6 +338,7 @@
     opacity: 0;
     transform: translateY(12px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -335,6 +350,7 @@
     opacity: 0;
     transform: translateX(-20px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -346,6 +362,7 @@
     opacity: 0;
     transform: scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
@@ -369,7 +386,8 @@
 
 .smart-bookmark-folder-item.has-actions,
 .smart-bookmark-bookmark-item.has-actions {
-  padding-right: 48px; /* 为右侧操作按钮留出空间 */
+  padding-right: 48px;
+  /* 为右侧操作按钮留出空间 */
 }
 
 .smart-bookmark-folder-item:hover {
@@ -754,34 +772,98 @@
 }
 
 /* 为不同位置的列表项添加交错延迟 */
-.smart-bookmark-folder-item:nth-child(1) { animation-delay: 0ms; }
-.smart-bookmark-folder-item:nth-child(2) { animation-delay: 30ms; }
-.smart-bookmark-folder-item:nth-child(3) { animation-delay: 60ms; }
-.smart-bookmark-folder-item:nth-child(4) { animation-delay: 90ms; }
-.smart-bookmark-folder-item:nth-child(5) { animation-delay: 120ms; }
-.smart-bookmark-folder-item:nth-child(6) { animation-delay: 150ms; }
-.smart-bookmark-folder-item:nth-child(7) { animation-delay: 180ms; }
-.smart-bookmark-folder-item:nth-child(8) { animation-delay: 210ms; }
-.smart-bookmark-folder-item:nth-child(9) { animation-delay: 240ms; }
-.smart-bookmark-folder-item:nth-child(10) { animation-delay: 270ms; }
+.smart-bookmark-folder-item:nth-child(1) {
+  animation-delay: 0ms;
+}
 
-.smart-bookmark-bookmark-item:nth-child(1) { animation-delay: 0ms; }
-.smart-bookmark-bookmark-item:nth-child(2) { animation-delay: 30ms; }
-.smart-bookmark-bookmark-item:nth-child(3) { animation-delay: 60ms; }
-.smart-bookmark-bookmark-item:nth-child(4) { animation-delay: 90ms; }
-.smart-bookmark-bookmark-item:nth-child(5) { animation-delay: 120ms; }
-.smart-bookmark-bookmark-item:nth-child(6) { animation-delay: 150ms; }
-.smart-bookmark-bookmark-item:nth-child(7) { animation-delay: 180ms; }
-.smart-bookmark-bookmark-item:nth-child(8) { animation-delay: 210ms; }
-.smart-bookmark-bookmark-item:nth-child(9) { animation-delay: 240ms; }
-.smart-bookmark-bookmark-item:nth-child(10) { animation-delay: 270ms; }
+.smart-bookmark-folder-item:nth-child(2) {
+  animation-delay: 30ms;
+}
+
+.smart-bookmark-folder-item:nth-child(3) {
+  animation-delay: 60ms;
+}
+
+.smart-bookmark-folder-item:nth-child(4) {
+  animation-delay: 90ms;
+}
+
+.smart-bookmark-folder-item:nth-child(5) {
+  animation-delay: 120ms;
+}
+
+.smart-bookmark-folder-item:nth-child(6) {
+  animation-delay: 150ms;
+}
+
+.smart-bookmark-folder-item:nth-child(7) {
+  animation-delay: 180ms;
+}
+
+.smart-bookmark-folder-item:nth-child(8) {
+  animation-delay: 210ms;
+}
+
+.smart-bookmark-folder-item:nth-child(9) {
+  animation-delay: 240ms;
+}
+
+.smart-bookmark-folder-item:nth-child(10) {
+  animation-delay: 270ms;
+}
+
+.smart-bookmark-bookmark-item:nth-child(1) {
+  animation-delay: 0ms;
+}
+
+.smart-bookmark-bookmark-item:nth-child(2) {
+  animation-delay: 30ms;
+}
+
+.smart-bookmark-bookmark-item:nth-child(3) {
+  animation-delay: 60ms;
+}
+
+.smart-bookmark-bookmark-item:nth-child(4) {
+  animation-delay: 90ms;
+}
+
+.smart-bookmark-bookmark-item:nth-child(5) {
+  animation-delay: 120ms;
+}
+
+.smart-bookmark-bookmark-item:nth-child(6) {
+  animation-delay: 150ms;
+}
+
+.smart-bookmark-bookmark-item:nth-child(7) {
+  animation-delay: 180ms;
+}
+
+.smart-bookmark-bookmark-item:nth-child(8) {
+  animation-delay: 210ms;
+}
+
+.smart-bookmark-bookmark-item:nth-child(9) {
+  animation-delay: 240ms;
+}
+
+.smart-bookmark-bookmark-item:nth-child(10) {
+  animation-delay: 270ms;
+}
 
 /* 对于更多项目，使用更小的延迟增量 */
-.smart-bookmark-folder-item:nth-child(n+11) { animation-delay: 300ms; }
-.smart-bookmark-bookmark-item:nth-child(n+11) { animation-delay: 300ms; }
+.smart-bookmark-folder-item:nth-child(n+11) {
+  animation-delay: 300ms;
+}
+
+.smart-bookmark-bookmark-item:nth-child(n+11) {
+  animation-delay: 300ms;
+}
 
 /* 减少过度动画，保持性能 */
 @media (prefers-reduced-motion: reduce) {
+
   .smart-bookmark-folder-item,
   .smart-bookmark-bookmark-item {
     opacity: 1;
@@ -884,7 +966,7 @@
   background: var(--sb-popover);
   border: 1px solid var(--sb-border);
   border-radius: 8px;
-  box-shadow: 
+  box-shadow:
     0 4px 6px -1px rgba(0, 0, 0, 0.1),
     0 2px 4px -1px rgba(0, 0, 0, 0.06);
   z-index: 999999;
@@ -899,7 +981,7 @@
 }
 
 .dark-mode .smart-bookmark-control-dropdown {
-  box-shadow: 
+  box-shadow:
     0 4px 6px -1px rgba(0, 0, 0, 0.3),
     0 2px 4px -1px rgba(0, 0, 0, 0.2);
 }
@@ -1027,22 +1109,22 @@
     max-height: 85vh;
     margin: 20px auto;
   }
-  
+
   .smart-bookmark-modal-header,
   .smart-bookmark-modal-body,
   .smart-bookmark-modal-footer {
     padding: 16px;
   }
-  
+
   .smart-bookmark-folder-item,
   .smart-bookmark-bookmark-item {
     padding: 10px;
   }
-  
+
   .smart-bookmark-keyboard-hints {
     gap: 4px;
   }
-  
+
   .smart-bookmark-keyboard-hint {
     font-size: 10px;
     padding: 1px 4px;
@@ -1059,8 +1141,9 @@
     opacity: 0;
     transform: translateY(8px);
   }
+
   to {
-  opacity: 1;
+    opacity: 1;
     transform: translateY(0);
   }
 }
@@ -1079,12 +1162,12 @@
 
 /* High Contrast Mode Support */
 @media (prefers-contrast: high) {
-  :root {
+  .smart-bookmark-modal {
     --sb-border: #000000;
     --sb-muted-foreground: #000000;
   }
-  
-  .dark-mode {
+
+  .smart-bookmark-modal.dark-mode {
     --sb-border: #ffffff;
     --sb-muted-foreground: #ffffff;
   }
@@ -1094,6 +1177,7 @@
 
 /* Reduced Motion Support */
 @media (prefers-reduced-motion: reduce) {
+
   .smart-bookmark-modal,
   .smart-bookmark-modal-backdrop,
   .smart-bookmark-folder-item,
@@ -1102,7 +1186,7 @@
   .smart-bookmark-toast {
     transition: none;
   }
-  
+
   .item-fade-in {
     animation: none;
   }

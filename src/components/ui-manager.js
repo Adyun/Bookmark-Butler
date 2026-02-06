@@ -23,27 +23,50 @@ UIManager.prototype.createModal = function () {
   var self = this;
 
   // 检查是否已经存在宿主元素
-  if (document.getElementById('smart-bookmark-extension-root')) {
-    // 如果已存在，直接获取引用
-    this.hostElement = document.getElementById('smart-bookmark-extension-root');
+  var existingHost = document.getElementById('smart-bookmark-extension-root');
+  if (existingHost) {
+    this.hostElement = existingHost;
     this.shadowRoot = this.hostElement.shadowRoot;
-    return;
+
+    // 检查 shadowRoot 是否存在且包含 modal 元素
+    if (this.shadowRoot && this.shadowRoot.getElementById(window.SMART_BOOKMARK_CONSTANTS.MODAL_ID)) {
+      // Modal 已存在，直接使用
+      return;
+    }
+
+    // shadowRoot 存在但 modal 不存在，需要重新创建内容
+    if (this.shadowRoot) {
+      // 清空旧内容
+      this.shadowRoot.innerHTML = '';
+      // 重新加载样式
+      this.loadStyles();
+    } else {
+      // shadowRoot 不存在，移除旧宿主并重新创建
+      existingHost.remove();
+      this.hostElement = null;
+      this.shadowRoot = null;
+    }
   }
 
-  // 创建 Shadow DOM 宿主元素
-  this.hostElement = document.createElement('div');
-  this.hostElement.id = 'smart-bookmark-extension-root';
-  this.hostElement.style.cssText = 'position: fixed; top: 0; left: 0; width: 0; height: 0; z-index: 2147483647; pointer-events: none;';
-  document.body.appendChild(this.hostElement);
+  // 创建 Shadow DOM 宿主元素（仅当不存在时）
+  if (!this.hostElement) {
+    this.hostElement = document.createElement('div');
+    this.hostElement.id = 'smart-bookmark-extension-root';
+    this.hostElement.style.cssText = 'position: fixed; top: 0; left: 0; width: 0; height: 0; z-index: 2147483647; pointer-events: none;';
+    document.body.appendChild(this.hostElement);
 
-  // 创建 Shadow Root
-  this.shadowRoot = this.hostElement.attachShadow({ mode: 'open' });
+    // 创建 Shadow Root
+    this.shadowRoot = this.hostElement.attachShadow({ mode: 'open' });
 
-  // 暴露到全局，供其他管理器使用
-  window.smartBookmarkShadowRoot = this.shadowRoot;
+    // 暴露到全局，供其他管理器使用
+    window.smartBookmarkShadowRoot = this.shadowRoot;
 
-  // 加载 CSS 到 Shadow DOM 内部
-  this.loadStyles();
+    // 立即注入FOUC防护样式（在CSS加载前隐藏所有内容）
+    this.injectFOUCProtection();
+
+    // 加载 CSS 到 Shadow DOM 内部
+    this.loadStyles();
+  }
 
   // 创建 modal 背景层
   var modalBackdrop = document.createElement('div');
@@ -128,6 +151,36 @@ UIManager.prototype.createModal = function () {
 };
 
 /**
+ * 注入FOUC防护样式（在CSS加载前隐藏所有内容以防止闪烁）
+ */
+UIManager.prototype.injectFOUCProtection = function () {
+  var foucStyle = document.createElement('style');
+  foucStyle.id = 'smart-bookmark-fouc-protection';
+  foucStyle.textContent = `
+    /* FOUC防护：在主CSS加载完成前隐藏所有内容 */
+    :host {
+      visibility: hidden !important;
+    }
+    .smart-bookmark-modal-backdrop {
+      visibility: hidden !important;
+      opacity: 0 !important;
+    }
+  `;
+  this.shadowRoot.appendChild(foucStyle);
+};
+
+/**
+ * 移除FOUC防护样式（在CSS加载完成后调用）
+ */
+UIManager.prototype.removeFOUCProtection = function () {
+  if (!this.shadowRoot) return;
+  var foucStyle = this.shadowRoot.getElementById('smart-bookmark-fouc-protection');
+  if (foucStyle) {
+    foucStyle.remove();
+  }
+};
+
+/**
  * 加载 CSS 到 Shadow DOM 内部
  */
 UIManager.prototype.loadStyles = function () {
@@ -149,9 +202,10 @@ UIManager.prototype.loadStyles = function () {
     .then(function (cssText) {
       // 创建 style 元素并注入到 Shadow Root
       var styleElement = document.createElement('style');
+      styleElement.id = 'smart-bookmark-main-styles';
       styleElement.textContent = cssText;
 
-      // 插入到 Shadow Root 的最前面
+      // 插入到 Shadow Root 的最前面（在FOUC防护样式之前）
       if (self.shadowRoot.firstChild) {
         self.shadowRoot.insertBefore(styleElement, self.shadowRoot.firstChild);
       } else {
@@ -159,12 +213,17 @@ UIManager.prototype.loadStyles = function () {
       }
 
       self.stylesLoaded = true;
-      console.log('Shadow DOM styles loaded successfully');
+      // console.log('Shadow DOM styles loaded successfully');
+
+      // CSS加载完成后移除FOUC防护
+      self.removeFOUCProtection();
     })
     .catch(function (error) {
       console.error('Failed to load Shadow DOM styles:', error);
       // 回退：尝试使用内联关键样式
       self.injectFallbackStyles();
+      // 即使失败也要移除FOUC防护，否则永远不可见
+      self.removeFOUCProtection();
     });
 };
 

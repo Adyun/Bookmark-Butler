@@ -86,23 +86,13 @@
     }
 
     if (allCharsFound && searchTerm.length > 0) {
-      // 更宽松的评分：让更多弱匹配被包含，参考书签模式
+      // 模糊匹配评分：根据搜索词和文件夹名的长度比例计算
       var ratio = searchTerm.length / name.length;
-      return Math.max(0.15, ratio * 0.4); // 提高最低分和比例系数
+      return Math.max(0.15, ratio * 0.4);
     }
 
-    // 额外的宽松匹配：如果包含任意字符，给予很低但非零的分数
-    var hasAnyChar = false;
-    for (var j = 0; j < searchTermChars.length; j++) {
-      if (name.indexOf(searchTermChars[j]) > -1) {
-        hasAnyChar = true;
-        break;
-      }
-    }
-
-    if (hasAnyChar && searchTerm.length > 0) {
-      return 0.05; // 很低的分数，但足以被包含
-    }
+    // 对于中文搜索，如果搜索词较长但完全没有匹配，不应该返回分数
+    // 移除之前的 hasAnyChar 宽松匹配，避免单字符误匹配
 
     return 0;
   };

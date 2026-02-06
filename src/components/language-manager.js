@@ -200,12 +200,12 @@ LanguageManager.prototype.syncFromChromeStorage = function () {
  * @param {string} language - 语言代码 ('zh' 或 'en')
  */
 LanguageManager.prototype.setLanguage = function (language) {
-  console.log('切换语言到:', language);
+  // console.log('切换语言到:', language);
   if (this.translations[language]) {
     this.currentLanguage = language;
     this.saveLanguageToStorage(language);
     this.updateUI();
-    console.log('语言切换完成');
+    // console.log('语言切换完成');
   } else {
     console.warn('不支持的语言:', language);
   }
@@ -225,7 +225,7 @@ LanguageManager.prototype.t = function (key) {
  * 更新界面文本
  */
 LanguageManager.prototype.updateUI = function () {
-  console.log('更新界面语言文本');
+  // console.log('更新界面语言文本');
 
   // 更新模态框标题
   var modalTitle = this.getRoot().querySelector('.smart-bookmark-modal-title');
@@ -235,16 +235,16 @@ LanguageManager.prototype.updateUI = function () {
       window.modalManager.uiManager.currentMode :
       window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH;
 
-    console.log('当前模式:', currentMode);
+    // console.log('当前模式:', currentMode);
 
     if (currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_FOLDER_SELECT) {
       modalTitle.textContent = this.t('addBookmarkTitle');
-      console.log('设置为文件夹模式标题:', this.t('addBookmarkTitle'));
+      // console.log('设置为文件夹模式标题:', this.t('addBookmarkTitle'));
     } else {
       modalTitle.textContent = this.t('modalTitle');
-      console.log('设置为书签模式标题:', this.t('modalTitle'));
+      // console.log('设置为书签模式标题:', this.t('modalTitle'));
     }
-    console.log('模态框标题已更新:', modalTitle.textContent);
+    // console.log('模态框标题已更新:', modalTitle.textContent);
   } else {
     console.warn('找不到模态框标题元素');
   }
@@ -259,10 +259,10 @@ LanguageManager.prototype.updateUI = function () {
 
     if (currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_FOLDER_SELECT) {
       searchInput.placeholder = this.t('searchFolderPlaceholder');
-      console.log('设置为文件夹模式搜索占位符:', this.t('searchFolderPlaceholder'));
+      // console.log('设置为文件夹模式搜索占位符:', this.t('searchFolderPlaceholder'));
     } else {
       searchInput.placeholder = this.t('searchPlaceholder');
-      console.log('设置为书签模式搜索占位符:', this.t('searchPlaceholder'));
+      // console.log('设置为书签模式搜索占位符:', this.t('searchPlaceholder'));
     }
   }
 

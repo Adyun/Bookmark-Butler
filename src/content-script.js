@@ -1,5 +1,5 @@
 // Content script entry point
-console.log("Smart Bookmark Extension content script loaded");
+// console.log("Smart Bookmark Extension content script loaded");
 
 // 向background script报告脚本已加载
 if (chrome.runtime && chrome.runtime.sendMessage) {
@@ -8,7 +8,7 @@ if (chrome.runtime && chrome.runtime.sendMessage) {
     url: window.location.href,
     timestamp: Date.now()
   }).catch((error) => {
-    console.log("Could not send loaded message:", error);
+    // console.log("Could not send loaded message:", error);
   });
 }
 
@@ -21,7 +21,7 @@ const memoryManager = {
   timeouts: [],
 
   init() {
-    console.log("Initializing memory manager");
+    // console.log("Initializing memory manager");
 
     try {
       // 检查必要的依赖是否存在
@@ -32,7 +32,7 @@ const memoryManager = {
 
       // 创建Modal管理器实例
       this.modalManager = new window.ModalManager();
-      console.log("ModalManager created successfully");
+      // console.log("ModalManager created successfully");
 
       // 暴露到全局，供其他组件使用
       window.modalManager = this.modalManager;
@@ -137,10 +137,10 @@ const memoryManager = {
           if (document.hidden && this.modalManager && this.modalManager.isModalVisible()) {
             // 检查用户是否在活跃交互，如果是则不关闭
             if (this.modalManager.isUserActive) {
-              console.log('User is active, not closing modal despite page being hidden');
+              // console.log('User is active, not closing modal despite page being hidden');
               return;
             }
-            console.log('Page hidden for extended time, closing modal');
+            // console.log('Page hidden for extended time, closing modal');
             this.modalManager.hide();
 
             // 清理缓存
@@ -187,9 +187,9 @@ const memoryManager = {
       if (window.SMART_BOOKMARK_SORTING && window.SMART_BOOKMARK_SORTING.clearActivityCache) {
         window.SMART_BOOKMARK_SORTING.clearActivityCache();
       }
-      console.log('Memory usage reduced (modal not active)');
+      // console.log('Memory usage reduced (modal not active)');
     } else {
-      console.log('Skipped memory cleanup - modal is active');
+      // console.log('Skipped memory cleanup - modal is active');
     }
   },
 
@@ -252,7 +252,7 @@ const memoryManager = {
     // 重置引用
     this.modalManager = null;
 
-    console.log("Content script memory cleaned up");
+    // console.log("Content script memory cleaned up");
   }
 };
 
@@ -268,7 +268,7 @@ function getCurrentPageInfo() {
  * 处理来自background script的消息
  */
 function handleMessage(request, sender, sendResponse) {
-  console.log("Content script received message:", request);
+  // console.log("Content script received message:", request);
 
   try {
     // 后台广播：书签数据变更
@@ -299,7 +299,7 @@ function handleMessage(request, sender, sendResponse) {
     }
     // 简单的ping响应，用于检测脚本是否加载
     if (request.action === "ping") {
-      console.log("Responding to ping");
+      // console.log("Responding to ping");
       sendResponse({ status: "success", message: "Content script is alive" });
       return true;
     }
@@ -316,7 +316,7 @@ function handleMessage(request, sender, sendResponse) {
       memoryManager.modalManager.show(request.pageInfo);
       sendResponse({ status: "success" });
 
-      console.log("Modal opened successfully");
+      // console.log("Modal opened successfully");
       return true;
     }
   } catch (error) {
@@ -337,11 +337,11 @@ let isInitialized = false;
 
 function initExtension() {
   if (isInitialized) {
-    console.log("Extension already initialized, skipping");
+    // console.log("Extension already initialized, skipping");
     return;
   }
 
-  console.log("Initializing Smart Bookmark Extension");
+  // console.log("Initializing Smart Bookmark Extension");
 
   try {
     // 初始化内存管理器
@@ -355,13 +355,13 @@ function initExtension() {
     // 确保chrome.runtime.onMessage的正确使用
     if (chrome.runtime.onMessage && chrome.runtime.onMessage.addListener) {
       chrome.runtime.onMessage.addListener(handleMessage);
-      console.log("Message listener added successfully");
+      // console.log("Message listener added successfully");
     } else {
       console.error("chrome.runtime.onMessage not available");
     }
 
     isInitialized = true;
-    console.log("Smart Bookmark Extension initialized successfully");
+    // console.log("Smart Bookmark Extension initialized successfully");
   } catch (error) {
     console.error("Error initializing extension:", error);
   }

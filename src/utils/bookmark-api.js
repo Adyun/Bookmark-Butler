@@ -39,7 +39,7 @@ function retryAsyncFunction(asyncFn, retries, delay) {
           if (n >= retries) {
             reject(error);
           } else {
-            console.log('Attempt ' + (n + 1) + ' failed, retrying in ' + delay + 'ms...');
+            // console.log('Attempt ' + (n + 1) + ' failed, retrying in ' + delay + 'ms...');
             setTimeout(function () {
               attempt(n + 1);
             }, delay);
@@ -133,7 +133,7 @@ function getAllFolders() {
 
     // 检查内存缓存
     if (cache.memory.folders && (now - cache.memory.lastFetch) < cache.memory.ttl) {
-      console.log('Returning cached folders from memory');
+      // console.log('Returning cached folders from memory');
       return Promise.resolve(cache.memory.folders);
     }
 
@@ -145,7 +145,7 @@ function getAllFolders() {
         cache.memory.lastFetch = now;
         cache.memory.version = persistentCache.version || 0;
 
-        console.log('Returning cached folders from persistent storage');
+        // console.log('Returning cached folders from persistent storage');
         return Promise.resolve(persistentCache.folders);
       }
 
@@ -184,7 +184,7 @@ function getAllFolders() {
               version: cache.memory.version
             });
 
-            console.log('Fetched ' + response.folders.length + ' folders from background script');
+            // console.log('Fetched ' + response.folders.length + ' folders from background script');
             resolve(response.folders);
           } else {
             reject(new Error('Invalid response from background script'));
@@ -241,9 +241,9 @@ function createBookmark(folderId, title, url) {
               cache.memory.lastFetch = 0;
               cache.memory.version = (cache.memory.version || 0) + 1;
             }
-          } catch (e) {}
+          } catch (e) { }
 
-          console.log('Bookmark created successfully via background script');
+          // console.log('Bookmark created successfully via background script');
           resolve(response.bookmark);
         } else {
           reject(new Error('Invalid response from background script'));
@@ -285,7 +285,7 @@ function searchFolders(query) {
         }
 
         if (response && response.folders) {
-          console.log('Found ' + response.folders.length + ' folders matching query via background script');
+          // console.log('Found ' + response.folders.length + ' folders matching query via background script');
           resolve(response.folders);
         } else {
           reject(new Error('Invalid response from background script'));
@@ -327,7 +327,7 @@ function searchBookmarks(query) {
         }
 
         if (response && response.bookmarks) {
-          console.log('Found ' + response.bookmarks.length + ' bookmarks matching query via background script');
+          // console.log('Found ' + response.bookmarks.length + ' bookmarks matching query via background script');
           resolve(response.bookmarks);
         } else {
           reject(new Error('Invalid response from background script'));
@@ -347,7 +347,7 @@ function getAllBookmarks() {
 
     // 检查内存缓存
     if (cache.memory.bookmarks && (now - cache.memory.lastFetch) < cache.memory.ttl) {
-      console.log('Returning cached bookmarks from memory');
+      // console.log('Returning cached bookmarks from memory');
       return Promise.resolve(cache.memory.bookmarks);
     }
 
@@ -359,7 +359,7 @@ function getAllBookmarks() {
         cache.memory.lastFetch = now;
         cache.memory.version = persistentCache.version || 0;
 
-        console.log('Returning cached bookmarks from persistent storage');
+        // console.log('Returning cached bookmarks from persistent storage');
         return Promise.resolve(persistentCache.bookmarks);
       }
 
@@ -398,7 +398,7 @@ function getAllBookmarks() {
               version: cache.memory.version
             });
 
-            console.log('Fetched ' + response.bookmarks.length + ' bookmarks from background script');
+            // console.log('Fetched ' + response.bookmarks.length + ' bookmarks from background script');
             resolve(response.bookmarks);
           } else {
             reject(new Error('Invalid response from background script'));

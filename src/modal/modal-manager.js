@@ -64,15 +64,15 @@ ModalManager.prototype.getRoot = function () {
 ModalManager.prototype.initializeComponents = function () {
   var self = this;
 
-  console.log('ModalManager.initializeComponents called');
+  // console.log('ModalManager.initializeComponents called');
 
   // 初始化主题管理器
-  console.log('Initializing theme manager...');
+  // console.log('Initializing theme manager...');
   this.themeManager.init();
-  console.log('Theme manager initialized');
+  // console.log('Theme manager initialized');
 
   // 初始化键盘管理器
-  console.log('Initializing keyboard manager...');
+  // console.log('Initializing keyboard manager...');
   this.keyboardManager.init();
   this.keyboardManager.setCallbacks({
     onConfirm: function () { self.handleConfirm(); },
@@ -141,7 +141,7 @@ ModalManager.prototype.initializeComponents = function () {
 ModalManager.prototype.bindEvents = function () {
   var self = this;
 
-  console.log('ModalManager.bindEvents called');
+  // console.log('ModalManager.bindEvents called');
 
   // 使用UI管理器的事件监听器管理
   var addEventListenerFn = function (element, event, handler) {
@@ -244,9 +244,9 @@ ModalManager.prototype.bindEvents = function () {
   // 语言切换按钮事件
   var languageToggle = this.getRoot().getElementById('smart-bookmark-language-toggle');
   if (languageToggle) {
-    console.log('绑定语言切换按钮事件');
+    // console.log('绑定语言切换按钮事件');
     addEventListenerFn(languageToggle, 'click', function (e) {
-      console.log('语言切换按钮被点击');
+      // console.log('语言切换按钮被点击');
       e.stopPropagation();
       self.toggleDropdown('smart-bookmark-language-dropdown');
     });
@@ -257,9 +257,9 @@ ModalManager.prototype.bindEvents = function () {
   // 深浅色模式切换按钮事件
   var modeToggle = this.getRoot().getElementById('smart-bookmark-mode-toggle');
   if (modeToggle) {
-    console.log('绑定深浅色模式切换按钮事件');
+    // console.log('绑定深浅色模式切换按钮事件');
     addEventListenerFn(modeToggle, 'click', function (e) {
-      console.log('深浅色模式切换按钮被点击');
+      // console.log('深浅色模式切换按钮被点击');
       e.stopPropagation();
       self.toggleDropdown('smart-bookmark-mode-dropdown');
     });
@@ -270,9 +270,9 @@ ModalManager.prototype.bindEvents = function () {
   // 主题颜色切换按钮事件
   var themeToggle = this.getRoot().getElementById('smart-bookmark-theme-toggle');
   if (themeToggle) {
-    console.log('绑定主题颜色切换按钮事件');
+    // console.log('绑定主题颜色切换按钮事件');
     addEventListenerFn(themeToggle, 'click', function (e) {
-      console.log('主题颜色切换按钮被点击');
+      // console.log('主题颜色切换按钮被点击');
       e.stopPropagation();
       self.toggleDropdown('smart-bookmark-theme-dropdown');
     });
@@ -339,9 +339,9 @@ ModalManager.prototype.bindEvents = function () {
   }
 
   // 绑定主题相关事件
-  console.log('Binding theme manager events...');
+  // console.log('Binding theme manager events...');
   this.themeManager.bindEvents(addEventListenerFn);
-  console.log('Theme manager events bound');
+  // console.log('Theme manager events bound');
 };
 
 /**
@@ -445,7 +445,7 @@ ModalManager.prototype.show = function (pageInfo) {
   // 打开时不强制刷新数据：改为缓存优先（SWR可在后台做，但此处不阻塞首屏）
 
   var endTime = performance.now();
-  console.log('Modal show took ' + (endTime - startTime) + ' milliseconds');
+  // console.log('Modal show took ' + (endTime - startTime) + ' milliseconds');
 };
 
 /**
@@ -476,7 +476,7 @@ ModalManager.prototype.loadFolders = function () {
       self.allFolders = folders;
       // 构建快速查找表
       self.buildFolderIdMap();
-      console.log('Retrieved ' + folders.length + ' folders');
+      // console.log('Retrieved ' + folders.length + ' folders');
 
       if (folders.length === 0) {
         self.uiManager.showEmptyState('folders');
@@ -512,7 +512,7 @@ ModalManager.prototype.loadFolders = function () {
       // 进入模式不自动选中，只有搜索后才默认选中
 
       var endTime = performance.now();
-      console.log('Load folders took ' + (endTime - startTime) + ' milliseconds');
+      // console.log('Load folders took ' + (endTime - startTime) + ' milliseconds');
     })
     .catch(function (error) {
       console.error('Failed to load folders:', error);
@@ -558,7 +558,7 @@ ModalManager.prototype.loadBookmarks = function () {
       }
 
       self.allBookmarks = bookmarks;
-      console.log('Retrieved ' + bookmarks.length + ' bookmarks');
+      // console.log('Retrieved ' + bookmarks.length + ' bookmarks');
 
       if (bookmarks.length === 0) {
         self.uiManager.showEmptyState('bookmarks');
@@ -582,7 +582,7 @@ ModalManager.prototype.loadBookmarks = function () {
       // 进入模式不自动选中，只有搜索后才默认选中
 
       var endTime = performance.now();
-      console.log('Load bookmarks took ' + (endTime - startTime) + ' milliseconds');
+      // console.log('Load bookmarks took ' + (endTime - startTime) + ' milliseconds');
     })
     .catch(function (error) {
       console.error('Failed to load bookmarks:', error);
@@ -732,7 +732,7 @@ ModalManager.prototype.handleSearch = function (query) {
   }, 100); // 确保虚拟滚动器完全准备好
 
   var endTime = performance.now();
-  console.log('Search took ' + (endTime - startTime) + ' milliseconds');
+  // console.log('Search took ' + (endTime - startTime) + ' milliseconds');
 };
 
 /**
@@ -747,11 +747,19 @@ ModalManager.prototype.updateFolderList = function () {
 
   // 检查是否有结果
   if (hasSearchQuery && this.filteredFolders.length === 0) {
+    // 清理虚拟滚动器的内容容器，确保无结果消息能正确显示
+    if (this.folderVirtualScroller && this.folderVirtualScroller.contentContainer) {
+      this.folderVirtualScroller.contentContainer.remove();
+    }
     this.uiManager.showNoResultsState('folders');
     return;
   }
 
   if (!hasSearchQuery && this.filteredFolders.length === 0) {
+    // 清理虚拟滚动器的内容容器
+    if (this.folderVirtualScroller && this.folderVirtualScroller.contentContainer) {
+      this.folderVirtualScroller.contentContainer.remove();
+    }
     this.uiManager.showEmptyState('folders');
     return;
   }
@@ -906,11 +914,19 @@ ModalManager.prototype.updateBookmarkList = function () {
 
   // 检查是否有结果
   if (hasSearchQuery && this.filteredBookmarks.length === 0) {
+    // 清理虚拟滚动器的内容容器，确保无结果消息能正确显示
+    if (this.bookmarkVirtualScroller && this.bookmarkVirtualScroller.contentContainer) {
+      this.bookmarkVirtualScroller.contentContainer.remove();
+    }
     this.uiManager.showNoResultsState('bookmarks');
     return;
   }
 
   if (!hasSearchQuery && this.filteredBookmarks.length === 0) {
+    // 清理虚拟滚动器的内容容器
+    if (this.bookmarkVirtualScroller && this.bookmarkVirtualScroller.contentContainer) {
+      this.bookmarkVirtualScroller.contentContainer.remove();
+    }
     this.uiManager.showEmptyState('bookmarks');
     return;
   }
@@ -1282,7 +1298,7 @@ ModalManager.prototype.handleConfirm = function () {
     window.SMART_BOOKMARK_API.createBookmark(folderId, this.currentPageInfo.title, this.currentPageInfo.url)
       .then(function () {
         var endTime = performance.now();
-        console.log('Create bookmark took ' + (endTime - startTime) + ' milliseconds');
+        // console.log('Create bookmark took ' + (endTime - startTime) + ' milliseconds');
         window.SMART_BOOKMARK_HELPERS.showToast(self.languageManager.t('bookmarkAdded'));
         self.hide();
       })
@@ -1476,7 +1492,7 @@ ModalManager.prototype.buildFolderIdMap = function () {
  * @param {string} dropdownId - 下拉菜单ID
  */
 ModalManager.prototype.toggleDropdown = function (dropdownId) {
-  console.log('切换下拉菜单:', dropdownId);
+  // console.log('切换下拉菜单:', dropdownId);
 
   // 先关闭所有其他下拉菜单
   this.closeAllDropdowns();
@@ -1487,10 +1503,10 @@ ModalManager.prototype.toggleDropdown = function (dropdownId) {
     var hasShowClass = dropdown.classList.contains('show');
     if (hasShowClass) {
       dropdown.classList.remove('show');
-      console.log('下拉菜单', dropdownId, '已关闭');
+      // console.log('下拉菜单', dropdownId, '已关闭');
     } else {
       dropdown.classList.add('show');
-      console.log('下拉菜单', dropdownId, '已打开');
+      // console.log('下拉菜单', dropdownId, '已打开');
     }
   } else {
     console.warn('找不到下拉菜单:', dropdownId);

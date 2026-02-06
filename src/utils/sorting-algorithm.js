@@ -89,7 +89,7 @@ async function preCalculateFolderActivity(folders) {
   });
 
   const endTime = performance.now();
-  console.log(`Pre-calculated activity for ${folders.length} folders in ${(endTime - startTime).toFixed(2)}ms`);
+  // console.log(`Pre-calculated activity for ${folders.length} folders in ${(endTime - startTime).toFixed(2)}ms`);
 
   return activityMap;
 }
@@ -102,7 +102,7 @@ async function preCalculateFolderActivity(folders) {
 async function sortByBrowserOrder(folders) {
   // 检查folders是否有效
   if (!folders || !Array.isArray(folders) || folders.length === 0) {
-    console.log('Invalid or empty folders array, returning empty array');
+    // console.log('Invalid or empty folders array, returning empty array');
     return [];
   }
 
@@ -126,7 +126,7 @@ async function sortByBrowserOrder(folders) {
 async function sortByActivity(folders, activityMap = null) {
   // 检查folders是否有效
   if (!folders || !Array.isArray(folders) || folders.length === 0) {
-    console.log('Invalid or empty folders array, returning empty array');
+    // console.log('Invalid or empty folders array, returning empty array');
     return [];
   }
 
