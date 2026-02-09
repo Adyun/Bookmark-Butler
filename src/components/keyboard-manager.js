@@ -212,45 +212,21 @@ KeyboardManager.prototype.navigateByPage = function (direction) {
  * 更新选择状态
  */
 KeyboardManager.prototype.updateSelection = function () {
-  // 移除所有选中状态
-  var activeItems = this.getRoot().querySelectorAll('.smart-bookmark-bookmark-item.active, .smart-bookmark-folder-item.active');
-  for (var i = 0; i < activeItems.length; i++) {
-    activeItems[i].classList.remove('active');
-  }
-
   // 如果有有效的选中项
   if (this.selectedIndex >= 0 && this.selectedIndex < this.currentItems.length) {
     var selectedItem = this.currentItems[this.selectedIndex];
 
-    // 使用虚拟滚动器滚动到选中项，添加边界检查
+    // 使用虚拟滚动器滚动到选中项并设置选中状态
     if (this.virtualScroller && selectedItem) {
       // 确保索引在虚拟滚动器的有效范围内
       if (this.selectedIndex < this.virtualScroller.totalItems) {
+        // 先设置选中索引，这样滚动后渲染时会自动添加 active 状态
+        this.virtualScroller.setSelectedIndex(this.selectedIndex);
         this.virtualScroller.scrollToIndex(this.selectedIndex);
       } else {
         console.warn('Selected index out of virtual scroller range:', this.selectedIndex, 'total:', this.virtualScroller.totalItems);
       }
     }
-
-    // 延迟添加选中状态，确保虚拟滚动器已渲染且没有其他选中项
-    var self = this;
-    setTimeout(function () {
-      // 再次清除所有选中状态，确保唯一性
-      var allActiveItems = self.getRoot().querySelectorAll('.smart-bookmark-bookmark-item.active, .smart-bookmark-folder-item.active');
-      for (var j = 0; j < allActiveItems.length; j++) {
-        allActiveItems[j].classList.remove('active');
-      }
-
-      var currentItem = self.getRoot().querySelector(
-        '[data-folder-id="' + selectedItem.id + '"], [data-bookmark-id="' + selectedItem.id + '"]'
-      );
-      if (currentItem) {
-        currentItem.classList.add('active');
-
-        // 确保选中项在视口中可见
-        self.ensureItemVisible(currentItem);
-      }
-    }, 20); // 缩短延迟时间
 
     // 如果是文件夹选择模式，启用确认按钮
     if (this.currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_FOLDER_SELECT) {
@@ -259,6 +235,9 @@ KeyboardManager.prototype.updateSelection = function () {
         confirmBtn.disabled = false;
       }
     }
+  } else if (this.virtualScroller) {
+    // 没有选中项时，清除虚拟滚动器中的选中状态
+    this.virtualScroller.setSelectedIndex(-1);
   }
 };
 

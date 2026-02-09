@@ -51,7 +51,10 @@ function LanguageManager() {
       // 权限相关
       permissionTitle: '需要书签权限',
       permissionDescription: '请授予书签访问权限以使用此功能',
-      grantPermission: '授予权限'
+      grantPermission: '授予权限',
+
+      // 面包屑
+      rootDirectory: '根目录'
     },
     en: {
       // Modal titles and buttons
@@ -98,7 +101,10 @@ function LanguageManager() {
       // Permission related
       permissionTitle: 'Bookmark Permission Required',
       permissionDescription: 'Please grant bookmark access permission to use this feature',
-      grantPermission: 'Grant Permission'
+      grantPermission: 'Grant Permission',
+
+      // Breadcrumbs
+      rootDirectory: 'Root Directory'
     }
   };
 

@@ -522,6 +522,11 @@ ModalManager.prototype.loadFolders = function () {
       // 更新显示
       self.updateFolderList();
 
+      // 修复Bug 2: 切换模式时默认选中第一个项目
+      if (self.filteredFolders.length > 0) {
+        self.keyboardManager.setSelectedIndex(0);
+      }
+
       // 进入模式不自动选中，只有搜索后才默认选中
 
       var endTime = performance.now();
@@ -578,7 +583,8 @@ ModalManager.prototype.loadBookmarks = function () {
         return;
       }
 
-      self.filteredBookmarks = self.allBookmarks;
+      // 使用空字符串搜索来获取默认视图（包含文件夹和书签，且按规则排序）
+      self.filteredBookmarks = self.searchEngine.searchAll('', self.allBookmarks, self.allFolders);
 
       // 清理面包屑缓存，因为数据已更新
       self.clearBreadcrumbCache();
@@ -591,6 +597,11 @@ ModalManager.prototype.loadBookmarks = function () {
 
       // 更新显示
       self.updateBookmarkList();
+
+      // 修复Bug 1: 默认打开时选中第一个项目
+      if (self.filteredBookmarks.length > 0) {
+        self.keyboardManager.setSelectedIndex(0);
+      }
 
       // 进入模式不自动选中，只有搜索后才默认选中
 
@@ -985,9 +996,9 @@ ModalManager.prototype.renderFolderListWithVirtualScroll = function (folderList,
         return self.renderFolderItem(folder, index, hasSearchQuery);
       }
     );
-    // 设置键盘管理器的虚拟滚动器引用
-    this.keyboardManager.setVirtualScroller(this.folderVirtualScroller);
   }
+  // 每次渲染时都更新键盘管理器的虚拟滚动器引用，确保模式切换时引用正确
+  this.keyboardManager.setVirtualScroller(this.folderVirtualScroller);
   // 更新渲染函数以使用最新的 hasSearchQuery 等上下文
   if (this.folderVirtualScroller && typeof this.folderVirtualScroller.setRenderItem === 'function') {
     this.folderVirtualScroller.setRenderItem(function (folder, index) {
@@ -1152,9 +1163,9 @@ ModalManager.prototype.renderBookmarkListWithVirtualScroll = function (bookmarkL
         return self.renderBookmarkItem(bookmark, index, hasSearchQuery);
       }
     );
-    // 设置键盘管理器的虚拟滚动器引用
-    this.keyboardManager.setVirtualScroller(this.bookmarkVirtualScroller);
   }
+  // 每次渲染时都更新键盘管理器的虚拟滚动器引用，确保模式切换时引用正确
+  this.keyboardManager.setVirtualScroller(this.bookmarkVirtualScroller);
   // 更新渲染函数以使用最新的 hasSearchQuery 等上下文
   if (this.bookmarkVirtualScroller && typeof this.bookmarkVirtualScroller.setRenderItem === 'function') {
     this.bookmarkVirtualScroller.setRenderItem(function (bookmark, index) {
@@ -1676,8 +1687,14 @@ ModalManager.prototype.isModalVisible = function () {
  * @returns {string} 面包屑HTML字符串
  */
 ModalManager.prototype.generateBreadcrumb = function (parentId) {
-  if (!parentId || parentId === '0') {
-    return ''; // 根目录不显示面包屑
+  if (!parentId) {
+    return '';
+  }
+
+  // 根目录特殊处理
+  if (parentId === '0') {
+    var rootText = this.languageManager ? this.languageManager.t('rootDirectory') : '根目录';
+    return '<div class="breadcrumb" title="' + rootText + '">' + rootText + '</div>';
   }
 
   // 检查缓存

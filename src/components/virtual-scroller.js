@@ -21,6 +21,7 @@ function VirtualScroller(container, itemHeight, totalItems, renderItem) {
   this.isRenderScheduled = false; // rAF合帧标记
   this.lastStartIndex = -1; // 上一次渲染的起始索引
   this.lastEndIndex = -1;   // 上一次渲染的结束索引
+  this.selectedIndex = -1;  // 当前选中项的索引，用于渲染时添加 active 状态
 
   this.init();
 }
@@ -155,13 +156,6 @@ VirtualScroller.prototype.render = function () {
     return;
   }
 
-  // 记录当前选中项目的ID，用于重新渲染后恢复选中状态
-  var currentActiveItem = this.contentContainer.querySelector('.smart-bookmark-folder-item.active, .smart-bookmark-bookmark-item.active');
-  var activeItemId = null;
-  if (currentActiveItem) {
-    activeItemId = currentActiveItem.getAttribute('data-folder-id') || currentActiveItem.getAttribute('data-bookmark-id');
-  }
-
   // 清空内容容器
   this.contentContainer.innerHTML = '';
 
@@ -234,11 +228,15 @@ VirtualScroller.prototype.render = function () {
   // 本轮渲染后，关闭自动动画
   this.shouldAnimateOnNextRender = false;
 
-  // 恢复之前的选中状态（如果有的话）
-  if (activeItemId) {
-    var restoredItem = this.contentContainer.querySelector('[data-folder-id="' + activeItemId + '"], [data-bookmark-id="' + activeItemId + '"]');
-    if (restoredItem) {
-      restoredItem.classList.add('active');
+  // 使用 selectedIndex 添加选中状态（不再依赖 DOM 查询，避免时序问题）
+  if (this.selectedIndex >= 0 && this.selectedIndex >= this.startIndex && this.selectedIndex <= this.endIndex && this.items[this.selectedIndex]) {
+    var selectedItem = this.items[this.selectedIndex];
+    var selector = '[data-folder-id="' + selectedItem.id + '"], [data-bookmark-id="' + selectedItem.id + '"]';
+    var selectedElement = this.contentContainer.querySelector(selector);
+    if (selectedElement) {
+      selectedElement.classList.add('active');
+      selectedElement.style.background = 'rgba(59, 130, 246, 0.15)';
+      selectedElement.style.border = '1px solid #3b82f6';
     }
   }
   // 记录本次渲染范围
@@ -304,7 +302,16 @@ VirtualScroller.prototype.scrollToIndex = function (index) {
       // 项目在视口下方或太接近底部，滚动到项目底部可见有缓冲区
       this.container.scrollTop = itemBottom - this.containerHeight + buffer;
     }
-    // 如果项目已经在视口内且有足够缓冲区，不需要滚动
+
+    // 滚动后立即更新可见范围
+    this.scrollTop = this.container.scrollTop;
+    this.updateVisibleRange();
+
+    // 强制绕过渲染优化，确保目标元素一定会被渲染出来
+    // 重置 lastStartIndex 和 lastEndIndex 使 render 函数不会跳过
+    this.lastStartIndex = -1;
+    this.lastEndIndex = -1;
+    this.render();
   }
 };
 
@@ -322,6 +329,38 @@ VirtualScroller.prototype.getLastVisibleIndex = function () {
   var firstVisible = this.getFirstVisibleIndex();
   var visibleCount = Math.ceil(this.containerHeight / (this.itemHeight + 8));
   return Math.min(firstVisible + visibleCount - 1, this.totalItems - 1);
+};
+
+/**
+ * 设置当前选中项的索引
+ * @param {number} index - 选中项的索引，-1 表示无选中
+ */
+VirtualScroller.prototype.setSelectedIndex = function (index) {
+  var oldIndex = this.selectedIndex;
+  this.selectedIndex = index;
+
+  // 如果索引变化了，更新 DOM 中的 active 状态
+  if (oldIndex !== index) {
+    // 移除所有现有的 active 状态
+    var activeItems = this.contentContainer.querySelectorAll('.smart-bookmark-folder-item.active, .smart-bookmark-bookmark-item.active');
+    for (var i = 0; i < activeItems.length; i++) {
+      activeItems[i].classList.remove('active');
+      activeItems[i].style.background = '';
+      activeItems[i].style.border = '';
+    }
+
+    // 如果新索引有效且在当前渲染范围内，添加 active 状态
+    if (index >= 0 && index >= this.startIndex && index <= this.endIndex && this.items[index]) {
+      var item = this.items[index];
+      var selector = '[data-folder-id="' + item.id + '"], [data-bookmark-id="' + item.id + '"]';
+      var element = this.contentContainer.querySelector(selector);
+      if (element) {
+        element.classList.add('active');
+        element.style.background = 'rgba(59, 130, 246, 0.15)';
+        element.style.border = '1px solid #3b82f6';
+      }
+    }
+  }
 };
 
 /**
