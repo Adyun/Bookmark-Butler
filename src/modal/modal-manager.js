@@ -29,8 +29,11 @@ function ModalManager() {
   this.lastUserInteraction = Date.now();
   this.isUserActive = false;
 
-
-
+  // 文件夹导航状态
+  this.navigationStack = [];        // 导航历史栈
+  this.currentFolderId = null;      // 当前浏览的文件夹ID
+  this.isInFolderView = false;      // 是否在文件夹视图中
+  this.lastSearchQuery = '';        // 上次搜索词
   this.init();
 }
 
@@ -672,6 +675,128 @@ ModalManager.prototype.handlePermissionRequest = function () {
 };
 
 /**
+ * 进入文件夹，显示其中的书签和子文件夹
+ * @param {string} folderId - 文件夹ID
+ * @param {string} folderTitle - 文件夹标题
+ */
+ModalManager.prototype.enterFolder = function (folderId, folderTitle) {
+  var self = this;
+
+  // 保存当前状态到导航栈
+  if (this.isInFolderView) {
+    this.navigationStack.push({
+      type: 'folder',
+      folderId: this.currentFolderId,
+      folderTitle: this.currentFolderTitle
+    });
+  } else {
+    this.navigationStack.push({
+      type: 'search',
+      query: this.lastSearchQuery,
+      results: this.filteredBookmarks.slice() // 保存当前搜索结果副本
+    });
+  }
+
+  // 更新状态
+  this.isInFolderView = true;
+  this.currentFolderId = folderId;
+  this.currentFolderTitle = folderTitle;
+
+  // 清空搜索框
+  var searchInput = this.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
+  if (searchInput) {
+    searchInput.value = '';
+  }
+
+  // 获取文件夹内容（子文件夹 + 书签）
+  Promise.all([
+    window.SMART_BOOKMARK_API.getSubFolders(folderId),
+    window.SMART_BOOKMARK_API.getBookmarksByFolder(folderId)
+  ]).then(function (results) {
+    var subFolders = results[0];
+    var bookmarks = results[1];
+
+    // 合并：子文件夹在前，书签在后
+    var combinedItems = [];
+
+    // 添加返回项
+    combinedItems.push({
+      id: '__back__',
+      title: '← 返回',
+      itemType: 'back'
+    });
+
+    // 添加子文件夹
+    for (var i = 0; i < subFolders.length; i++) {
+      combinedItems.push({
+        id: subFolders[i].id,
+        title: subFolders[i].title,
+        parentId: subFolders[i].parentId,
+        bookmarkCount: subFolders[i].bookmarkCount,
+        itemType: 'folder'
+      });
+    }
+
+    // 添加书签
+    for (var j = 0; j < bookmarks.length; j++) {
+      combinedItems.push({
+        id: bookmarks[j].id,
+        title: bookmarks[j].title,
+        url: bookmarks[j].url,
+        parentId: bookmarks[j].parentId,
+        itemType: 'bookmark'
+      });
+    }
+
+    self.filteredBookmarks = combinedItems;
+    self.keyboardManager.setCurrentItems(self.filteredBookmarks);
+    self.updateBookmarkList();
+    // 默认选中第一项
+    self.keyboardManager.navigateToFirst();
+  });
+};
+
+/**
+ * 返回上一级
+ */
+ModalManager.prototype.goBack = function () {
+  if (this.navigationStack.length === 0) {
+    // 没有历史，回到默认状态
+    this.isInFolderView = false;
+    this.currentFolderId = null;
+    this.currentFolderTitle = null;
+    this.handleSearch('');
+    return;
+  }
+
+  var prevState = this.navigationStack.pop();
+
+  if (prevState.type === 'search') {
+    // 恢复搜索状态
+    this.isInFolderView = false;
+    this.currentFolderId = null;
+    this.currentFolderTitle = null;
+
+    // 恢复搜索框和结果
+    var searchInput = this.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
+    if (searchInput) {
+      searchInput.value = prevState.query;
+    }
+
+    this.filteredBookmarks = prevState.results;
+    this.keyboardManager.setCurrentItems(this.filteredBookmarks);
+    this.updateBookmarkList();
+    // 默认选中第一项
+    this.keyboardManager.navigateToFirst();
+  } else if (prevState.type === 'folder') {
+    // 返回上一级文件夹
+    this.enterFolder(prevState.folderId, prevState.folderTitle);
+    // enterFolder 会再次 push，需要 pop 掉
+    this.navigationStack.pop();
+  }
+};
+
+/**
  * 处理搜索
  * @param {string} query - 搜索关键词
  */
@@ -692,28 +817,55 @@ ModalManager.prototype.handleSearch = function (query) {
 
   // 执行搜索
   if (this.uiManager.currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH) {
-    this.filteredBookmarks = this.searchEngine.searchBookmarks(query, this.allBookmarks);
+    // 如果在文件夹视图中，退出文件夹视图进行新搜索
+    if (this.isInFolderView) {
+      this.isInFolderView = false;
+      this.currentFolderId = null;
+      this.navigationStack = [];
+    }
 
-    // 应用历史加成分数（异步）
+    // 保存搜索词
     var queryTrimmed = query ? query.trim() : '';
+    this.lastSearchQuery = queryTrimmed;
+
+    // 使用 searchAll 同时搜索书签和文件夹
+    this.filteredBookmarks = this.searchEngine.searchAll(queryTrimmed, this.allBookmarks, this.allFolders);
+
+    // 应用历史加成分数（仅对书签）
     if (queryTrimmed && window.SMART_BOOKMARK_QUERY_HISTORY && this.filteredBookmarks.length > 0) {
-      var bookmarkIds = this.filteredBookmarks.map(function (b) { return b.id; });
-      window.SMART_BOOKMARK_QUERY_HISTORY.getBatchBoostScores(queryTrimmed, bookmarkIds)
-        .then(function (boostScores) {
-          // 叠加历史加成分数
-          for (var i = 0; i < self.filteredBookmarks.length; i++) {
-            var bookmark = self.filteredBookmarks[i];
-            var boost = boostScores[bookmark.id] || 0;
-            bookmark.score = (bookmark.score || 0) + boost;
-          }
-          // 重新按分数排序
-          self.filteredBookmarks.sort(function (a, b) {
-            return (b.score || 0) - (a.score || 0);
+      var bookmarkIds = [];
+      for (var i = 0; i < this.filteredBookmarks.length; i++) {
+        if (this.filteredBookmarks[i].itemType === 'bookmark') {
+          bookmarkIds.push(this.filteredBookmarks[i].id);
+        }
+      }
+
+      if (bookmarkIds.length > 0) {
+        window.SMART_BOOKMARK_QUERY_HISTORY.getBatchBoostScores(queryTrimmed, bookmarkIds)
+          .then(function (boostScores) {
+            // 叠加历史加成分数
+            for (var i = 0; i < self.filteredBookmarks.length; i++) {
+              var item = self.filteredBookmarks[i];
+              if (item.itemType === 'bookmark') {
+                var boost = boostScores[item.id] || 0;
+                item.score = (item.score || 0) + boost;
+              }
+            }
+            // 重新排序：文件夹在前，书签在后，各自按分数排序
+            self.filteredBookmarks.sort(function (a, b) {
+              if (a.itemType !== b.itemType) {
+                return a.itemType === 'folder' ? -1 : 1;
+              }
+              return (b.score || 0) - (a.score || 0);
+            });
+            // 更新显示
+            self.keyboardManager.setCurrentItems(self.filteredBookmarks);
+            self.updateBookmarkList();
           });
-          // 更新显示
-          self.keyboardManager.setCurrentItems(self.filteredBookmarks);
-          self.updateBookmarkList();
-        });
+      } else {
+        this.keyboardManager.setCurrentItems(this.filteredBookmarks);
+        this.updateBookmarkList();
+      }
     } else {
       this.keyboardManager.setCurrentItems(this.filteredBookmarks);
       this.updateBookmarkList();
@@ -1019,22 +1171,53 @@ ModalManager.prototype.renderBookmarkListWithVirtualScroll = function (bookmarkL
 };
 
 /**
- * 渲染单个书签项目
- * @param {Object} bookmark - 书签对象
+ * 渲染单个书签项目（支持书签和文件夹）
+ * @param {Object} bookmark - 书签或文件夹对象
  * @param {number} index - 索引
  * @param {boolean} hasSearchQuery - 是否有搜索查询
- * @returns {Element} 书签元素
+ * @returns {Element} 书签/文件夹元素
  */
 ModalManager.prototype.renderBookmarkItem = function (bookmark, index, hasSearchQuery) {
   if (!bookmark) return null;
+
+  var self = this;
+  var isFolder = bookmark.itemType === 'folder';
+  var isBack = bookmark.itemType === 'back';
 
   // 移除匹配度样式，保持统一简约风格
   var matchClass = '';
 
   var item = document.createElement('div');
-  item.className = 'smart-bookmark-bookmark-item ' + matchClass;
-  item.setAttribute('data-bookmark-id', bookmark.id);
-  item.setAttribute('data-bookmark-url', bookmark.url);
+  item.className = 'smart-bookmark-bookmark-item ' + matchClass +
+    (isFolder ? ' is-folder' : '') +
+    (isBack ? ' is-back-btn' : '');
+
+  // 处理返回按钮 - 三行结构：标题 / 副标题 / 当前位置
+  if (isBack) {
+    item.innerHTML =
+      '<div class="smart-bookmark-bookmark-content">' +
+      '<span class="smart-bookmark-bookmark-icon">←</span>' +
+      '<div class="smart-bookmark-bookmark-text">' +
+      '<div class="smart-bookmark-bookmark-title-container">' +
+      '<span class="smart-bookmark-bookmark-title">返回上一级</span>' +
+      '</div>' +
+      '<div class="smart-bookmark-bookmark-url">点击或按回车键返回</div>' +
+      '<div class="breadcrumb">当前：' + (self.currentFolderTitle || '搜索结果') + '</div>' +
+      '</div>' +
+      '</div>';
+
+    item.addEventListener('click', function () {
+      self.goBack();
+    });
+    return item;
+  }
+
+  if (isFolder) {
+    item.setAttribute('data-folder-id', bookmark.id);
+  } else {
+    item.setAttribute('data-bookmark-id', bookmark.id);
+    item.setAttribute('data-bookmark-url', bookmark.url);
+  }
 
   // 生成面包屑
   var breadcrumb = this.generateBreadcrumb(bookmark.parentId);
@@ -1044,60 +1227,83 @@ ModalManager.prototype.renderBookmarkItem = function (bookmark, index, hasSearch
   var searchTerm = searchInput ? searchInput.value.trim() : '';
   var highlightedTitle = hasSearchQuery && searchTerm ?
     this.highlightText(bookmark.title, searchTerm) : bookmark.title;
-  var displayUrl = this.formatUrlForDisplay(bookmark.url);
-  var highlightedUrl = hasSearchQuery && searchTerm ?
-    this.highlightText(displayUrl, searchTerm) : displayUrl;
 
-  // 重构为上下布局 - 参考文件夹模式的完美样式
-  item.innerHTML =
-    '<div class="smart-bookmark-bookmark-content">' +
-    '<span class="smart-bookmark-bookmark-icon">🔗</span>' +
-    '<div class="smart-bookmark-bookmark-text">' +
-    '<div class="smart-bookmark-bookmark-title-container">' +
-    '<span class="smart-bookmark-bookmark-title">' + highlightedTitle + '</span>' +
-    '</div>' +
-    '<div class="smart-bookmark-bookmark-url" title="' + bookmark.url + '">' + highlightedUrl + '</div>' +
-    (breadcrumb ? breadcrumb : '') +
-    '</div>' +
-    '</div>';
+  if (isFolder) {
+    // 渲染文件夹 - 三行结构：标题 / 内含X个书签链接 / 面包屑
+    var countLine = bookmark.bookmarkCount > 0
+      ? '<div class="smart-bookmark-bookmark-url">内含 ' + bookmark.bookmarkCount + ' 个书签链接</div>'
+      : '<div class="smart-bookmark-bookmark-url">空文件夹</div>';
+    item.innerHTML =
+      '<div class="smart-bookmark-bookmark-content">' +
+      '<span class="smart-bookmark-bookmark-icon folder-icon">📁</span>' +
+      '<div class="smart-bookmark-bookmark-text">' +
+      '<div class="smart-bookmark-bookmark-title-container">' +
+      '<span class="smart-bookmark-bookmark-title">' + highlightedTitle + '</span>' +
+      '</div>' +
+      countLine +
+      (breadcrumb ? breadcrumb : '') +
+      '</div>' +
+      '<span class="smart-bookmark-folder-arrow">›</span>' +
+      '</div>';
 
-  // 右侧置顶按钮（搜索态仍显示，但不改变排序）
-  try {
-    item.classList.add('has-actions');
-    var actions = document.createElement('div');
-    actions.className = 'smart-bookmark-item-actions';
-    var pinBtn = document.createElement('button');
-    pinBtn.className = 'smart-bookmark-pin-btn';
-    pinBtn.type = 'button';
-    pinBtn.innerHTML = '<svg class="smart-bookmark-pin-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M23.9986 5L17.8856 17.4776L4 19.4911L14.0589 29.3251L11.6544 43L23.9986 36.4192L36.3454 43L33.9586 29.3251L44 19.4911L30.1913 17.4776L23.9986 5Z"/></svg>';
-    if (window.SMART_BOOKMARK_PINS && window.SMART_BOOKMARK_PINS.isPinned('bookmarks', bookmark.id)) {
-      pinBtn.classList.add('pinned');
-    }
-    var selfRef = this;
-    pinBtn.addEventListener('click', function (e) {
-      e.stopPropagation();
-      if (!window.SMART_BOOKMARK_PINS) return;
-      window.SMART_BOOKMARK_PINS.togglePin('bookmarks', bookmark.id).then(function (pinnedNow) {
-        if (pinnedNow) pinBtn.classList.add('pinned'); else pinBtn.classList.remove('pinned');
-        // 空搜索时刷新排序，搜索态仅刷新按钮样式
-        var searchInput = selfRef.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
-        var hasSearchQuery = searchInput && searchInput.value.trim() !== '';
-        if (!hasSearchQuery) {
-          selfRef.updateBookmarkList();
-        } else if (selfRef.bookmarkVirtualScroller) {
-          selfRef.bookmarkVirtualScroller.forceUpdate();
-        }
-      });
+    // 文件夹点击进入
+    item.addEventListener('click', function (e) {
+      self.enterFolder(bookmark.id, bookmark.title);
     });
-    actions.appendChild(pinBtn);
-    item.appendChild(actions);
-  } catch (e) { }
+  } else {
+    // 渲染书签
+    var displayUrl = this.formatUrlForDisplay(bookmark.url);
+    var highlightedUrl = hasSearchQuery && searchTerm ?
+      this.highlightText(displayUrl, searchTerm) : displayUrl;
 
-  // 绑定点击事件
-  var self = this;
-  item.addEventListener('click', function (e) {
-    self.selectBookmark(e.currentTarget);
-  });
+    item.innerHTML =
+      '<div class="smart-bookmark-bookmark-content">' +
+      '<span class="smart-bookmark-bookmark-icon">🔗</span>' +
+      '<div class="smart-bookmark-bookmark-text">' +
+      '<div class="smart-bookmark-bookmark-title-container">' +
+      '<span class="smart-bookmark-bookmark-title">' + highlightedTitle + '</span>' +
+      '</div>' +
+      '<div class="smart-bookmark-bookmark-url" title="' + bookmark.url + '">' + highlightedUrl + '</div>' +
+      (breadcrumb ? breadcrumb : '') +
+      '</div>' +
+      '</div>';
+
+    // 右侧置顶按钮（仅书签）
+    try {
+      item.classList.add('has-actions');
+      var actions = document.createElement('div');
+      actions.className = 'smart-bookmark-item-actions';
+      var pinBtn = document.createElement('button');
+      pinBtn.className = 'smart-bookmark-pin-btn';
+      pinBtn.type = 'button';
+      pinBtn.innerHTML = '<svg class="smart-bookmark-pin-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M23.9986 5L17.8856 17.4776L4 19.4911L14.0589 29.3251L11.6544 43L23.9986 36.4192L36.3454 43L33.9586 29.3251L44 19.4911L30.1913 17.4776L23.9986 5Z"/></svg>';
+      if (window.SMART_BOOKMARK_PINS && window.SMART_BOOKMARK_PINS.isPinned('bookmarks', bookmark.id)) {
+        pinBtn.classList.add('pinned');
+      }
+      var selfRef = this;
+      pinBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (!window.SMART_BOOKMARK_PINS) return;
+        window.SMART_BOOKMARK_PINS.togglePin('bookmarks', bookmark.id).then(function (pinnedNow) {
+          if (pinnedNow) pinBtn.classList.add('pinned'); else pinBtn.classList.remove('pinned');
+          var searchInput = selfRef.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
+          var hasSearchQuery = searchInput && searchInput.value.trim() !== '';
+          if (!hasSearchQuery) {
+            selfRef.updateBookmarkList();
+          } else if (selfRef.bookmarkVirtualScroller) {
+            selfRef.bookmarkVirtualScroller.forceUpdate();
+          }
+        });
+      });
+      actions.appendChild(pinBtn);
+      item.appendChild(actions);
+    } catch (e) { }
+
+    // 书签点击打开
+    item.addEventListener('click', function (e) {
+      self.selectBookmark(e.currentTarget);
+    });
+  }
 
   return item;
 };
@@ -1318,9 +1524,24 @@ ModalManager.prototype.isSpecialUrl = function (url) {
  */
 ModalManager.prototype.handleConfirm = function () {
   if (this.uiManager.currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH) {
-    // 书签搜索模式：打开选中的书签
+    // 书签搜索模式：根据选中项类型处理
     var selectedItem = this.keyboardManager.getSelectedItem();
-    if (selectedItem && selectedItem.url) {
+    if (!selectedItem) return;
+
+    // 处理返回按钮
+    if (selectedItem.itemType === 'back') {
+      this.goBack();
+      return;
+    }
+
+    // 处理文件夹进入
+    if (selectedItem.itemType === 'folder') {
+      this.enterFolder(selectedItem.id, selectedItem.title);
+      return;
+    }
+
+    // 处理书签打开
+    if (selectedItem.url) {
       // 记录搜索词与书签的关联（用于历史加成排序）
       var searchInput = this.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
       var searchTerm = searchInput ? searchInput.value.trim() : '';

@@ -1191,3 +1191,77 @@
     animation: none;
   }
 }
+
+/* 文件夹导航相关样式 */
+
+/* 返回按钮 */
+.smart-bookmark-bookmark-item.is-back-btn {
+  background: var(--sb-muted);
+  border: 1px solid var(--sb-border);
+  margin-bottom: 2px;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+}
+
+.smart-bookmark-bookmark-item.is-back-btn:hover {
+  background: var(--sb-accent);
+}
+
+/* 返回按钮 active 样式与列表项统一 */
+.smart-bookmark-bookmark-item.is-back-btn.active {
+  background: var(--sb-ring-light);
+  border-color: var(--sb-ring);
+  border-style: solid;
+}
+
+/* 返回按钮 active 样式与列表项统一 */
+.smart-bookmark-bookmark-item.is-back-btn.active {
+  background: var(--sb-ring-light);
+  border-color: var(--sb-ring);
+  border-style: solid;
+}
+
+.smart-bookmark-bookmark-item.is-back-btn .back-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.smart-bookmark-back-arrow {
+  font-size: 16px;
+  color: var(--sb-ring);
+}
+
+.smart-bookmark-back-text {
+  font-size: 14px;
+  color: var(--sb-muted-foreground);
+}
+
+/* 文件夹项目样式 */
+.smart-bookmark-bookmark-item.is-folder {
+  cursor: pointer;
+}
+
+.smart-bookmark-bookmark-item.is-folder:hover {
+  background: var(--sb-accent);
+}
+
+.smart-bookmark-bookmark-item.is-folder .folder-icon {
+  font-size: 16px;
+}
+
+/* 文件夹箭头 */
+.smart-bookmark-folder-arrow {
+  font-size: 18px;
+  color: var(--sb-muted-foreground);
+  margin-left: auto;
+  padding-left: 8px;
+}
+
+/* 文件夹计数 (搜索结果中的文件夹) */
+.smart-bookmark-bookmark-item .smart-bookmark-folder-count {
+  font-size: 12px;
+  color: var(--sb-muted-foreground);
+  margin-left: 4px;
+}

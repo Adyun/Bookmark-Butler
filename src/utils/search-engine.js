@@ -612,5 +612,49 @@ SearchEngine.prototype.calculateSingleKeywordBookmarkScore = function (title, ur
   return Math.max(titleScore, urlScore * 0.5);
 };
 
+/**
+ * 同时搜索书签和文件夹
+ * @param {string} query - 搜索词
+ * @param {Array} bookmarks - 所有书签
+ * @param {Array} folders - 所有文件夹
+ * @returns {Array} 混合结果，每项带有 itemType 属性
+ */
+SearchEngine.prototype.searchAll = function (query, bookmarks, folders) {
+  var bookmarkResults = this.searchBookmarks(query, bookmarks);
+  var folderResults = this.search(query, folders);
+
+  // 标记类型
+  var taggedBookmarks = [];
+  for (var i = 0; i < bookmarkResults.length; i++) {
+    var b = bookmarkResults[i];
+    taggedBookmarks.push({
+      id: b.id,
+      title: b.title,
+      url: b.url,
+      parentId: b.parentId,
+      score: b.score,
+      itemType: 'bookmark'
+    });
+  }
+
+  var taggedFolders = [];
+  for (var j = 0; j < folderResults.length; j++) {
+    var f = folderResults[j];
+    taggedFolders.push({
+      id: f.id,
+      title: f.title,
+      parentId: f.parentId,
+      bookmarkCount: f.bookmarkCount,
+      score: f.score,
+      itemType: 'folder'
+    });
+  }
+
+  // 合并结果：文件夹在前，书签在后，各自按分数排序
+  var combined = taggedFolders.concat(taggedBookmarks);
+
+  return combined;
+};
+
 // 将类附加到全局window对象
 window.SearchEngine = SearchEngine;

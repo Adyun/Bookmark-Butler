@@ -491,10 +491,38 @@ function getCacheStatus() {
   };
 }
 
+/**
+ * 获取指定文件夹中的书签
+ * @param {string} folderId - 文件夹ID
+ * @returns {Promise<Array>} 该文件夹中的书签列表
+ */
+function getBookmarksByFolder(folderId) {
+  return getAllBookmarks().then(function (allBookmarks) {
+    return allBookmarks.filter(function (bookmark) {
+      return bookmark.parentId === folderId;
+    });
+  });
+}
+
+/**
+ * 获取指定文件夹中的子文件夹
+ * @param {string} folderId - 文件夹ID
+ * @returns {Promise<Array>} 该文件夹中的子文件夹列表
+ */
+function getSubFolders(folderId) {
+  return getAllFolders().then(function (allFolders) {
+    return allFolders.filter(function (folder) {
+      return folder.parentId === folderId;
+    });
+  });
+}
+
 // 将函数附加到全局window对象
 window.SMART_BOOKMARK_API = {
   getAllFolders: getAllFolders,
   getAllBookmarks: getAllBookmarks,
+  getBookmarksByFolder: getBookmarksByFolder,
+  getSubFolders: getSubFolders,
   createBookmark: createBookmark,
   searchFolders: searchFolders,
   searchBookmarks: searchBookmarks,
