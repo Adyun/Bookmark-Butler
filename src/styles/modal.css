@@ -209,7 +209,7 @@
   max-width: 95vw;
   max-height: 80vh;
   height: auto;
-  min-height: 400px;
+  min-height: 550px;
   display: flex;
   flex-direction: column;
   opacity: 0;

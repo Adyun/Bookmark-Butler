@@ -304,13 +304,13 @@ UIManager.prototype.setupModalLayout = function () {
     .smart-bookmark-modal-body {
       /* 让body根据内容自适应高度 */
       flex: 1;
-      min-height: 300px;
+      min-height: 450px;
       max-height: calc(70vh - var(--header-height) - var(--footer-height));
     }
     
     .smart-bookmark-list-container {
       height: calc(100% - 80px); /* 减去搜索框和间距的高度 */
-      min-height: 250px;
+      min-height: 400px;
       display: flex;
       flex-direction: column;
     }
