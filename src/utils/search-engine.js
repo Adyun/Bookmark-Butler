@@ -556,38 +556,54 @@ SearchEngine.prototype.calculateBookmarkScore = function (bookmark, query) {
   // 如果搜索词为空，返回最高分数
   if (!searchTerm) return 1;
 
+  // 支持多关键词搜索：按空格拆分
+  var keywords = searchTerm.split(/\s+/).filter(function (k) { return k.length > 0; });
+
+  // 如果没有有效关键词，返回最高分数
+  if (keywords.length === 0) return 1;
+
+  // 计算每个关键词的分数
+  var scores = [];
+  for (var i = 0; i < keywords.length; i++) {
+    var keyword = keywords[i];
+    var score = this.calculateSingleKeywordBookmarkScore(title, url, keyword);
+
+    // 如果任意一个关键词完全不匹配，返回0
+    if (score === 0) return 0;
+
+    scores.push(score);
+  }
+
+  // 返回所有关键词分数的平均值
+  var total = 0;
+  for (var j = 0; j < scores.length; j++) {
+    total += scores[j];
+  }
+  return total / scores.length;
+};
+
+/**
+ * 计算单个关键词的书签匹配分数
+ * @param {string} title - 书签标题（小写）
+ * @param {string} url - 书签URL（小写）
+ * @param {string} keyword - 单个关键词（小写）
+ * @returns {number} 匹配分数 (0-1)
+ */
+SearchEngine.prototype.calculateSingleKeywordBookmarkScore = function (title, url, keyword) {
   // 计算标题匹配分数
   var titleScore = 0;
-  if (title === searchTerm) {
+  if (title === keyword) {
     titleScore = 1; // 完全匹配
-  } else if (title.indexOf(searchTerm) === 0) {
+  } else if (title.indexOf(keyword) === 0) {
     titleScore = 0.8; // 前缀匹配
-  } else if (title.indexOf(searchTerm) > -1) {
+  } else if (title.indexOf(keyword) > -1) {
     titleScore = 0.5; // 包含匹配
-  } else {
-    // 模糊匹配：检查每个字符是否都包含在标题中
-    var searchTermChars = searchTerm.split('');
-    var allCharsFound = true;
-    var lastIndex = -1;
-
-    for (var i = 0; i < searchTermChars.length; i++) {
-      var charIndex = title.indexOf(searchTermChars[i], lastIndex + 1);
-      if (charIndex === -1) {
-        allCharsFound = false;
-        break;
-      }
-      lastIndex = charIndex;
-    }
-
-    if (allCharsFound && searchTerm.length > 0) {
-      var ratio = searchTerm.length / title.length;
-      titleScore = Math.max(0.1, ratio * 0.3);
-    }
   }
+  // 不再使用模糊匹配（逐字符匹配），因为太容易误匹配
 
   // 计算URL匹配分数
   var urlScore = 0;
-  if (url.indexOf(searchTerm) > -1) {
+  if (url.indexOf(keyword) > -1) {
     // URL匹配的权重较低
     urlScore = 0.3;
   }

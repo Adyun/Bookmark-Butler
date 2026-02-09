@@ -1,8 +1,5 @@
 // Constants for the Smart Bookmark Extension
 
-// Keyboard shortcuts
-var KEYBOARD_SHORTCUT = 'Ctrl+Shift+B';
-
 // Modal element IDs
 var MODAL_ID = 'smart-bookmark-modal';
 var MODAL_TITLE_ID = 'smart-bookmark-modal-title';
@@ -56,7 +53,6 @@ var DEFAULT_MODE = MODE_BOOKMARK_SEARCH;
 
 // 将常量附加到全局window对象，以便其他脚本可以访问
 window.SMART_BOOKMARK_CONSTANTS = {
-  KEYBOARD_SHORTCUT: KEYBOARD_SHORTCUT,
   MODAL_ID: MODAL_ID,
   MODAL_TITLE_ID: MODAL_TITLE_ID,
   SEARCH_INPUT_ID: SEARCH_INPUT_ID,

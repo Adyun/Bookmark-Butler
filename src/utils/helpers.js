@@ -62,38 +62,45 @@
     // 如果搜索词为空，返回最高分数
     if (!searchTerm) return 1;
 
+    // 支持多关键词搜索：按空格拆分
+    var keywords = searchTerm.split(/\s+/).filter(function (k) { return k.length > 0; });
+
+    // 如果没有有效关键词，返回最高分数
+    if (keywords.length === 0) return 1;
+
+    // 计算每个关键词的分数
+    var scores = [];
+    for (var i = 0; i < keywords.length; i++) {
+      var keyword = keywords[i];
+      var score = calculateSingleKeywordScore(name, keyword);
+
+      // 如果任意一个关键词完全不匹配，返回0
+      if (score === 0) return 0;
+
+      scores.push(score);
+    }
+
+    // 返回所有关键词分数的平均值
+    var total = 0;
+    for (var j = 0; j < scores.length; j++) {
+      total += scores[j];
+    }
+    return total / scores.length;
+  };
+
+  // 计算单个关键词的匹配分数
+  var calculateSingleKeywordScore = function (name, keyword) {
     // 完全匹配
-    if (name === searchTerm) return 1;
+    if (name === keyword) return 1;
 
     // 前缀匹配
-    if (name.indexOf(searchTerm) === 0) return 0.8;
+    if (name.indexOf(keyword) === 0) return 0.8;
 
     // 包含匹配
-    if (name.indexOf(searchTerm) > -1) return 0.5;
+    if (name.indexOf(keyword) > -1) return 0.5;
 
-    // 模糊匹配：检查每个字符是否都包含在文件夹名称中
-    var searchTermChars = searchTerm.split('');
-    var allCharsFound = true;
-    var lastIndex = -1;
-
-    for (var i = 0; i < searchTermChars.length; i++) {
-      var charIndex = name.indexOf(searchTermChars[i], lastIndex + 1);
-      if (charIndex === -1) {
-        allCharsFound = false;
-        break;
-      }
-      lastIndex = charIndex;
-    }
-
-    if (allCharsFound && searchTerm.length > 0) {
-      // 模糊匹配评分：根据搜索词和文件夹名的长度比例计算
-      var ratio = searchTerm.length / name.length;
-      return Math.max(0.15, ratio * 0.4);
-    }
-
-    // 对于中文搜索，如果搜索词较长但完全没有匹配，不应该返回分数
-    // 移除之前的 hasAnyChar 宽松匹配，避免单字符误匹配
-
+    // 不再使用模糊匹配（逐字符匹配），因为太容易误匹配
+    // 没有匹配返回0
     return 0;
   };
 
