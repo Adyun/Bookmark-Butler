@@ -235,8 +235,6 @@ VirtualScroller.prototype.render = function () {
     var selectedElement = this.contentContainer.querySelector(selector);
     if (selectedElement) {
       selectedElement.classList.add('active');
-      selectedElement.style.background = 'rgba(59, 130, 246, 0.15)';
-      selectedElement.style.border = '1px solid #3b82f6';
     }
   }
   // 记录本次渲染范围
@@ -345,8 +343,6 @@ VirtualScroller.prototype.setSelectedIndex = function (index) {
     var activeItems = this.contentContainer.querySelectorAll('.smart-bookmark-folder-item.active, .smart-bookmark-bookmark-item.active');
     for (var i = 0; i < activeItems.length; i++) {
       activeItems[i].classList.remove('active');
-      activeItems[i].style.background = '';
-      activeItems[i].style.border = '';
     }
 
     // 如果新索引有效且在当前渲染范围内，添加 active 状态
@@ -356,8 +352,6 @@ VirtualScroller.prototype.setSelectedIndex = function (index) {
       var element = this.contentContainer.querySelector(selector);
       if (element) {
         element.classList.add('active');
-        element.style.background = 'rgba(59, 130, 246, 0.15)';
-        element.style.border = '1px solid #3b82f6';
       }
     }
   }
