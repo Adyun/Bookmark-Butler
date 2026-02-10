@@ -75,18 +75,7 @@ function loadPersistentCache() {
           }
         });
       } else {
-        // 如果 chrome.storage 不可用，尝试从 localStorage 获取
-        var cachedData = localStorage.getItem(cache.persistent.key);
-        if (cachedData) {
-          cachedData = JSON.parse(cachedData);
-          if ((Date.now() - cachedData.timestamp) < cache.persistent.ttl) {
-            resolve(cachedData);
-          } else {
-            resolve(null);
-          }
-        } else {
-          resolve(null);
-        }
+        resolve(null);
       }
     } catch (error) {
       console.error('Error loading persistent cache:', error);
@@ -116,8 +105,7 @@ function savePersistentCache(data) {
         'smart_bookmark_cache': cacheData
       });
     } else {
-      // 如果 chrome.storage 不可用，保存到 localStorage
-      localStorage.setItem(cache.persistent.key, JSON.stringify(cacheData));
+      // 无可用持久化存储时跳过
     }
   } catch (error) {
     console.error('Error saving persistent cache:', error);
@@ -475,8 +463,6 @@ function clearCache() {
     // 检查扩展上下文是否有效
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local && chrome.runtime.id) {
       chrome.storage.local.remove([cache.persistent.key]);
-    } else {
-      localStorage.removeItem(cache.persistent.key);
     }
   } catch (error) {
     // 忽略扩展上下文无效的错误，这是正常的页面卸载时的行为

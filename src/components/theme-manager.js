@@ -60,14 +60,19 @@ ThemeManager.prototype.init = function () {
  * 从存储中加载深色模式设置 - 同步版本
  */
 ThemeManager.prototype.loadDarkModeSetting = function () {
-  try {
-    // 优先使用localStorage，更可靠
-    var mode = localStorage.getItem(window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_STORAGE_KEY);
-    this.darkMode = mode || window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_AUTO;
-  } catch (e) {
-    // 如果localStorage失败，使用默认设置
-    this.darkMode = window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_AUTO;
+  var self = this;
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+    chrome.storage.local.get([window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_STORAGE_KEY], function (result) {
+      var mode = result && result[window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_STORAGE_KEY];
+      if (mode) {
+        self.darkMode = mode;
+        self.applyDarkMode();
+        self.updateToggleButtonDisplay();
+      }
+    });
+    return;
   }
+  this.darkMode = window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_AUTO;
 };
 
 /**
@@ -76,8 +81,6 @@ ThemeManager.prototype.loadDarkModeSetting = function () {
  */
 ThemeManager.prototype.saveDarkModeSetting = function (mode) {
   try {
-    // 直接使用localStorage，简化逻辑
-    localStorage.setItem(window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_STORAGE_KEY, mode);
     this.darkMode = mode;
 
     // 同步到 chrome.storage，作为跨上下文的单一事实来源
@@ -103,13 +106,19 @@ ThemeManager.prototype.saveDarkModeSetting = function (mode) {
  * 从存储中加载主题色设置
  */
 ThemeManager.prototype.loadThemeColorSetting = function () {
-  try {
-    var themeColor = localStorage.getItem('smart-bookmark-theme-color');
-    // 默认为灰色主题
-    this.themeColor = themeColor || 'gray';
-  } catch (e) {
-    this.themeColor = 'gray';
+  var self = this;
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+    chrome.storage.local.get(['smart-bookmark-theme-color'], function (result) {
+      var themeColor = result && result['smart-bookmark-theme-color'];
+      if (typeof themeColor === 'string') {
+        self.themeColor = themeColor;
+        self.applyThemeColor();
+        self.updateDropdownSelection();
+      }
+    });
+    return;
   }
+  this.themeColor = 'gray';
 };
 
 /**
@@ -118,7 +127,6 @@ ThemeManager.prototype.loadThemeColorSetting = function () {
  */
 ThemeManager.prototype.saveThemeColorSetting = function (themeColor) {
   try {
-    localStorage.setItem('smart-bookmark-theme-color', themeColor);
     this.themeColor = themeColor;
 
     // 同步到 chrome.storage，保持与新tab/弹窗一致

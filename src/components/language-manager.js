@@ -143,11 +143,6 @@ LanguageManager.prototype.loadLanguageFromStorage = function () {
       self.updateUI();
     });
   } else {
-    // 回退到localStorage
-    var saved = localStorage.getItem('smartBookmarkLanguage');
-    if (saved) {
-      this.currentLanguage = saved;
-    }
     this.updateUI();
   }
 };
@@ -159,11 +154,8 @@ LanguageManager.prototype.loadLanguageFromStorage = function () {
 LanguageManager.prototype.saveLanguageToStorage = function (language) {
   if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
     chrome.storage.local.set({ smartBookmarkLanguage: language });
-    // 同步一份到 localStorage，保证回退路径一致
-    try { localStorage.setItem('smartBookmarkLanguage', language); } catch (e) { }
   } else {
-    // 回退到localStorage
-    localStorage.setItem('smartBookmarkLanguage', language);
+    // 无可用存储时保持内存状态
   }
 };
 
@@ -179,7 +171,6 @@ LanguageManager.prototype.setupStorageChangeListener = function () {
       var newLang = changes.smartBookmarkLanguage.newValue;
       if (newLang && newLang !== self.currentLanguage) {
         self.currentLanguage = newLang;
-        try { localStorage.setItem('smartBookmarkLanguage', newLang); } catch (e) { }
         self.updateUI();
       }
     }
@@ -195,7 +186,6 @@ LanguageManager.prototype.syncFromChromeStorage = function () {
   chrome.storage.local.get(['smartBookmarkLanguage'], function (result) {
     if (result && result.smartBookmarkLanguage && result.smartBookmarkLanguage !== self.currentLanguage) {
       self.currentLanguage = result.smartBookmarkLanguage;
-      try { localStorage.setItem('smartBookmarkLanguage', self.currentLanguage); } catch (e) { }
       self.updateUI();
     }
   });

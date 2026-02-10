@@ -292,8 +292,22 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 // 监听书签变化事件，并广播到前台页面，提示刷新缓存与数据
+const PERSISTENT_CACHE_KEY = 'smart_bookmark_cache';
+
+function invalidatePersistentCache() {
+  try {
+    if (chrome.storage && chrome.storage.local) {
+      chrome.storage.local.remove([PERSISTENT_CACHE_KEY]);
+    }
+  } catch (e) {
+    // 忽略缓存清理失败
+  }
+}
+
 function broadcastBookmarksChanged(reason, payload) {
   try {
+    // 书签变更时清理持久化缓存，避免未加载 content script 的页面读到旧数据
+    invalidatePersistentCache();
     chrome.tabs.query({}, (tabs) => {
       for (const tab of tabs) {
         try {
@@ -501,6 +515,7 @@ function injectContentScript(tabId, originalMessage) {
             'src/utils/bookmark-api.js',
             'src/utils/sorting-algorithm.js',
             'src/utils/pin-manager.js',
+            'src/utils/query-history.js',
             'src/utils/search-engine.js',
             'src/components/virtual-scroller.js',
             'src/components/ui-manager.js',
@@ -554,4 +569,3 @@ chrome.action.onClicked.addListener((tab) => {
     }
   });
 });
-
