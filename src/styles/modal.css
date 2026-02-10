@@ -369,6 +369,44 @@
   }
 }
 
+/* Filter Bar - 标签筛选器 */
+.smart-bookmark-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 0 4px;
+  flex-wrap: wrap;
+}
+
+.smart-bookmark-filter-tab {
+  padding: 4px 14px;
+  border-radius: 16px;
+  border: 1px solid var(--sb-border);
+  background: var(--sb-muted);
+  color: var(--sb-muted-foreground);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  outline: none;
+  line-height: 1.5;
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+.smart-bookmark-filter-tab:hover {
+  background: var(--sb-accent);
+  color: var(--sb-accent-foreground);
+  border-color: var(--sb-ring);
+}
+
+.smart-bookmark-filter-tab.active {
+  background: var(--sb-ring);
+  color: #fff;
+  border-color: var(--sb-ring);
+  font-weight: 600;
+}
+
 /* Folder Items */
 .smart-bookmark-folder-item {
   padding: 12px;

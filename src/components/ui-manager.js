@@ -119,6 +119,11 @@ UIManager.prototype.createModal = function () {
     '</div>' +
     '<div class="smart-bookmark-modal-body">' +
     '<input type="text" id="' + window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID + '" class="smart-bookmark-search" placeholder="搜索书签..." autofocus>' +
+    '<div class="smart-bookmark-filter-bar" id="smart-bookmark-filter-bar">' +
+    '<button class="smart-bookmark-filter-tab active" data-filter="all">全部</button>' +
+    '<button class="smart-bookmark-filter-tab" data-filter="bookmark">🔗 链接</button>' +
+    '<button class="smart-bookmark-filter-tab" data-filter="folder">📁 文件夹</button>' +
+    '</div>' +
     '<div class="smart-bookmark-list-container">' +
     '<ul id="' + window.SMART_BOOKMARK_CONSTANTS.BOOKMARK_LIST_ID + '" class="smart-bookmark-bookmark-list"></ul>' +
     '<ul id="' + window.SMART_BOOKMARK_CONSTANTS.FOLDER_LIST_ID + '" class="smart-bookmark-folder-list" style="display: none;"></ul>' +
@@ -129,6 +134,7 @@ UIManager.prototype.createModal = function () {
     '<span class="smart-bookmark-keyboard-hint">↑↓ 选择</span>' +
     '<span class="smart-bookmark-keyboard-hint">Enter 确认</span>' +
     '<span class="smart-bookmark-keyboard-hint">Space 切换模式</span>' +
+    '<span class="smart-bookmark-keyboard-hint">Tab 切换筛选</span>' +
     '</div>' +
     '<div class="smart-bookmark-footer-buttons">' +
     '<button class="smart-bookmark-btn smart-bookmark-btn-secondary" id="smart-bookmark-cancel">取消</button>' +

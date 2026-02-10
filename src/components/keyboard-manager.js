@@ -20,6 +20,7 @@ function KeyboardManager() {
   this.onConfirm = null;
   this.onModeToggle = null;
   this.onModalClose = null;
+  this.onFilterCycle = null;
 }
 
 /**
@@ -122,6 +123,15 @@ KeyboardManager.prototype.handleKeyDown = function (e) {
     case 'PageDown':
       e.preventDefault();
       this.navigateByPage(1);
+      break;
+
+    case 'Tab':
+      // 仅在书签搜索模式且有选中项时，Tab 切换筛选标签
+      if (this.currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH &&
+        this.selectedIndex >= 0 && this.onFilterCycle) {
+        e.preventDefault();
+        this.onFilterCycle(e.shiftKey ? -1 : 1);
+      }
       break;
 
     default:
@@ -354,6 +364,7 @@ KeyboardManager.prototype.setCallbacks = function (callbacks) {
   this.onConfirm = callbacks.onConfirm || null;
   this.onModeToggle = callbacks.onModeToggle || null;
   this.onModalClose = callbacks.onModalClose || null;
+  this.onFilterCycle = callbacks.onFilterCycle || null;
 };
 
 /**
