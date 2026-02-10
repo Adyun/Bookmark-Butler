@@ -6,7 +6,8 @@ var cache = {
   memory: {
     folders: null,
     bookmarks: null,
-    lastFetch: 0,
+    foldersLastFetch: 0,
+    bookmarksLastFetch: 0,
     ttl: 60000, // 1分钟内存缓存
     version: 0 // 缓存版本号，用于检测数据变化
   },
@@ -132,7 +133,7 @@ function getAllFolders() {
     var now = Date.now();
 
     // 检查内存缓存
-    if (cache.memory.folders && (now - cache.memory.lastFetch) < cache.memory.ttl) {
+    if (cache.memory.folders && (now - cache.memory.foldersLastFetch) < cache.memory.ttl) {
       // console.log('Returning cached folders from memory');
       return Promise.resolve(cache.memory.folders);
     }
@@ -142,7 +143,7 @@ function getAllFolders() {
       if (persistentCache && persistentCache.folders) {
         // 更新内存缓存
         cache.memory.folders = persistentCache.folders;
-        cache.memory.lastFetch = now;
+        cache.memory.foldersLastFetch = now;
         cache.memory.version = persistentCache.version || 0;
 
         // console.log('Returning cached folders from persistent storage');
@@ -174,7 +175,7 @@ function getAllFolders() {
           if (response && response.folders) {
             // 更新内存缓存
             cache.memory.folders = response.folders;
-            cache.memory.lastFetch = now;
+            cache.memory.foldersLastFetch = now;
             cache.memory.version++;
 
             // 保存到持久化缓存
@@ -238,7 +239,8 @@ function createBookmark(folderId, title, url) {
               // 直接操作内部缓存作为兜底
               cache.memory.folders = null;
               cache.memory.bookmarks = null;
-              cache.memory.lastFetch = 0;
+              cache.memory.foldersLastFetch = 0;
+              cache.memory.bookmarksLastFetch = 0;
               cache.memory.version = (cache.memory.version || 0) + 1;
             }
           } catch (e) { }
@@ -360,7 +362,7 @@ function getAllBookmarks() {
     var now = Date.now();
 
     // 检查内存缓存
-    if (cache.memory.bookmarks && (now - cache.memory.lastFetch) < cache.memory.ttl) {
+    if (cache.memory.bookmarks && (now - cache.memory.bookmarksLastFetch) < cache.memory.ttl) {
       // console.log('Returning cached bookmarks from memory');
       return Promise.resolve(cache.memory.bookmarks);
     }
@@ -370,7 +372,7 @@ function getAllBookmarks() {
       if (persistentCache && persistentCache.bookmarks) {
         // 更新内存缓存
         cache.memory.bookmarks = persistentCache.bookmarks;
-        cache.memory.lastFetch = now;
+        cache.memory.bookmarksLastFetch = now;
         cache.memory.version = persistentCache.version || 0;
 
         // console.log('Returning cached bookmarks from persistent storage');
@@ -402,7 +404,7 @@ function getAllBookmarks() {
           if (response && response.bookmarks) {
             // 更新内存缓存
             cache.memory.bookmarks = response.bookmarks;
-            cache.memory.lastFetch = now;
+            cache.memory.bookmarksLastFetch = now;
             cache.memory.version++;
 
             // 保存到持久化缓存
@@ -464,7 +466,8 @@ function requestBookmarksPermission() {
 function clearCache() {
   cache.memory.folders = null;
   cache.memory.bookmarks = null;
-  cache.memory.lastFetch = 0;
+  cache.memory.foldersLastFetch = 0;
+  cache.memory.bookmarksLastFetch = 0;
   cache.memory.version = 0;
 
   // 清除持久化缓存
@@ -492,10 +495,16 @@ function getCacheStatus() {
   return {
     memoryCache: {
       hasFolders: !!cache.memory.folders,
-      hasBookmarks: !!cache.memory.bookmarks,
-      lastFetch: cache.memory.lastFetch,
+      lastFetch: cache.memory.foldersLastFetch,
       ttl: cache.memory.ttl,
-      age: now - cache.memory.lastFetch,
+      age: now - cache.memory.foldersLastFetch,
+      version: cache.memory.version
+    },
+    bookmarksMemoryCache: {
+      hasBookmarks: !!cache.memory.bookmarks,
+      lastFetch: cache.memory.bookmarksLastFetch,
+      ttl: cache.memory.ttl,
+      age: now - cache.memory.bookmarksLastFetch,
       version: cache.memory.version
     },
     persistentCache: {

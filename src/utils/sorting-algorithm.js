@@ -21,7 +21,8 @@ function getCachedActivity(folderId) {
     return null;
   }
 
-  return ACTIVITY_CACHE.data.get(folderId) || null;
+  const value = ACTIVITY_CACHE.data.get(folderId);
+  return value !== undefined ? value : null;
 }
 
 /**
@@ -40,6 +41,7 @@ function setCachedActivity(folderId, activity) {
   }
 
   ACTIVITY_CACHE.data.set(folderId, activity);
+  ACTIVITY_CACHE.lastUpdate = Date.now();
 }
 
 /**
