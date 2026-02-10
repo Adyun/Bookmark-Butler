@@ -959,6 +959,7 @@ ModalManager.prototype.handleSearch = function (query) {
  * @param {string} filterType - 筛选类型 ('all', 'bookmark', 'folder')
  */
 ModalManager.prototype.setFilter = function (filterType) {
+  console.log('[Filter] setFilter called:', filterType, 'current:', this.currentFilter);
   if (this.currentFilter === filterType) return;
   this.currentFilter = filterType;
 
@@ -1005,6 +1006,10 @@ ModalManager.prototype.updateBookmarkList = function () {
 
   // 根据当前筛选类型过滤结果
   var sourceItems = this.filteredBookmarks;
+  console.log('[Filter] updateBookmarkList: currentFilter=', this.currentFilter, 'sourceItems count=', sourceItems ? sourceItems.length : 0);
+  if (sourceItems && sourceItems.length > 0) {
+    console.log('[Filter] first item itemType:', sourceItems[0].itemType, 'title:', sourceItems[0].title);
+  }
   var filtered;
   if (this.currentFilter === 'all') {
     filtered = sourceItems ? sourceItems.slice() : [];
@@ -1016,6 +1021,7 @@ ModalManager.prototype.updateBookmarkList = function () {
       }
     }
   }
+  console.log('[Filter] filtered count:', filtered.length);
 
   // 检查是否有结果
   if (hasSearchQuery && filtered.length === 0) {
@@ -1219,53 +1225,6 @@ ModalManager.prototype.renderFolderItem = function (folder, index, hasSearchQuer
   });
 
   return item;
-};
-
-/**
- * 更新书签列表显示
- */
-ModalManager.prototype.updateBookmarkList = function () {
-  var bookmarkList = this.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.BOOKMARK_LIST_ID);
-  if (!bookmarkList) return;
-
-  var searchInput = this.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
-  var hasSearchQuery = searchInput && searchInput.value.trim() !== '';
-
-  // 检查是否有结果
-  if (hasSearchQuery && this.filteredBookmarks.length === 0) {
-    // 清理虚拟滚动器的内容容器，确保无结果消息能正确显示
-    if (this.bookmarkVirtualScroller && this.bookmarkVirtualScroller.contentContainer) {
-      this.bookmarkVirtualScroller.contentContainer.remove();
-    }
-    this.uiManager.showNoResultsState('bookmarks');
-    return;
-  }
-
-  if (!hasSearchQuery && this.filteredBookmarks.length === 0) {
-    // 清理虚拟滚动器的内容容器
-    if (this.bookmarkVirtualScroller && this.bookmarkVirtualScroller.contentContainer) {
-      this.bookmarkVirtualScroller.contentContainer.remove();
-    }
-    this.uiManager.showEmptyState('bookmarks');
-    return;
-  }
-
-  // 应用置顶规则：
-  // - 空搜索：置顶项按置顶时间倒序优先
-  // - 有搜索：若结果包含置顶项，则将置顶项提升到顶部但保留搜索相对顺序
-  var itemsToRender = this.filteredBookmarks ? this.filteredBookmarks.slice() : [];
-  if (window.SMART_BOOKMARK_PINS) {
-    if (!hasSearchQuery) {
-      itemsToRender = window.SMART_BOOKMARK_PINS.applyPinOrdering(itemsToRender, 'bookmarks');
-    } else if (window.SMART_BOOKMARK_PINS.hasAnyPinned(itemsToRender, 'bookmarks')) {
-      itemsToRender = window.SMART_BOOKMARK_PINS.promotePinnedPreserveOrder(itemsToRender, 'bookmarks');
-    }
-  }
-  // 保持键盘导航与渲染顺序一致
-  this.filteredBookmarks = itemsToRender.slice();
-
-  // 使用虚拟滚动渲染书签列表
-  this.renderBookmarkListWithVirtualScroll(bookmarkList, hasSearchQuery, itemsToRender);
 };
 
 /**
