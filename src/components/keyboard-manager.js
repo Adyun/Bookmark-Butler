@@ -126,11 +126,12 @@ KeyboardManager.prototype.handleKeyDown = function (e) {
       break;
 
     case 'Tab':
-      // 仅在书签搜索模式且有选中项时，Tab 切换筛选标签
-      if (this.currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH &&
-        this.selectedIndex >= 0 && this.onFilterCycle) {
+      // 书签搜索模式下始终拦截 Tab 键，防止焦点跳转
+      if (this.currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH) {
         e.preventDefault();
-        this.onFilterCycle(e.shiftKey ? -1 : 1);
+        if (this.onFilterCycle) {
+          this.onFilterCycle(e.shiftKey ? -1 : 1);
+        }
       }
       break;
 

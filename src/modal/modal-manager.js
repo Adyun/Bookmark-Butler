@@ -1058,6 +1058,16 @@ ModalManager.prototype.updateBookmarkList = function () {
 
   // 使用虚拟滚动渲染书签列表
   this.renderBookmarkListWithVirtualScroll(bookmarkList, hasSearchQuery, itemsToRender);
+
+  // 渲染后自动选中第一项
+  var self = this;
+  setTimeout(function () {
+    if (itemsToRender.length > 0) {
+      self.keyboardManager.setSelectedIndex(0);
+    } else {
+      self.keyboardManager.setSelectedIndex(-1);
+    }
+  }, 50);
 };
 
 /**
