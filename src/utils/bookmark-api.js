@@ -285,8 +285,22 @@ function searchFolders(query) {
         }
 
         if (response && response.folders) {
-          // console.log('Found ' + response.folders.length + ' folders matching query via background script');
-          resolve(response.folders);
+          // 补充每个文件夹的子文件夹数量
+          getAllFolders().then(function (allFolders) {
+            response.folders.forEach(function (folder) {
+              var count = 0;
+              for (var i = 0; i < allFolders.length; i++) {
+                if (allFolders[i].parentId === folder.id) {
+                  count++;
+                }
+              }
+              folder.subFolderCount = count;
+            });
+            resolve(response.folders);
+          }).catch(function () {
+            // 如果获取所有文件夹失败，仍然返回搜索结果，只是没有数量
+            resolve(response.folders);
+          });
         } else {
           reject(new Error('Invalid response from background script'));
         }
@@ -511,9 +525,22 @@ function getBookmarksByFolder(folderId) {
  */
 function getSubFolders(folderId) {
   return getAllFolders().then(function (allFolders) {
-    return allFolders.filter(function (folder) {
+    var subFolders = allFolders.filter(function (folder) {
       return folder.parentId === folderId;
     });
+
+    // 计算每个子文件夹的子文件夹数量
+    subFolders.forEach(function (subFolder) {
+      var count = 0;
+      for (var i = 0; i < allFolders.length; i++) {
+        if (allFolders[i].parentId === subFolder.id) {
+          count++;
+        }
+      }
+      subFolder.subFolderCount = count;
+    });
+
+    return subFolders;
   });
 }
 

@@ -94,12 +94,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
         // 如果节点没有url属性，则认为是文件夹
         if (!node.url) {
-          // 计算文件夹中的书签数量
+          // 计算文件夹中的书签数量和子文件夹数量
           let bookmarkCount = 0;
+          let subFolderCount = 0;
           if (node.children && Array.isArray(node.children)) {
             for (const child of node.children) {
               if (child && child.url) {
                 bookmarkCount++;
+              } else if (child && !child.url) {
+                subFolderCount++;
               }
             }
           }
@@ -111,6 +114,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               title: node.title || '未命名文件夹',
               children: node.children || [],
               bookmarkCount: bookmarkCount,
+              subFolderCount: subFolderCount,
               parentId: node.parentId
             });
           }

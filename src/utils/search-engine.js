@@ -459,6 +459,7 @@ SearchEngine.prototype.fallbackSearch = function (query, items, type) {
     if (type === 'folders') {
       itemWithScore.children = item.children;
       itemWithScore.bookmarkCount = item.bookmarkCount;
+      itemWithScore.subFolderCount = item.subFolderCount;
       itemWithScore.activity = item.activity;
     } else {
       itemWithScore.url = item.url;
@@ -645,6 +646,7 @@ SearchEngine.prototype.searchAll = function (query, bookmarks, folders) {
       title: f.title,
       parentId: f.parentId,
       bookmarkCount: f.bookmarkCount,
+      subFolderCount: f.subFolderCount,
       score: f.score,
       itemType: 'folder'
     });

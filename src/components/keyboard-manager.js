@@ -21,6 +21,7 @@ function KeyboardManager() {
   this.onModeToggle = null;
   this.onModalClose = null;
   this.onFilterCycle = null;
+  this.onGoBack = null;
 }
 
 /**
@@ -75,6 +76,23 @@ KeyboardManager.prototype.handleKeyDown = function (e) {
     case 'Escape':
       if (this.onModalClose) {
         this.onModalClose();
+      }
+      break;
+
+    case 'Backspace':
+      // 获取根元素（Shadow Root 或 Document）
+      var root = this.getRoot();
+      var activeElement = (root.activeElement || document.activeElement);
+
+      // 如果焦点在搜索框且不为空，保持默认行为（删除字符）
+      if (searchInput && activeElement === searchInput && searchInput.value.length > 0) {
+        return;
+      }
+
+      // 其他情况（搜索框为空或焦点不在搜索框），触发返回
+      if (this.onGoBack) {
+        e.preventDefault();
+        this.onGoBack();
       }
       break;
 
@@ -366,6 +384,7 @@ KeyboardManager.prototype.setCallbacks = function (callbacks) {
   this.onModeToggle = callbacks.onModeToggle || null;
   this.onModalClose = callbacks.onModalClose || null;
   this.onFilterCycle = callbacks.onFilterCycle || null;
+  this.onGoBack = callbacks.onGoBack || null;
 };
 
 /**

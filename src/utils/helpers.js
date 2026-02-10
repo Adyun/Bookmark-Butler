@@ -38,6 +38,9 @@
           children: node.children || [],
           bookmarkCount: (node.children || []).filter(function (child) {
             return child.url;
+          }).length,
+          subFolderCount: (node.children || []).filter(function (child) {
+            return !child.url && child.id;
           }).length
         });
       }

@@ -86,7 +86,8 @@ ModalManager.prototype.initializeComponents = function () {
     onConfirm: function () { self.handleConfirm(); },
     onModeToggle: function () { self.toggleMode(); },
     onModalClose: function () { self.hide(); },
-    onFilterCycle: function (direction) { self.cycleFilter(direction); }
+    onFilterCycle: function (direction) { self.cycleFilter(direction); },
+    onGoBack: function () { self.goBack(); }
   });
 
   // 监听布局重新计算事件
@@ -767,6 +768,7 @@ ModalManager.prototype.enterFolder = function (folderId, folderTitle) {
         title: subFolders[i].title,
         parentId: subFolders[i].parentId,
         bookmarkCount: subFolders[i].bookmarkCount,
+        subFolderCount: subFolders[i].subFolderCount,
         itemType: 'folder'
       });
     }
@@ -783,6 +785,21 @@ ModalManager.prototype.enterFolder = function (folderId, folderTitle) {
     }
 
     self.filteredBookmarks = combinedItems;
+
+    // 进入文件夹时重置筛选器为"全部"
+    if (self.currentFilter !== 'all') {
+      self.currentFilter = 'all';
+      // 更新筛选标签 UI
+      var tabs = self.getRoot().querySelectorAll('.smart-bookmark-filter-tab');
+      for (var k = 0; k < tabs.length; k++) {
+        if (tabs[k].getAttribute('data-filter') === 'all') {
+          tabs[k].classList.add('active');
+        } else {
+          tabs[k].classList.remove('active');
+        }
+      }
+    }
+
     self.keyboardManager.setCurrentItems(self.filteredBookmarks);
     self.updateBookmarkList();
     // 默认选中第一项
@@ -959,7 +976,7 @@ ModalManager.prototype.handleSearch = function (query) {
  * @param {string} filterType - 筛选类型 ('all', 'bookmark', 'folder')
  */
 ModalManager.prototype.setFilter = function (filterType) {
-  console.log('[Filter] setFilter called:', filterType, 'current:', this.currentFilter);
+
   if (this.currentFilter === filterType) return;
   this.currentFilter = filterType;
 
@@ -1006,10 +1023,7 @@ ModalManager.prototype.updateBookmarkList = function () {
 
   // 根据当前筛选类型过滤结果
   var sourceItems = this.filteredBookmarks;
-  console.log('[Filter] updateBookmarkList: currentFilter=', this.currentFilter, 'sourceItems count=', sourceItems ? sourceItems.length : 0);
-  if (sourceItems && sourceItems.length > 0) {
-    console.log('[Filter] first item itemType:', sourceItems[0].itemType, 'title:', sourceItems[0].title);
-  }
+
   var filtered;
   if (this.currentFilter === 'all') {
     filtered = sourceItems ? sourceItems.slice() : [];
@@ -1021,7 +1035,7 @@ ModalManager.prototype.updateBookmarkList = function () {
       }
     }
   }
-  console.log('[Filter] filtered count:', filtered.length);
+
 
   // 检查是否有结果
   if (hasSearchQuery && filtered.length === 0) {
@@ -1062,7 +1076,9 @@ ModalManager.prototype.updateBookmarkList = function () {
   // 渲染后自动选中第一项
   var self = this;
   setTimeout(function () {
-    if (itemsToRender.length > 0) {
+    // 使用当前键盘管理器中的项目数量来判断，避免闭包中的 itemsToRender 过时
+    var currentCount = self.keyboardManager.currentItems.length;
+    if (currentCount > 0) {
       self.keyboardManager.setSelectedIndex(0);
     } else {
       self.keyboardManager.setSelectedIndex(-1);
@@ -1333,9 +1349,17 @@ ModalManager.prototype.renderBookmarkItem = function (bookmark, index, hasSearch
 
   if (isFolder) {
     // 渲染文件夹 - 三行结构：标题 / 内含X个书签链接 / 面包屑
-    var countLine = bookmark.bookmarkCount > 0
-      ? '<div class="smart-bookmark-bookmark-url">内含 ' + bookmark.bookmarkCount + ' 个书签链接</div>'
-      : '<div class="smart-bookmark-bookmark-url">空文件夹</div>';
+    // 渲染文件夹 - 三行结构：标题 / 内含X个书签链接 / 面包屑
+    var countParts = [];
+    if (bookmark.subFolderCount > 0) {
+      countParts.push(bookmark.subFolderCount + ' 个文件夹');
+    }
+    if (bookmark.bookmarkCount > 0) {
+      countParts.push(bookmark.bookmarkCount + ' 个书签');
+    }
+
+    var countText = countParts.length > 0 ? '内含 ' + countParts.join('，') : '空文件夹';
+    var countLine = '<div class="smart-bookmark-bookmark-url">' + countText + '</div>';
     item.innerHTML =
       '<div class="smart-bookmark-bookmark-content">' +
       '<span class="smart-bookmark-bookmark-icon folder-icon">📁</span>' +
