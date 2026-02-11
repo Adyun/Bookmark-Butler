@@ -1,0 +1,17 @@
+# Claude Code 配置目录（本地开发环境）
+.claude/
+
+# Node modules
+node_modules/
+
+# 操作系统文件
+.DS_Store
+Thumbs.db
+
+# IDE 配置
+.vscode/
+.idea/
+
+# 临时文件
+*.log
+*.tmp
