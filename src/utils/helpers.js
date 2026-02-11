@@ -3,17 +3,37 @@
 
   var showToast = function (message, isError) {
     isError = isError || false;
-    // 优先从 Shadow Root 中查找 toast 元素
-    var root = window.smartBookmarkShadowRoot || document;
-    var toast = root.getElementById('smart-bookmark-toast');
-    if (toast) {
-      toast.textContent = message;
-      toast.className += ' show';
 
-      setTimeout(function () {
-        toast.className = toast.className.replace(' show', '');
-      }, 3000);
+    // 移除已有的 toast（避免重叠）
+    var existing = document.getElementById('smart-bookmark-global-toast');
+    if (existing) {
+      existing.remove();
     }
+
+    // 在 document.body 上创建独立 toast，脱离 Shadow DOM
+    var toast = document.createElement('div');
+    toast.id = 'smart-bookmark-global-toast';
+    toast.textContent = message;
+    var bg = isError
+      ? 'background:linear-gradient(135deg,#ef4444,#dc2626);'
+      : 'background:linear-gradient(135deg,#22c55e,#16a34a);';
+    toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-80px);' +
+      bg + 'color:#fff;padding:10px 20px;border-radius:50px;' +
+      'z-index:2147483647;font-size:14px;font-weight:500;font-family:system-ui,-apple-system,sans-serif;' +
+      'box-shadow:0 8px 24px rgba(0,0,0,0.15);transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1);' +
+      'pointer-events:none;backdrop-filter:blur(8px);';
+    document.body.appendChild(toast);
+
+    // 触发重排后启动弹入动画
+    toast.offsetHeight;
+    toast.style.transform = 'translateX(-50%) translateY(0)';
+
+    setTimeout(function () {
+      toast.style.transform = 'translateX(-50%) translateY(-80px)';
+      setTimeout(function () {
+        if (toast.parentNode) toast.remove();
+      }, 300);
+    }, 3000);
   };
 
   var debounce = function (func, delay) {

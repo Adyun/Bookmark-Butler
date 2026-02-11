@@ -1,5 +1,14 @@
 /* Smart Bookmark Extension - Modern Minimal Styles */
 
+/* 阻断宿主页面的可继承属性，确保 Shadow DOM 内字体不受外部影响 */
+:host {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 /* CSS Variables - 使用 .smart-bookmark-modal 而非 :root，因为 :root 在 Shadow DOM 中不起作用 */
 .smart-bookmark-modal {
   --sb-background: #ffffff;
