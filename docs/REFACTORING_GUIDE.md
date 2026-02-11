@@ -168,11 +168,9 @@ themeManager.getCurrentThemeState();        // 获取当前状态
 
 **存储策略：**
 ```javascript
-// 优先使用Chrome Storage，失败时降级到localStorage
+// 使用 Chrome Storage 作为统一持久化存储
 if (chrome.storage && chrome.storage.local) {
   chrome.storage.local.set({ 'smart_bookmark_dark_mode': mode });
-} else {
-  localStorage.setItem('smart_bookmark_dark_mode', mode);
 }
 ```
 
@@ -192,6 +190,7 @@ if (chrome.storage && chrome.storage.local) {
 - 与虚拟滚动的协调
 
 **支持的快捷键：**
+> 说明：以下为 Modal 内部键盘导航快捷键，不是扩展全局快捷键。全局快捷键通过 `chrome://extensions/shortcuts` 配置，默认未设置。
 ```javascript
 // 快捷键映射
 const shortcuts = {
@@ -354,7 +353,7 @@ UIManager.prototype.cleanup = function () {
 
 1. **确定组件归属**：新功能应该属于哪个组件？
 2. **遵循接口规范**：使用现有的通信机制
-3. **单元测试**：为新功能编写测试
+3. **手动验证**：当前无自动化测试，新增功能需补充手动验证步骤
 4. **文档更新**：更新相关文档
 
 示例 - 添加新的键盘快捷键：
@@ -401,7 +400,7 @@ ModalManager.prototype.show = function (pageInfo) {
 1. **添加动画**：可以在UIManager中添加过渡动画
 2. **国际化支持**：在constants.js中添加多语言支持
 3. **主题扩展**：在ThemeManager中添加更多主题选项
-4. **快捷键自定义**：扩展KeyboardManager支持用户自定义
+4. **快捷键说明**：扩展全局快捷键由 Chrome 命令配置（默认未设置）
 
 ## 🐛 故障排除
 

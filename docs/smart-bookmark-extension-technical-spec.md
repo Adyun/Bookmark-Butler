@@ -6,7 +6,7 @@
 
 ```mermaid
 graph TD
-    A[用户操作] -->|快捷键/点击| B[Content Script]
+    A[用户操作] -->|自定义快捷键/点击| B[Content Script]
     B --> C[Modal Manager]
     C --> D[Bookmark API Module]
     D --> E[Chrome Bookmarks API]
@@ -19,9 +19,9 @@ graph TD
 
 - **Runtime**: Chrome Extension Manifest V3
 - **Language**: 原生 JavaScript (ES6+)
-- **Styling**: TailwindCSS (CDN 版本，减少构建复杂度)
+- **Styling**: 原生 CSS（包含响应式与主题样式）
 - **API**: Chrome Bookmarks API
-- **Storage**: 浏览器原生书签存储 (零额外存储)
+- **Storage**: chrome.storage.local（仅用于缓存与设置，不存用户内容）
 
 ## 2. 代码规范
 
@@ -212,26 +212,28 @@ class SortingAlgorithm {
 smart-bookmark-extension/
 ├── manifest.json                 # 扩展配置
 ├── src/
-│   ├── core/                     # 核心模块
-│   │   ├── bookmark-api.js      # 书签API封装
-│   │   ├── modal-manager.js     # Modal管理器
-│   │   ├── search-engine.js     # 搜索引擎
-│   │   └── sorting-algorithm.js # 排序算法
+│   ├── background.js             # 后台脚本
+│   ├── content-script.js         # 内容脚本入口
 │   ├── components/               # UI组件
-│   │   ├── bookmark-modal.js    # 主Modal组件
-│   │   ├── search-bar.js        # 搜索栏组件
-│   │   ├── folder-list.js       # 文件夹列表组件
-│   │   └── toast.js            # 提示消息组件
+│   │   ├── virtual-scroller.js   # 虚拟滚动组件
+│   │   ├── ui-manager.js         # UI状态管理
+│   │   ├── theme-manager.js      # 主题管理
+│   │   ├── keyboard-manager.js   # 键盘导航
+│   │   └── language-manager.js   # 多语言
+│   ├── modal/                    # Modal控制器
+│   │   └── modal-manager.js      # 主控制器
 │   ├── utils/                    # 工具函数
-│   │   ├── constants.js         # 常量定义
-│   │   ├── helpers.js           # 辅助函数
-│   │   └── cache.js             # 简单缓存
-│   ├── content-script.js        # 内容脚本入口
+│   │   ├── bookmark-api.js       # 书签API封装
+│   │   ├── constants.js          # 常量定义
+│   │   ├── helpers.js            # 辅助函数
+│   │   ├── search-engine.js      # 搜索引擎
+│   │   ├── sorting-algorithm.js  # 排序算法
+│   │   ├── pin-manager.js        # 置顶管理
+│   │   └── query-history.js      # 查询历史
 │   └── styles/
-│       └── modal.css            # 组件样式
+│       └── modal.css             # 组件样式
 ├── icons/                       # 扩展图标
 ├── docs/                        # 文档
-└── tests/                       # 测试文件
 ```
 
 ### 4.2 依赖管理
@@ -239,41 +241,22 @@ smart-bookmark-extension/
 由于采用零依赖策略，所有代码均为原生实现：
 
 - 使用原生 JavaScript API
-- 使用 TailwindCSS CDN
+- 使用原生 CSS
 - 使用 Chrome 原生 API
 
 ## 5. 测试策略
 
-### 5.1 单元测试
+### 5.1 手动验证（当前无自动化测试）
 
-```javascript
-// 示例：BookmarkAPI测试
-describe("BookmarkAPI", () => {
-  test("should fetch all folders", async () => {
-    const api = new BookmarkAPI();
-    const folders = await api.getAllFolders();
-    expect(Array.isArray(folders)).toBe(true);
-    expect(folders.every((f) => !f.url)).toBe(true);
-  });
+- 验证书签读取、搜索、创建流程
+- 验证缓存与刷新机制
+- 验证主题/语言切换与持久化
 
-  test("should create bookmark correctly", async () => {
-    const api = new BookmarkAPI();
-    const bookmark = await api.createBookmark(
-      "folder1",
-      "Test",
-      "https://example.com"
-    );
-    expect(bookmark.title).toBe("Test");
-    expect(bookmark.url).toBe("https://example.com");
-  });
-});
-```
-
-### 5.2 集成测试
+### 5.2 端到端验证
 
 - 测试 Modal 与书签 API 的完整流程
 - 测试搜索功能的准确性
-- 测试快捷键触发机制
+- 测试扩展图标或自定义快捷键触发机制（默认未设置）
 - 测试跨页面兼容性
 
 ### 5.3 性能测试
@@ -426,7 +409,9 @@ function validateBookmarkData(title, url) {
 ```javascript
 // 快速重置扩展状态
 function resetExtension() {
-  localStorage.clear();
+  if (chrome.storage && chrome.storage.local) {
+    chrome.storage.local.clear();
+  }
   location.reload();
 }
 

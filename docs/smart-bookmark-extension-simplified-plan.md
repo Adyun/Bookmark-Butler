@@ -4,6 +4,8 @@
 
 一个极简的浏览器扩展，直接调用 Edge/Chrome 原生书签 API，无需后端存储，实现智能收藏夹功能。
 
+> 说明：本文档为早期简化规划。当前实现已升级为组件化架构，包含 `background.js`、Shadow DOM、以及 `chrome.storage.local` 的轻量缓存/设置。全局快捷键默认未设置，需在 `chrome://extensions/shortcuts` 中配置。
+
 ## 核心需求（简化版）
 
 - **主要功能**：使用 Edge/Chrome 原生书签 API，无需数据存储
@@ -18,14 +20,13 @@
 - **Chrome Extension Manifest V3**
 - **TypeScript**（可选，简化开发）
 - **原生 JavaScript**（推荐，减少复杂度）
-- **TailwindCSS**（轻量级样式）
+- **原生 CSS**（轻量级样式）
 - **Chrome Bookmarks API**（直接调用）
 
 ### 架构简化
 
 - ❌ 移除 IndexedDB 存储
-- ❌ 移除后台脚本
-- ❌ 移除数据同步
+- ✅ 使用后台脚本处理注入、缓存失效与书签变更广播
 - ✅ 直接使用 chrome.bookmarks API
 - ✅ 实时读取现有书签结构
 
@@ -35,20 +36,15 @@
 smart-bookmark-extension/
 ├── manifest.json              # 扩展配置
 ├── src/
-│   ├── content-script.js      # 内容脚本（唯一脚本）
-│   ├── modal/                 # Modal组件
-│   │   ├── bookmark-modal.js
-│   │   ├── search-bar.js
-│   │   └── folder-list.js
-│   └── utils/
-│       └── bookmark-api.js    # 书签API封装
-├── styles/
-│   └── modal.css              # 样式文件
-├── icons/
-│   ├── icon16.png
-│   ├── icon48.png
-│   └── icon128.png
-└── popup.html                 # 简单设置页面
+│   ├── background.js          # 后台脚本
+│   ├── content-script.js      # 内容脚本入口
+│   ├── components/            # 组件化目录
+│   ├── modal/                 # Modal控制器
+│   ├── utils/                 # 工具函数
+│   └── styles/
+│       └── modal.css          # 样式文件
+├── icons/                     # 扩展图标
+└── docs/                      # 文档
 ```
 
 ## 核心 API 使用
@@ -105,7 +101,7 @@ chrome.bookmarks.search(searchTerm, (results) => {
 
 ### 阶段 3：优化体验（1 天）
 
-- [ ] 添加键盘快捷键
+- [ ] 支持扩展图标与可选自定义快捷键（默认未设置）
 - [ ] 优化搜索响应
 - [ ] 美化界面样式
 
@@ -115,14 +111,14 @@ chrome.bookmarks.search(searchTerm, (results) => {
 
 - Edge 88+
 - Chrome 88+
-- 无需额外权限，只需`bookmarks`权限
+- 需 `bookmarks`、`activeTab`、`storage`、`scripting`、`notifications` 权限
 
-## 所需权限（最小化）
+## 所需权限（以 manifest 为准）
 
 ```json
 {
-  "permissions": ["bookmarks", "activeTab"],
-  "host_permissions": []
+  "permissions": ["bookmarks", "activeTab", "storage", "scripting", "notifications"],
+  "host_permissions": ["<all_urls>"]
 }
 ```
 
@@ -138,11 +134,9 @@ chrome.bookmarks.search(searchTerm, (results) => {
 ### Modal 触发
 
 ```javascript
-// content-script.js
-document.addEventListener("keydown", (e) => {
-  if (e.ctrlKey && e.shiftKey && e.key === "D") {
-    showBookmarkModal();
-  }
+// background.js（支持扩展图标点击与自定义快捷键 _execute_action）
+chrome.action.onClicked.addListener((tab) => {
+  // 触发内容脚本显示 Modal
 });
 ```
 
@@ -187,7 +181,7 @@ async function addBookmark(folderId, title, url) {
 
 ## 优势
 
-- **零存储**：不占用额外存储空间
+- **轻量存储**：仅用于缓存与设置
 - **零配置**：直接使用现有书签
 - **零维护**：无需数据同步和备份
 - **兼容性**：完美兼容所有 Chrome 内核浏览器
