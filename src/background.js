@@ -522,7 +522,12 @@ function injectContentScript(tabId, originalMessage) {
             'src/components/theme-manager.js',
             'src/components/keyboard-manager.js',
             'src/components/language-manager.js',
-            'src/modal/modal-manager.js',
+            'src/modal/modal-manager-core.js',
+            'src/modal/modal-manager-data.js',
+            'src/modal/modal-manager-search.js',
+            'src/modal/modal-manager-render.js',
+            'src/modal/modal-manager-navigation.js',
+            'src/modal/modal-manager-export.js',
             'src/content-script.js'
           ]
         }).then(() => {
