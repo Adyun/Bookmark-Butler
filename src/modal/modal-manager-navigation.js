@@ -30,7 +30,7 @@ ModalManager.prototype.enterFolder = function (folderId, folderTitle) {
   }
 
   // 获取文件夹内容（子文件夹 + 书签）
-  Promise.all([
+  return Promise.all([
     window.SMART_BOOKMARK_API.getSubFolders(folderId),
     window.SMART_BOOKMARK_API.getBookmarksByFolder(folderId)
   ]).then(function (results) {
@@ -215,6 +215,302 @@ ModalManager.prototype.isSpecialUrl = function (url) {
 };
 
 /**
+ * 主动关闭重复书签对话框
+ */
+ModalManager.prototype.dismissDuplicateDialog = function () {
+  if (typeof this.duplicateDialogCleanup === 'function') {
+    this.duplicateDialogCleanup();
+  }
+};
+
+/**
+ * 检查重复书签（全局范围，URL 标准化匹配）
+ * @param {string} url - 要检查的 URL
+ * @returns {Promise<Array>} 匹配的重复书签列表
+ */
+ModalManager.prototype.checkDuplicateBookmarks = function (url) {
+  var normalizedUrl = window.SMART_BOOKMARK_HELPERS.normalizeUrl(url);
+  if (!normalizedUrl) {
+    return Promise.resolve([]);
+  }
+
+  return window.SMART_BOOKMARK_API.getAllBookmarks().then(function (allBookmarks) {
+    var duplicates = [];
+    for (var i = 0; i < allBookmarks.length; i++) {
+      if (window.SMART_BOOKMARK_HELPERS.normalizeUrl(allBookmarks[i].url) === normalizedUrl) {
+        duplicates.push(allBookmarks[i]);
+      }
+    }
+    return duplicates;
+  });
+};
+
+/**
+ * 显示重复书签确认对话框
+ * @param {Array} duplicates - 重复书签列表
+ * @returns {Promise<string>} 用户操作：'cancel' | 'add' | 'jump'
+ */
+ModalManager.prototype.showDuplicateDialog = function (duplicates) {
+  var self = this;
+
+  this.dismissDuplicateDialog();
+
+  return new Promise(function (resolve) {
+    var root = self.getRoot();
+
+    // 构建重复项列表
+    var itemsHtml = '';
+    for (var i = 0; i < duplicates.length; i++) {
+      var dup = duplicates[i];
+      var breadcrumb = self.generateBreadcrumb(dup.parentId);
+      var pathText = breadcrumb
+        ? breadcrumb.replace(/<[^>]*>/g, '')
+        : (self.languageManager.t('rootDirectory'));
+
+      itemsHtml +=
+        '<li class="smart-bookmark-duplicate-item">' +
+          '<div class="smart-bookmark-duplicate-item-title">' + self.escapeHtml(dup.title) + '</div>' +
+          '<div class="smart-bookmark-duplicate-item-path">' + self.escapeHtml(pathText) + '</div>' +
+        '</li>';
+    }
+
+    var titleText = duplicates.length === 1
+      ? self.languageManager.t('duplicateFound')
+      : self.languageManager.t('duplicatesFound').replace('{count}', duplicates.length);
+
+    var overlay = document.createElement('div');
+    overlay.className = 'smart-bookmark-duplicate-overlay';
+    overlay.style.pointerEvents = 'auto';
+    overlay.setAttribute('role', 'presentation');
+    overlay.innerHTML =
+      '<div class="smart-bookmark-duplicate-dialog" role="dialog" aria-modal="true">' +
+        '<div class="smart-bookmark-duplicate-header">' +
+          '<span class="smart-bookmark-duplicate-icon">\u26A0\uFE0F</span>' +
+          '<h3 class="smart-bookmark-duplicate-title">' + titleText + '</h3>' +
+        '</div>' +
+        '<div class="smart-bookmark-duplicate-body">' +
+          '<div class="smart-bookmark-duplicate-message">' + self.languageManager.t('duplicateMessage') + '</div>' +
+          '<ul class="smart-bookmark-duplicate-list">' + itemsHtml + '</ul>' +
+        '</div>' +
+        '<div class="smart-bookmark-duplicate-footer">' +
+          '<button class="smart-bookmark-btn smart-bookmark-btn-secondary" data-action="cancel">' +
+            self.languageManager.t('duplicateCancel') +
+          '</button>' +
+          '<button class="smart-bookmark-btn smart-bookmark-btn-secondary" data-action="jump">' +
+            self.languageManager.t('duplicateJumpTo') +
+          '</button>' +
+          '<button class="smart-bookmark-btn smart-bookmark-btn-primary" data-action="add">' +
+            self.languageManager.t('duplicateStillAdd') +
+          '</button>' +
+        '</div>' +
+      '</div>';
+
+    // 重复弹窗挂在 ShadowRoot 下，不会继承 modal 上的 --sb-* 变量；显式同步以适配主题/暗色模式
+    var modalElement = root.getElementById(window.SMART_BOOKMARK_CONSTANTS.MODAL_ID);
+    if (modalElement && window.getComputedStyle) {
+      try {
+        var modalStyles = window.getComputedStyle(modalElement);
+        var themeVarKeys = [
+          '--sb-background',
+          '--sb-foreground',
+          '--sb-muted',
+          '--sb-muted-foreground',
+          '--sb-border',
+          '--sb-input',
+          '--sb-primary',
+          '--sb-primary-foreground',
+          '--sb-primary-hover',
+          '--sb-secondary',
+          '--sb-secondary-foreground',
+          '--sb-accent',
+          '--sb-accent-foreground',
+          '--sb-ring',
+          '--sb-ring-light',
+          '--sb-radius'
+        ];
+        for (var p = 0; p < themeVarKeys.length; p++) {
+          var propName = themeVarKeys[p];
+          var propValue = modalStyles.getPropertyValue(propName);
+          if (propValue) {
+            overlay.style.setProperty(propName, propValue);
+          }
+        }
+      } catch (e) {
+        // 忽略样式同步失败，走CSS fallback
+      }
+    }
+
+    root.appendChild(overlay);
+    self.isDuplicateDialogOpen = true;
+
+    requestAnimationFrame(function () {
+      overlay.classList.add('active');
+    });
+
+    var settled = false;
+    var buttons = overlay.querySelectorAll('[data-action]');
+    var cleanup = function (skipAnimation) {
+      self.isDuplicateDialogOpen = false;
+      self.duplicateDialogCleanup = null;
+      document.removeEventListener('keydown', documentKeydownHandler, true);
+
+      if (skipAnimation) {
+        if (overlay.parentNode) overlay.remove();
+        return;
+      }
+
+      overlay.classList.remove('active');
+      setTimeout(function () {
+        if (overlay.parentNode) overlay.remove();
+      }, 200);
+    };
+
+    var finish = function (action, skipAnimation) {
+      if (settled) return;
+      settled = true;
+      cleanup(skipAnimation);
+      resolve(action);
+    };
+
+    self.duplicateDialogCleanup = function () {
+      finish('cancel', true);
+    };
+
+    var documentKeydownHandler = function (e) {
+      if (!self.isDuplicateDialogOpen) return;
+
+      var key = e.key;
+      var blockedKeys = {
+        Escape: true,
+        Backspace: true,
+        ' ': true,
+        Enter: true,
+        ArrowUp: true,
+        ArrowDown: true,
+        Home: true,
+        End: true,
+        PageUp: true,
+        PageDown: true,
+        Tab: true
+      };
+
+      if (key === 'Tab') {
+        if (buttons.length > 0) {
+          var activeElement = (root && root.activeElement) || document.activeElement;
+          var currentIndex = -1;
+          for (var i = 0; i < buttons.length; i++) {
+            if (buttons[i] === activeElement) {
+              currentIndex = i;
+              break;
+            }
+          }
+          var nextIndex;
+          if (e.shiftKey) {
+            nextIndex = currentIndex <= 0 ? buttons.length - 1 : currentIndex - 1;
+          } else {
+            nextIndex = currentIndex >= buttons.length - 1 ? 0 : currentIndex + 1;
+          }
+          buttons[nextIndex].focus();
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+        return;
+      }
+
+      if (key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+        finish('cancel');
+        return;
+      }
+
+      if (key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+
+        var active = (root && root.activeElement) || document.activeElement;
+        if (active && typeof active.closest === 'function') {
+          var actionElement = active.closest('[data-action]');
+          if (actionElement) {
+            finish(actionElement.getAttribute('data-action'));
+          }
+        }
+        return;
+      }
+
+      if (blockedKeys[key]) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+      }
+    };
+
+    document.addEventListener('keydown', documentKeydownHandler, true);
+
+    for (var j = 0; j < buttons.length; j++) {
+      buttons[j].addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        finish(this.getAttribute('data-action'));
+      });
+    }
+
+    overlay.addEventListener('click', function (e) {
+      if (e.target === overlay) {
+        finish('cancel');
+      }
+    });
+
+    if (buttons.length > 0) {
+      buttons[0].focus();
+    }
+  });
+};
+
+/**
+ * 跳转到已有书签所在的文件夹并高亮
+ * @param {Object} bookmark - 已有书签对象
+ */
+ModalManager.prototype.jumpToExistingBookmark = function (bookmark) {
+  var self = this;
+  if (!bookmark || !bookmark.id || !bookmark.parentId) return;
+
+  // 切换到书签搜索模式（仅切UI，避免触发loadBookmarks覆盖enterFolder结果）
+  if (this.uiManager.currentMode !== window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH) {
+    this.cancelPendingSearch();
+    this.uiManager.setMode(window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH);
+    this.keyboardManager.setMode(window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH);
+
+    var filterBar = this.getRoot().getElementById('smart-bookmark-filter-bar');
+    if (filterBar) {
+      filterBar.style.display = '';
+    }
+  }
+
+  var parentFolder = this.findFolderById(bookmark.parentId);
+  var folderTitle = parentFolder ? parentFolder.title : '';
+
+  this.enterFolder(bookmark.parentId, folderTitle).then(function () {
+    // updateBookmarkList 内有 setTimeout(50ms) 自动选中第一项，
+    // 需要在其之后再设置目标索引
+    setTimeout(function () {
+      var items = self.filteredBookmarks;
+      for (var i = 0; i < items.length; i++) {
+        if (items[i].id === bookmark.id) {
+          self.keyboardManager.setSelectedIndex(i);
+          break;
+        }
+      }
+    }, 100);
+  }).catch(function (error) {
+    console.error('Failed to jump to existing bookmark:', error);
+  });
+};
+
+/**
  * 处理确认操作
  */
 
@@ -254,25 +550,87 @@ ModalManager.prototype.handleConfirm = function () {
     }
   } else {
     // 文件夹选择模式：添加书签到选中的文件夹
+    if (this.isDuplicateCheckInProgress || this.isDuplicateDialogOpen) {
+      return;
+    }
+
     var selectedFolder = this.getRoot().querySelector('.smart-bookmark-folder-item.active');
     if (!selectedFolder || !this.currentPageInfo) {
       return;
     }
 
+    this.isDuplicateCheckInProgress = true;
     var folderId = selectedFolder.getAttribute('data-folder-id');
     var self = this;
-    var startTime = performance.now();
+    var pageTitle = this.currentPageInfo.title;
+    var pageUrl = this.currentPageInfo.url;
+    var isFlowActive = function () {
+      return !!(self.uiManager && self.uiManager.isModalVisible && self.currentPageInfo && self.currentPageInfo.url === pageUrl);
+    };
 
-    window.SMART_BOOKMARK_API.createBookmark(folderId, this.currentPageInfo.title, this.currentPageInfo.url)
-      .then(function () {
-        var endTime = performance.now();
-        // console.log('Create bookmark took ' + (endTime - startTime) + ' milliseconds');
-        window.SMART_BOOKMARK_HELPERS.showToast(self.languageManager.t('bookmarkAdded'));
-        self.hide();
+    var doCreate = function () {
+      if (!isFlowActive()) {
+        self.isDuplicateCheckInProgress = false;
+        return;
+      }
+      window.SMART_BOOKMARK_API.createBookmark(folderId, pageTitle, pageUrl)
+        .then(function () {
+          self.isDuplicateCheckInProgress = false;
+          window.SMART_BOOKMARK_HELPERS.showToast(self.languageManager.t('bookmarkAdded'));
+          self.hide();
+        })
+        .catch(function (error) {
+          self.isDuplicateCheckInProgress = false;
+          console.error('Failed to create bookmark:', error);
+          window.SMART_BOOKMARK_HELPERS.showToast(self.languageManager.t('bookmarkAddFailed'), true);
+        });
+    };
+
+    var duplicateCheckPromise;
+    try {
+      duplicateCheckPromise = this.checkDuplicateBookmarks(pageUrl);
+    } catch (syncError) {
+      console.error('Duplicate check failed:', syncError);
+      doCreate();
+      return;
+    }
+
+    Promise.resolve(duplicateCheckPromise)
+      .then(function (duplicates) {
+        if (!isFlowActive()) {
+          self.isDuplicateCheckInProgress = false;
+          return;
+        }
+
+        if (duplicates.length === 0) {
+          doCreate();
+          return;
+        }
+
+        self.showDuplicateDialog(duplicates).then(function (action) {
+          if (!isFlowActive()) {
+            self.isDuplicateCheckInProgress = false;
+            return;
+          }
+
+          if (action === 'add') {
+            doCreate();
+          } else if (action === 'jump') {
+            self.isDuplicateCheckInProgress = false;
+            self.jumpToExistingBookmark(duplicates[0]);
+          } else {
+            self.isDuplicateCheckInProgress = false;
+          }
+        }).catch(function (dialogError) {
+          // 对话框渲染/交互失败时降级为直接创建
+          console.error('Duplicate dialog failed:', dialogError);
+          doCreate();
+        });
       })
       .catch(function (error) {
-        console.error('Failed to create bookmark:', error);
-        window.SMART_BOOKMARK_HELPERS.showToast(self.languageManager.t('bookmarkAddFailed'), true);
+        // 重复检测失败，降级为直接创建
+        console.error('Duplicate check failed:', error);
+        doCreate();
       });
   }
 };

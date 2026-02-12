@@ -1323,3 +1323,121 @@
   color: var(--sb-muted-foreground);
   margin-left: 4px;
 }
+
+/* Duplicate Detection Dialog */
+.smart-bookmark-duplicate-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease-out;
+}
+
+.smart-bookmark-duplicate-overlay.active {
+  opacity: 1;
+}
+
+.smart-bookmark-duplicate-dialog {
+  background: var(--sb-background, #ffffff);
+  border: 1px solid var(--sb-border, #e2e8f0);
+  border-radius: var(--sb-radius, 8px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15);
+  width: 420px;
+  max-width: 90vw;
+  max-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  transform: scale(0.95);
+  transition: transform 0.2s ease-out;
+}
+
+.smart-bookmark-duplicate-overlay.active .smart-bookmark-duplicate-dialog {
+  transform: scale(1);
+}
+
+.smart-bookmark-duplicate-header {
+  padding: 20px 20px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.smart-bookmark-duplicate-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.smart-bookmark-duplicate-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--sb-foreground, #0f172a);
+  margin: 0;
+}
+
+.smart-bookmark-duplicate-body {
+  padding: 0 20px 16px;
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.smart-bookmark-duplicate-message {
+  font-size: 13px;
+  color: var(--sb-muted-foreground, #64748b);
+  margin-bottom: 12px;
+}
+
+.smart-bookmark-duplicate-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.smart-bookmark-duplicate-item {
+  padding: 10px 12px;
+  background: var(--sb-muted, #f8fafc);
+  border-radius: calc(var(--sb-radius, 8px) - 2px);
+  border: 1px solid var(--sb-border, #e2e8f0);
+}
+
+.smart-bookmark-duplicate-item-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--sb-foreground, #0f172a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.smart-bookmark-duplicate-item-path {
+  font-size: 11px;
+  color: var(--sb-muted-foreground, #64748b);
+  margin-top: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.smart-bookmark-duplicate-footer {
+  padding: 16px 20px;
+  border-top: 1px solid var(--sb-border, #e2e8f0);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.smart-bookmark-duplicate-footer .smart-bookmark-btn {
+  font-size: 13px;
+  padding: 6px 14px;
+}

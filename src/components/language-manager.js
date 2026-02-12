@@ -34,6 +34,14 @@ function LanguageManager() {
       permissionFailed: '权限获取失败，请手动在扩展管理页面授予权限',
       permissionRequestFailed: '权限请求失败，请手动在扩展管理页面授予权限',
 
+      // 重复检测
+      duplicateFound: '发现重复书签',
+      duplicatesFound: '发现 {count} 个重复书签',
+      duplicateMessage: '以下位置已存在相同的书签：',
+      duplicateCancel: '取消',
+      duplicateStillAdd: '仍然添加',
+      duplicateJumpTo: '跳转到已有书签',
+
       // 主题和语言设置
       themeSettings: '主题设置',
       languageSettings: '语言设置',
@@ -83,6 +91,14 @@ function LanguageManager() {
       specialUrlWarning: 'Cannot open special URL, please visit manually in browser',
       permissionFailed: 'Permission request failed, please grant manually in extension management page',
       permissionRequestFailed: 'Permission request failed, please grant manually in extension management page',
+
+      // Duplicate detection
+      duplicateFound: 'Duplicate Bookmark Found',
+      duplicatesFound: '{count} Duplicate Bookmarks Found',
+      duplicateMessage: 'This bookmark already exists in:',
+      duplicateCancel: 'Cancel',
+      duplicateStillAdd: 'Add Anyway',
+      duplicateJumpTo: 'Jump to Existing',
 
       // Theme and language settings
       themeSettings: 'Theme Settings',

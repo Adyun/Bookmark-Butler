@@ -42,6 +42,9 @@ function ModalManager() {
   this.filterTypes = ['all', 'bookmark', 'folder']; // 可用筛选类型列表
   this.dynamicDebouncedSearch = null;
   this.searchGeneration = 0;
+  this.isDuplicateCheckInProgress = false;
+  this.isDuplicateDialogOpen = false;
+  this.duplicateDialogCleanup = null;
 
   this.init();
 }
@@ -483,6 +486,7 @@ ModalManager.prototype.updateUserActivity = function () {
 ModalManager.prototype.show = function (pageInfo) {
   var startTime = performance.now();
 
+  this.isDuplicateCheckInProgress = false;
   this.currentPageInfo = pageInfo;
 
   // 显示Modal
@@ -520,6 +524,10 @@ ModalManager.prototype.show = function (pageInfo) {
  */
 
 ModalManager.prototype.hide = function () {
+  if (typeof this.dismissDuplicateDialog === 'function') {
+    this.dismissDuplicateDialog();
+  }
+  this.isDuplicateCheckInProgress = false;
   this.uiManager.hideModal();
   this.keyboardManager.setModalVisible(false);
   this.currentPageInfo = null;
@@ -633,6 +641,11 @@ ModalManager.prototype.clearBreadcrumbCache = function () {
  */
 
 ModalManager.prototype.cleanup = function () {
+  if (typeof this.dismissDuplicateDialog === 'function') {
+    this.dismissDuplicateDialog();
+  }
+  this.isDuplicateCheckInProgress = false;
+
   // 清理组件
   if (this.uiManager) {
     this.uiManager.cleanup();
@@ -675,4 +688,3 @@ ModalManager.prototype.cleanup = function () {
   // 清理面包屑缓存
   this.clearBreadcrumbCache();
 };
-

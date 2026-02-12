@@ -127,11 +127,36 @@
     return 0;
   };
 
+  var normalizeUrl = function (url) {
+    if (!url) return '';
+    try {
+      var urlObj = new URL(url);
+      var hostname = urlObj.hostname.toLowerCase().replace(/^www\./, '');
+      var port = urlObj.port;
+      if (port) {
+        var isDefaultHttpPort = urlObj.protocol === 'http:' && port === '80';
+        var isDefaultHttpsPort = urlObj.protocol === 'https:' && port === '443';
+        if (!isDefaultHttpPort && !isDefaultHttpsPort) {
+          hostname += ':' + port;
+        }
+      }
+      var pathname = urlObj.pathname.replace(/\/+$/, '') || '';
+      return hostname + pathname;
+    } catch (e) {
+      return url.toLowerCase()
+        .replace(/^https?:\/\//, '')
+        .replace(/^www\./, '')
+        .replace(/[?#].*$/, '')
+        .replace(/\/+$/, '');
+    }
+  };
+
   window.SMART_BOOKMARK_HELPERS = {
     showToast: showToast,
     debounce: debounce,
     extractFolders: extractFolders,
-    calculateSearchScore: calculateSearchScore
+    calculateSearchScore: calculateSearchScore,
+    normalizeUrl: normalizeUrl
   };
 
 })(window, document);
