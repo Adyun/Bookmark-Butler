@@ -19,6 +19,8 @@ const memoryManager = {
   observers: [],
   intervals: [],
   timeouts: [],
+  periodicCleanupInterval: null,
+  periodicMaintenanceInterval: null,
 
   init() {
     // console.log("Initializing memory manager");
@@ -109,17 +111,28 @@ const memoryManager = {
    * 设置定期清理 - 优化版本，避免在使用时清理
    */
   setupPeriodicCleanup() {
+    // 避免重复注册同一批定时任务
+    if (this.periodicCleanupInterval) {
+      clearInterval(this.periodicCleanupInterval);
+      this.periodicCleanupInterval = null;
+    }
+    if (this.periodicMaintenanceInterval) {
+      clearInterval(this.periodicMaintenanceInterval);
+      this.periodicMaintenanceInterval = null;
+    }
+
     // 每2分钟清理一次过期数据（但不在Modal显示时）
-    const cleanupInterval = this.setInterval(() => {
+    this.periodicCleanupInterval = setInterval(() => {
       if (!this.modalManager || !this.modalManager.isModalVisible()) {
         this.cleanup();
       }
     }, 2 * 60 * 1000);
 
-    // 每10分钟深度清理（但不在Modal显示时）
-    const deepCleanupInterval = this.setInterval(() => {
+    // 每10分钟做一次轻量维护（但不在Modal显示时）
+    // 注意：这里不能调用 deepCleanup，否则会销毁 modalManager，导致后续无法打开弹窗
+    this.periodicMaintenanceInterval = setInterval(() => {
       if (!this.modalManager || !this.modalManager.isModalVisible()) {
-        this.deepCleanup();
+        this.reduceMemoryUsage();
       }
     }, 10 * 60 * 1000);
   },
@@ -198,32 +211,41 @@ const memoryManager = {
    */
   cleanup() {
     this.reduceMemoryUsage();
-
-    // 清理过期的超时和间隔
-    const now = Date.now();
-    this.timeouts = this.timeouts.filter(id => {
-      try {
-        clearTimeout(id);
-        return false;
-      } catch (e) {
-        return true; // 已经被清理
-      }
-    });
-
-    this.intervals = this.intervals.filter(id => {
-      try {
-        clearInterval(id);
-        return false;
-      } catch (e) {
-        return true; // 已经被清理
-      }
-    });
   },
 
   /**
    * 深度清理
    */
   deepCleanup() {
+    // 停止周期性任务，防止卸载后仍有后台定时器运行
+    if (this.periodicCleanupInterval) {
+      clearInterval(this.periodicCleanupInterval);
+      this.periodicCleanupInterval = null;
+    }
+    if (this.periodicMaintenanceInterval) {
+      clearInterval(this.periodicMaintenanceInterval);
+      this.periodicMaintenanceInterval = null;
+    }
+
+    // 清理所有通过包装器创建的超时与间隔
+    this.timeouts.forEach(id => {
+      try {
+        clearTimeout(id);
+      } catch (e) {
+        // 忽略已经被清理的计时器
+      }
+    });
+    this.timeouts = [];
+
+    this.intervals.forEach(id => {
+      try {
+        clearInterval(id);
+      } catch (e) {
+        // 忽略已经被清理的计时器
+      }
+    });
+    this.intervals = [];
+
     // 清理事件监听器
     this.eventListeners.forEach(({ element, event, handler }) => {
       try {

@@ -98,7 +98,7 @@ KeyboardManager.prototype.handleKeyDown = function (e) {
 
     case ' ': // 空格键
       // 如果搜索框为空，切换模式
-      if (searchInput && searchInput.value.trim() === '') {
+      if (!e.repeat && searchInput && searchInput.value.trim() === '') {
         e.preventDefault();
         if (this.onModeToggle) {
           this.onModeToggle();

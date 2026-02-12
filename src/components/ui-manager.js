@@ -30,7 +30,8 @@ UIManager.prototype.createModal = function () {
 
     // 检查 shadowRoot 是否存在且包含 modal 元素
     if (this.shadowRoot && this.shadowRoot.getElementById(window.SMART_BOOKMARK_CONSTANTS.MODAL_ID)) {
-      // Modal 已存在，直接使用
+      // Modal 已存在，确保全局引用正确后直接使用
+      window.smartBookmarkShadowRoot = this.shadowRoot;
       return;
     }
 

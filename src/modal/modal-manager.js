@@ -38,6 +38,8 @@ function ModalManager() {
   // 标签筛选器状态
   this.currentFilter = 'all';       // 当前筛选类型
   this.filterTypes = ['all', 'bookmark', 'folder']; // 可用筛选类型列表
+  this.dynamicDebouncedSearch = null;
+  this.searchGeneration = 0;
 
   this.init();
 }
@@ -231,7 +233,7 @@ ModalManager.prototype.bindEvents = function () {
   // 搜索输入事件（动态防抖）
   var searchInput = this.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
   if (searchInput) {
-    var dynamicDebouncedSearch = this.debounceDynamic(function (query) {
+    this.dynamicDebouncedSearch = this.debounceDynamic(function (query) {
       self.handleSearch(query);
       // 搜索输入触发：下一次渲染需要动画
       if (self.folderVirtualScroller) self.folderVirtualScroller.shouldAnimateOnNextRender = true;
@@ -240,7 +242,7 @@ ModalManager.prototype.bindEvents = function () {
 
     addEventListenerFn(searchInput, 'input', function (e) {
       self.updateUserActivity(); // 记录用户活动
-      dynamicDebouncedSearch(e.target.value);
+      self.dynamicDebouncedSearch(e.target.value);
     });
 
     // 监听其他用户交互
@@ -400,7 +402,7 @@ ModalManager.prototype.debounce = function (func, delay) {
  */
 ModalManager.prototype.debounceDynamic = function (func, getDelay) {
   var timeoutId;
-  return function () {
+  var debounced = function () {
     var args = arguments;
     var context = this;
     clearTimeout(timeoutId);
@@ -410,6 +412,11 @@ ModalManager.prototype.debounceDynamic = function (func, getDelay) {
       func.apply(context, args);
     }, delay);
   };
+  debounced.cancel = function () {
+    clearTimeout(timeoutId);
+    timeoutId = null;
+  };
+  return debounced;
 };
 
 /**
@@ -428,6 +435,16 @@ ModalManager.prototype.getSearchDebounceDelay = function () {
   if (len > 2000) return 600;
   if (len > 1000) return 500;
   return base; // 400ms
+};
+
+/**
+ * 取消待执行搜索，并让旧搜索结果失效
+ */
+ModalManager.prototype.cancelPendingSearch = function () {
+  if (this.dynamicDebouncedSearch && typeof this.dynamicDebouncedSearch.cancel === 'function') {
+    this.dynamicDebouncedSearch.cancel();
+  }
+  this.searchGeneration++;
 };
 
 /**
@@ -854,6 +871,7 @@ ModalManager.prototype.goBack = function () {
 ModalManager.prototype.handleSearch = function (query) {
   var startTime = performance.now();
   var self = this;
+  var searchGeneration = ++this.searchGeneration;
 
 
 
@@ -894,6 +912,10 @@ ModalManager.prototype.handleSearch = function (query) {
       if (bookmarkIds.length > 0) {
         window.SMART_BOOKMARK_QUERY_HISTORY.getBatchBoostScores(queryTrimmed, bookmarkIds)
           .then(function (boostScores) {
+            if (searchGeneration !== self.searchGeneration ||
+              self.uiManager.currentMode !== window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH) {
+              return;
+            }
             // 叠加历史加成分数
             for (var i = 0; i < self.filteredBookmarks.length; i++) {
               var item = self.filteredBookmarks[i];
@@ -929,6 +951,7 @@ ModalManager.prototype.handleSearch = function (query) {
 
   // 计算新高度并应用动画
   setTimeout(function () {
+    if (searchGeneration !== self.searchGeneration) return;
     if (modal) {
       // 临时设置为auto来测量新高度
       modal.style.height = 'auto';
@@ -952,6 +975,7 @@ ModalManager.prototype.handleSearch = function (query) {
 
   // 延迟设置选中索引，确保虚拟滚动器完全渲染后再进行选择
   setTimeout(function () {
+    if (searchGeneration !== self.searchGeneration) return;
     if (self.uiManager.currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH) {
       if (self.filteredBookmarks.length > 0) {
         self.keyboardManager.setSelectedIndex(0);
@@ -1713,6 +1737,7 @@ ModalManager.prototype.handleConfirm = function () {
  * @param {string} mode - 模式类型
  */
 ModalManager.prototype.setMode = function (mode) {
+  this.cancelPendingSearch();
   this.uiManager.setMode(mode);
   this.keyboardManager.setMode(mode);
 
@@ -1734,6 +1759,7 @@ ModalManager.prototype.setMode = function (mode) {
  * 切换模式
  */
 ModalManager.prototype.toggleMode = function () {
+  this.cancelPendingSearch();
   this.uiManager.toggleMode();
   this.keyboardManager.setMode(this.uiManager.currentMode);
 
