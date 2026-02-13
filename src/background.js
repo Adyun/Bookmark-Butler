@@ -160,6 +160,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true; // 保持消息通道开放，以便异步发送响应
   }
 
+  if (request.action === "deleteBookmark") {
+    // 删除书签
+    chrome.bookmarks.remove(request.bookmarkId, () => {
+      if (chrome.runtime.lastError) {
+        console.error("Error deleting bookmark:", chrome.runtime.lastError);
+        sendResponse({ error: chrome.runtime.lastError.message });
+      } else {
+        console.log("Bookmark deleted successfully:", request.bookmarkId);
+        sendResponse({ success: true });
+      }
+    });
+
+    return true; // 保持消息通道开放，以便异步发送响应
+  }
+
   if (request.action === "searchBookmarks") {
     // 搜索书签
     chrome.bookmarks.search(request.query, (results) => {

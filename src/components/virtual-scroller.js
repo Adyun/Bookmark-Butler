@@ -17,11 +17,13 @@ function VirtualScroller(container, itemHeight, totalItems, renderItem) {
   this.contentContainer = null;
   this.scrollHandler = null;
   this.hasMeasuredItemHeight = false; // 是否已自动测量真实高度
-  this.shouldAnimateOnNextRender = true; // 仅在首次或数据更新后为true
+  this.enableItemAnimations = false; // 关闭虚拟列表入场动画，减少闪烁与重绘抖动
+  this.shouldAnimateOnNextRender = this.enableItemAnimations; // 仅在首次或数据更新后为true
   this.isRenderScheduled = false; // rAF合帧标记
   this.lastStartIndex = -1; // 上一次渲染的起始索引
   this.lastEndIndex = -1;   // 上一次渲染的结束索引
   this.selectedIndex = -1;  // 当前选中项的索引，用于渲染时添加 active 状态
+  this.suppressResizeRenderUntil = 0; // 搜索更新后短暂抑制 ResizeObserver 二次渲染
 
   this.init();
 }
@@ -33,9 +35,6 @@ function VirtualScroller(container, itemHeight, totalItems, renderItem) {
 VirtualScroller.prototype.setRenderItem = function (renderItem) {
   if (typeof renderItem === 'function') {
     this.renderItem = renderItem;
-    // 下一次渲染启用动画，且立即渲染
-    this.shouldAnimateOnNextRender = true;
-    this.render();
   }
 };
 
@@ -75,7 +74,12 @@ VirtualScroller.prototype.init = function () {
   // 监听容器大小变化
   if (window.ResizeObserver) {
     this.resizeObserver = new ResizeObserver(function () {
+      if (Date.now() < self.suppressResizeRenderUntil) {
+        return;
+      }
       self.updateContainerHeight();
+      // 尺寸变化只做布局重排，不重复触发列表入场动画
+      self.shouldAnimateOnNextRender = false;
       self.render();
     });
     this.resizeObserver.observe(this.container);
@@ -152,7 +156,9 @@ VirtualScroller.prototype.render = function () {
   }
 
   // 如果可见范围未变化且不需要动画，跳过渲染
-  if (this.startIndex === this.lastStartIndex && this.endIndex === this.lastEndIndex && !this.shouldAnimateOnNextRender) {
+  if (this.startIndex === this.lastStartIndex &&
+    this.endIndex === this.lastEndIndex &&
+    (!this.shouldAnimateOnNextRender || !this.enableItemAnimations)) {
     return;
   }
 
@@ -191,7 +197,7 @@ VirtualScroller.prototype.render = function () {
       itemElement.style.left = '0';
 
       // 添加出现动画：仅在允许动画时触发
-      if (this.shouldAnimateOnNextRender) {
+      if (this.enableItemAnimations && this.shouldAnimateOnNextRender) {
         this.addItemAnimation(itemElement, i - this.startIndex);
       }
 
@@ -221,7 +227,9 @@ VirtualScroller.prototype.render = function () {
   if (!this.hasMeasuredItemHeight) {
     this.hasMeasuredItemHeight = true;
     if (measuredMax && Math.abs(measuredMax - this.itemHeight) > 1) {
-      this.setItemHeight(measuredMax);
+      // 高度校准时不再触发第二次入场动画
+      this.setItemHeight(measuredMax, true);
+      return;
     }
   }
 
@@ -245,10 +253,12 @@ VirtualScroller.prototype.render = function () {
 /**
  * 更新数据
  * @param {Array} items - 新的项目数据
+ * @param {boolean} animateOnUpdate - 数据更新时是否播放入场动画（默认 true）
  */
-VirtualScroller.prototype.updateData = function (items) {
+VirtualScroller.prototype.updateData = function (items, animateOnUpdate) {
   this.items = items || [];
   this.totalItems = this.items.length;
+  var shouldAnimate = animateOnUpdate !== false;
   // 数据变化后允许再次自动测量高度
   this.hasMeasuredItemHeight = false;
   // 高度归一化：在搜索清空或返回初始状态时，重置到默认高度，避免因上次测量残留
@@ -257,7 +267,9 @@ VirtualScroller.prototype.updateData = function (items) {
   }
 
   // 数据更新：标记下一次渲染需要动画，并重置动画状态
-  this.shouldAnimateOnNextRender = true;
+  this.shouldAnimateOnNextRender = shouldAnimate && this.enableItemAnimations;
+  // 搜索输入后会伴随高度变化，短暂抑制 ResizeObserver 触发的二次重绘
+  this.suppressResizeRenderUntil = shouldAnimate ? Date.now() + 220 : 0;
   this.resetAnimations();
 
   // 如果有数据且内容容器未挂载，重新挂载
@@ -369,12 +381,19 @@ VirtualScroller.prototype.forceUpdate = function () {
 /**
  * 外部更新项目高度并重算
  * @param {number} newHeight
+ * @param {boolean} suppressAnimation - 是否抑制下次渲染动画
  */
-VirtualScroller.prototype.setItemHeight = function (newHeight) {
+VirtualScroller.prototype.setItemHeight = function (newHeight, suppressAnimation) {
   if (typeof newHeight === 'number' && newHeight > 0) {
     this.itemHeight = newHeight;
+    if (suppressAnimation) {
+      this.shouldAnimateOnNextRender = false;
+    }
     this.updateContainerHeight();
     this.updateVisibleRange();
+    // 即使可视范围没变，itemHeight 变化也需要强制重绘定位
+    this.lastStartIndex = -1;
+    this.lastEndIndex = -1;
     this.render();
   }
 };

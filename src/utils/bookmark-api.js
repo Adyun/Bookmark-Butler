@@ -539,6 +539,56 @@ function getSubFolders(folderId) {
   });
 }
 
+/**
+ * 删除书签
+ * @param {string} bookmarkId - 要删除的书签ID
+ * @returns {Promise<boolean>} 是否删除成功
+ */
+function deleteBookmark(bookmarkId) {
+  return new Promise(function (resolve, reject) {
+    // 检查是否在扩展环境中
+    if (typeof chrome === 'undefined' || !chrome.runtime) {
+      reject(new Error('Chrome runtime not available'));
+      return;
+    }
+
+    // 向后台脚本发送消息删除书签
+    chrome.runtime.sendMessage({
+      action: "deleteBookmark",
+      bookmarkId: bookmarkId
+    }, function (response) {
+      if (chrome.runtime.lastError) {
+        reject(new Error('Failed to communicate with background script: ' + chrome.runtime.lastError.message));
+        return;
+      }
+
+      if (response && response.error) {
+        reject(new Error(response.error));
+        return;
+      }
+
+      if (response && response.success) {
+        // 清除缓存
+        try {
+          if (typeof window !== 'undefined' && window.SMART_BOOKMARK_API && window.SMART_BOOKMARK_API.clearCache) {
+            window.SMART_BOOKMARK_API.clearCache();
+          } else {
+            cache.memory.folders = null;
+            cache.memory.bookmarks = null;
+            cache.memory.foldersLastFetch = 0;
+            cache.memory.bookmarksLastFetch = 0;
+            cache.memory.version = (cache.memory.version || 0) + 1;
+          }
+        } catch (e) { }
+
+        resolve(true);
+      } else {
+        reject(new Error('Invalid response from background script'));
+      }
+    });
+  });
+}
+
 // 将函数附加到全局window对象
 window.SMART_BOOKMARK_API = {
   getAllFolders: getAllFolders,
@@ -546,6 +596,7 @@ window.SMART_BOOKMARK_API = {
   getBookmarksByFolder: getBookmarksByFolder,
   getSubFolders: getSubFolders,
   createBookmark: createBookmark,
+  deleteBookmark: deleteBookmark,
   searchFolders: searchFolders,
   searchBookmarks: searchBookmarks,
   calculateFolderActivity: calculateFolderActivity,

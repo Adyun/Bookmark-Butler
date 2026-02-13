@@ -1441,3 +1441,183 @@
   font-size: 13px;
   padding: 6px 14px;
 }
+
+/* Delete Confirmation Dialog */
+.smart-bookmark-delete-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease-out;
+}
+
+.smart-bookmark-delete-overlay.active {
+  opacity: 1;
+}
+
+.smart-bookmark-delete-dialog {
+  background: var(--sb-background, #ffffff);
+  border: 1px solid var(--sb-border, #e2e8f0);
+  border-radius: var(--sb-radius, 8px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15);
+  width: 380px;
+  max-width: 90vw;
+  display: flex;
+  flex-direction: column;
+  transform: scale(0.95);
+  transition: transform 0.2s ease-out;
+}
+
+.smart-bookmark-delete-overlay.active .smart-bookmark-delete-dialog {
+  transform: scale(1);
+}
+
+.smart-bookmark-delete-header {
+  padding: 20px 20px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.smart-bookmark-delete-icon-large {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.smart-bookmark-delete-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--sb-foreground, #0f172a);
+  margin: 0;
+}
+
+.smart-bookmark-delete-body {
+  padding: 0 20px 16px;
+}
+
+.smart-bookmark-delete-message {
+  font-size: 13px;
+  color: var(--sb-muted-foreground, #64748b);
+  line-height: 1.6;
+}
+
+.smart-bookmark-delete-footer {
+  padding: 16px 20px;
+  border-top: 1px solid var(--sb-border, #e2e8f0);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.smart-bookmark-delete-footer .smart-bookmark-btn {
+  font-size: 13px;
+  padding: 6px 14px;
+}
+
+.smart-bookmark-btn-destructive {
+  background: var(--sb-destructive);
+  color: var(--sb-destructive-foreground);
+  border-color: var(--sb-destructive);
+}
+
+.smart-bookmark-btn-destructive:hover {
+  background: #dc2626;
+}
+
+.smart-bookmark-btn-destructive:focus {
+  outline: 2px solid var(--sb-destructive);
+  outline-offset: 2px;
+}
+
+.smart-bookmark-delete-footer .smart-bookmark-btn.focused {
+  outline: 2px solid var(--sb-ring);
+  outline-offset: 2px;
+}
+
+.smart-bookmark-delete-footer .smart-bookmark-btn-destructive.focused {
+  outline-color: var(--sb-destructive);
+}
+
+/* Context Menu - 右键上下文菜单 */
+.smart-bookmark-context-menu {
+  position: fixed;
+  background: var(--sb-popover);
+  border: 1px solid var(--sb-border);
+  border-radius: 8px;
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  z-index: 10002;
+  min-width: 160px;
+  padding: 4px;
+  opacity: 0;
+  transform: scale(0.95);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+  pointer-events: none;
+}
+
+.dark-mode .smart-bookmark-context-menu {
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.3),
+    0 2px 4px -1px rgba(0, 0, 0, 0.2);
+}
+
+.smart-bookmark-context-menu.show {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+}
+
+.smart-bookmark-context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-radius: 6px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--sb-popover-foreground);
+  transition: background 0.15s ease, color 0.15s ease;
+  margin: 1px 0;
+  user-select: none;
+}
+
+.smart-bookmark-context-menu-item:hover,
+.smart-bookmark-context-menu-item.focused {
+  background: var(--sb-accent);
+  color: var(--sb-accent-foreground);
+}
+
+.smart-bookmark-context-menu-item.destructive {
+  color: var(--sb-destructive);
+}
+
+.smart-bookmark-context-menu-item.destructive:hover,
+.smart-bookmark-context-menu-item.destructive.focused {
+  background: var(--sb-destructive);
+  color: var(--sb-destructive-foreground);
+}
+
+.smart-bookmark-context-menu-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.smart-bookmark-context-menu-separator {
+  height: 1px;
+  background: var(--sb-border);
+  margin: 4px 0;
+}

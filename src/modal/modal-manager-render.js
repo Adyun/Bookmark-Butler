@@ -150,9 +150,8 @@ ModalManager.prototype.renderFolderListWithVirtualScroll = function (folderList,
   }
 
   // 更新虚拟滚动器的数据
-  // 模式切换/首次渲染/搜索后：确保本次渲染播放动画
-  this.folderVirtualScroller.shouldAnimateOnNextRender = true;
-  this.folderVirtualScroller.updateData(itemsToRender);
+  // 文件夹模式下，输入搜索时关闭入场动画，避免结果量变化触发的二次闪烁感
+  this.folderVirtualScroller.updateData(itemsToRender, !hasSearchQuery);
   // 同步键盘管理器的当前项目
   this.keyboardManager.setCurrentItems(itemsToRender);
 };
@@ -414,8 +413,19 @@ ModalManager.prototype.renderBookmarkItem = function (bookmark, index, hasSearch
         });
       });
       actions.appendChild(pinBtn);
+
       item.appendChild(actions);
     } catch (e) { }
+
+    // 右键上下文菜单（仅书签项，不含文件夹和返回按钮）
+    var selfRef2 = this;
+    item.addEventListener('contextmenu', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (typeof selfRef2.showContextMenu === 'function') {
+        selfRef2.showContextMenu(e, bookmark);
+      }
+    });
 
     // 书签点击打开
     item.addEventListener('click', function (e) {

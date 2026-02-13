@@ -34,6 +34,14 @@ function LanguageManager() {
       permissionFailed: '权限获取失败，请手动在扩展管理页面授予权限',
       permissionRequestFailed: '权限请求失败，请手动在扩展管理页面授予权限',
 
+      // 删除书签
+      deleteConfirmTitle: '确认删除',
+      deleteConfirmMessage: '确定要删除书签「{title}」吗？此操作不可撤销。',
+      deleteConfirmBtn: '删除',
+      deleteCancelBtn: '取消',
+      bookmarkDeleted: '书签已删除',
+      bookmarkDeleteFailed: '删除书签失败，请重试',
+
       // 重复检测
       duplicateFound: '发现重复书签',
       duplicatesFound: '发现 {count} 个重复书签',
@@ -91,6 +99,14 @@ function LanguageManager() {
       specialUrlWarning: 'Cannot open special URL, please visit manually in browser',
       permissionFailed: 'Permission request failed, please grant manually in extension management page',
       permissionRequestFailed: 'Permission request failed, please grant manually in extension management page',
+
+      // Delete bookmark
+      deleteConfirmTitle: 'Confirm Delete',
+      deleteConfirmMessage: 'Are you sure you want to delete bookmark "{title}"? This action cannot be undone.',
+      deleteConfirmBtn: 'Delete',
+      deleteCancelBtn: 'Cancel',
+      bookmarkDeleted: 'Bookmark deleted',
+      bookmarkDeleteFailed: 'Failed to delete bookmark, please try again',
 
       // Duplicate detection
       duplicateFound: 'Duplicate Bookmark Found',

@@ -41,7 +41,9 @@ ModalManager.prototype.loadFolders = function () {
     .then(function (sortedFolders) {
       if (!sortedFolders) return;
 
-      self.filteredFolders = sortedFolders;
+      // 将默认排序结果作为文件夹主数据源，统一后续空查询展示顺序
+      self.allFolders = sortedFolders.slice();
+      self.filteredFolders = self.getDefaultFolderResults();
 
       // 更新键盘管理器的当前项目
       self.keyboardManager.setCurrentItems(self.filteredFolders);
@@ -103,10 +105,22 @@ ModalManager.prototype.loadBookmarks = function () {
         throw new Error('Invalid bookmarks data received');
       }
 
-      self.allBookmarks = bookmarks;
+      // 过滤浏览器内部/特殊协议书签（如 edge://、chrome://、about: 等）
+      // 这些链接通常无法在当前上下文打开，也不应出现在扩展列表中
+      var visibleBookmarks = [];
+      for (var bi = 0; bi < bookmarks.length; bi++) {
+        var bm = bookmarks[bi];
+        if (!bm || !bm.url) continue;
+        if (typeof self.isSpecialUrl === 'function' && self.isSpecialUrl(bm.url)) {
+          continue;
+        }
+        visibleBookmarks.push(bm);
+      }
+
+      self.allBookmarks = visibleBookmarks;
       // console.log('Retrieved ' + bookmarks.length + ' bookmarks');
 
-      if (bookmarks.length === 0) {
+      if (self.allBookmarks.length === 0) {
         self.uiManager.showEmptyState('bookmarks');
         return;
       }

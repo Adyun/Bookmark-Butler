@@ -22,6 +22,7 @@ function KeyboardManager() {
   this.onModalClose = null;
   this.onFilterCycle = null;
   this.onGoBack = null;
+  this.onDelete = null;
 }
 
 /**
@@ -89,10 +90,12 @@ KeyboardManager.prototype.handleKeyDown = function (e) {
         return;
       }
 
-      // 其他情况（搜索框为空或焦点不在搜索框），触发返回
-      if (this.onGoBack) {
+      // 仅书签搜索模式支持返回上级；其余模式吞掉 Backspace，避免触发页面后退
+      if (this.currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH && this.onGoBack) {
         e.preventDefault();
         this.onGoBack();
+      } else {
+        e.preventDefault();
       }
       break;
 
@@ -149,6 +152,23 @@ KeyboardManager.prototype.handleKeyDown = function (e) {
         e.preventDefault();
         if (this.onFilterCycle) {
           this.onFilterCycle(e.shiftKey ? -1 : 1);
+        }
+      }
+      break;
+
+    case 'Delete':
+      // 书签搜索模式下，按 Delete 键删除当前选中的书签
+      if (this.currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH) {
+        var deleteRoot = this.getRoot();
+        var deleteActiveElement = (deleteRoot.activeElement || document.activeElement);
+        // 焦点在搜索框时保留原生 Delete 行为（删除字符）
+        if (searchInput && deleteActiveElement === searchInput) {
+          return;
+        }
+
+        if (this.selectedIndex >= 0 && this.onDelete) {
+          e.preventDefault();
+          this.onDelete();
         }
       }
       break;
@@ -385,6 +405,7 @@ KeyboardManager.prototype.setCallbacks = function (callbacks) {
   this.onModalClose = callbacks.onModalClose || null;
   this.onFilterCycle = callbacks.onFilterCycle || null;
   this.onGoBack = callbacks.onGoBack || null;
+  this.onDelete = callbacks.onDelete || null;
 };
 
 /**

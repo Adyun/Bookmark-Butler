@@ -45,6 +45,10 @@ function ModalManager() {
   this.isDuplicateCheckInProgress = false;
   this.isDuplicateDialogOpen = false;
   this.duplicateDialogCleanup = null;
+  this.isDeleteDialogOpen = false;
+  this.deleteDialogCleanup = null;
+  this.isContextMenuOpen = false;
+  this.contextMenuCleanup = null;
 
   this.init();
 }
@@ -98,7 +102,14 @@ ModalManager.prototype.initializeComponents = function () {
     onModeToggle: function () { self.toggleMode(); },
     onModalClose: function () { self.hide(); },
     onFilterCycle: function (direction) { self.cycleFilter(direction); },
-    onGoBack: function () { self.goBack(); }
+    onGoBack: function () { self.goBack(); },
+    onDelete: function () {
+      if (self.isDeleteDialogOpen || self.isContextMenuOpen) return;
+      var selectedItem = self.keyboardManager.getSelectedItem();
+      if (selectedItem && selectedItem.url) {
+        self.confirmDeleteBookmark(selectedItem);
+      }
+    }
   });
 
   // 监听布局重新计算事件
@@ -244,10 +255,12 @@ ModalManager.prototype.bindEvents = function () {
   var searchInput = this.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
   if (searchInput) {
     this.dynamicDebouncedSearch = this.debounceDynamic(function (query) {
+      // 仅保留打开书签模式的输入动画触发，避免添加书签模式出现二次闪烁
+      if (self.uiManager.currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH &&
+        self.bookmarkVirtualScroller) {
+        self.bookmarkVirtualScroller.shouldAnimateOnNextRender = true;
+      }
       self.handleSearch(query);
-      // 搜索输入触发：下一次渲染需要动画
-      if (self.folderVirtualScroller) self.folderVirtualScroller.shouldAnimateOnNextRender = true;
-      if (self.bookmarkVirtualScroller) self.bookmarkVirtualScroller.shouldAnimateOnNextRender = true;
     }, function () { return self.getSearchDebounceDelay(); });
 
     addEventListenerFn(searchInput, 'input', function (e) {
@@ -527,6 +540,12 @@ ModalManager.prototype.hide = function () {
   if (typeof this.dismissDuplicateDialog === 'function') {
     this.dismissDuplicateDialog();
   }
+  if (typeof this.dismissDeleteDialog === 'function') {
+    this.dismissDeleteDialog();
+  }
+  if (typeof this.dismissContextMenu === 'function') {
+    this.dismissContextMenu();
+  }
   this.isDuplicateCheckInProgress = false;
   this.uiManager.hideModal();
   this.keyboardManager.setModalVisible(false);
@@ -637,12 +656,37 @@ ModalManager.prototype.clearBreadcrumbCache = function () {
 };
 
 /**
+ * 获取文件夹模式的默认结果顺序（按活跃度降序）
+ * 作为单一策略入口，避免不同调用点出现排序不一致
+ * @returns {Array} 排序后的文件夹列表副本
+ */
+ModalManager.prototype.getDefaultFolderResults = function () {
+  var folders = (this.allFolders || []).slice();
+
+  folders.sort(function (a, b) {
+    return (b && b.activity ? b.activity : 0) - (a && a.activity ? a.activity : 0);
+  });
+
+  for (var i = 0; i < folders.length; i++) {
+    folders[i].score = 1;
+  }
+
+  return folders;
+};
+
+/**
  * 清理Modal管理器
  */
 
 ModalManager.prototype.cleanup = function () {
   if (typeof this.dismissDuplicateDialog === 'function') {
     this.dismissDuplicateDialog();
+  }
+  if (typeof this.dismissDeleteDialog === 'function') {
+    this.dismissDeleteDialog();
+  }
+  if (typeof this.dismissContextMenu === 'function') {
+    this.dismissContextMenu();
   }
   this.isDuplicateCheckInProgress = false;
 

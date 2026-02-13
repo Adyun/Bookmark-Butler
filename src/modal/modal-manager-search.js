@@ -4,16 +4,19 @@ ModalManager.prototype.handleSearch = function (query) {
   var startTime = performance.now();
   var self = this;
   var searchGeneration = ++this.searchGeneration;
+  var shouldAnimateModalHeight = this.uiManager.currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH;
 
 
 
   // 记录当前高度
   var modal = this.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.MODAL_ID);
   var currentHeight = null;
-  if (modal) {
+  if (modal && shouldAnimateModalHeight) {
     currentHeight = modal.offsetHeight;
     modal.style.height = currentHeight + 'px'; // 设置当前高度
     modal.classList.add('content-changing');
+  } else if (modal) {
+    modal.classList.remove('content-changing');
   }
 
   // 执行搜索
@@ -76,7 +79,14 @@ ModalManager.prototype.handleSearch = function (query) {
       this.updateBookmarkList();
     }
   } else {
-    this.filteredFolders = this.searchEngine.search(query, this.allFolders);
+    var folderQueryTrimmed = query ? query.trim() : '';
+
+    if (folderQueryTrimmed === '') {
+      this.filteredFolders = this.getDefaultFolderResults();
+    } else {
+      this.filteredFolders = this.searchEngine.search(query, this.allFolders);
+    }
+
     this.keyboardManager.setCurrentItems(this.filteredFolders);
     this.updateFolderList();
   }
@@ -84,7 +94,7 @@ ModalManager.prototype.handleSearch = function (query) {
   // 计算新高度并应用动画
   setTimeout(function () {
     if (searchGeneration !== self.searchGeneration) return;
-    if (modal) {
+    if (modal && shouldAnimateModalHeight) {
       // 临时设置为auto来测量新高度
       modal.style.height = 'auto';
       var newHeight = modal.offsetHeight;
