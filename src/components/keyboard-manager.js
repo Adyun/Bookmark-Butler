@@ -50,8 +50,8 @@ KeyboardManager.prototype.bindKeyboardEvents = function () {
     self.handleKeyDown(e);
   };
 
-  document.addEventListener('keydown', handleKeyDown);
-  this.eventListeners.push({ element: document, event: 'keydown', handler: handleKeyDown });
+  document.addEventListener('keydown', handleKeyDown, true);
+  this.eventListeners.push({ element: document, event: 'keydown', handler: handleKeyDown, options: true });
 };
 
 /**
@@ -62,10 +62,12 @@ KeyboardManager.prototype.handleKeyDown = function (e) {
   // 如果模态框不可见，不处理键盘事件
   if (!this.isModalVisible) return;
 
-  var searchInput = this.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
+  var root = this.getRoot();
+  var searchInput = root.getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
 
   // 如果焦点在搜索框中，且按下了Escape键，关闭模态框
-  if (document.activeElement === searchInput && e.key === 'Escape') {
+  var activeElement = (root && root.activeElement) || document.activeElement;
+  if (activeElement === searchInput && e.key === 'Escape') {
     if (this.onModalClose) {
       this.onModalClose();
     }
@@ -81,10 +83,6 @@ KeyboardManager.prototype.handleKeyDown = function (e) {
       break;
 
     case 'Backspace':
-      // 获取根元素（Shadow Root 或 Document）
-      var root = this.getRoot();
-      var activeElement = (root.activeElement || document.activeElement);
-
       // 如果焦点在搜索框且不为空，保持默认行为（删除字符）
       if (searchInput && activeElement === searchInput && searchInput.value.length > 0) {
         return;
@@ -100,9 +98,29 @@ KeyboardManager.prototype.handleKeyDown = function (e) {
       break;
 
     case ' ': // 空格键
-      // 如果搜索框为空，切换模式
+      if (searchInput && activeElement === searchInput) {
+        var isEmptyQuery = searchInput.value.trim() === '';
+        if (isEmptyQuery) {
+          // 焦点在搜索框且为空：阻止插入空格并切换模式
+          e.preventDefault();
+          e.stopPropagation();
+          if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+          if (!e.repeat && this.onModeToggle) {
+            this.onModeToggle();
+          }
+          return;
+        }
+        // 焦点在搜索框且非空：保留原生输入空格，但阻止事件传播到背后网页脚本
+        e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+        return;
+      }
+      // 焦点不在搜索框：阻止事件穿透到背后网页（防止页面滚动等）
+      e.preventDefault();
+      e.stopPropagation();
+      if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+      // 搜索框为空且非连击：切换模式
       if (!e.repeat && searchInput && searchInput.value.trim() === '') {
-        e.preventDefault();
         if (this.onModeToggle) {
           this.onModeToggle();
         }
@@ -159,10 +177,8 @@ KeyboardManager.prototype.handleKeyDown = function (e) {
     case 'Delete':
       // 书签搜索模式下，按 Delete 键删除当前选中的书签
       if (this.currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH) {
-        var deleteRoot = this.getRoot();
-        var deleteActiveElement = (deleteRoot.activeElement || document.activeElement);
         // 焦点在搜索框时保留原生 Delete 行为（删除字符）
-        if (searchInput && deleteActiveElement === searchInput) {
+        if (searchInput && activeElement === searchInput) {
           return;
         }
 
@@ -430,7 +446,7 @@ KeyboardManager.prototype.cleanup = function () {
   for (var i = 0; i < this.eventListeners.length; i++) {
     var listener = this.eventListeners[i];
     try {
-      listener.element.removeEventListener(listener.event, listener.handler);
+      listener.element.removeEventListener(listener.event, listener.handler, listener.options || false);
     } catch (e) {
       // 忽略移除失败的监听器
     }
