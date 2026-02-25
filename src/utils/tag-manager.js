@@ -3,6 +3,7 @@
 
 (function () {
     var STORAGE_KEY = 'smart_bookmark_tags_v1';
+    var TAG_FILTER_STATS_KEY = 'smart_bookmark_tag_filter_stats_v1';
     var MAX_TAGS_PER_ITEM = 20;
     var MAX_TAG_LENGTH = 24;
 
@@ -10,6 +11,7 @@
         bookmarks: {},
         folders: {}
     };
+    var inMemoryTagFilterStats = {};
 
     var hasLoaded = false;
     var listeners = [];
@@ -41,6 +43,23 @@
         var safe = tags || {};
         if (!safe.bookmarks || typeof safe.bookmarks !== 'object') safe.bookmarks = {};
         if (!safe.folders || typeof safe.folders !== 'object') safe.folders = {};
+        return safe;
+    }
+
+    function normalizeTagFilterStats(stats) {
+        var safe = {};
+        if (!stats || typeof stats !== 'object') return safe;
+        var keys = Object.keys(stats);
+        for (var i = 0; i < keys.length; i++) {
+            var key = (keys[i] || '').toLowerCase();
+            if (!key) continue;
+            var item = stats[keys[i]] || {};
+            safe[key] = {
+                label: (item.label || keys[i] || '').toString(),
+                hitCount: Math.max(0, Number(item.hitCount) || 0),
+                lastUsedAt: Math.max(0, Number(item.lastUsedAt) || 0)
+            };
+        }
         return safe;
     }
 
@@ -78,17 +97,26 @@
                         var parsed = JSON.parse(raw);
                         inMemoryTags = normalizeTags(parsed);
                     }
+                    var statsRaw = localStorage.getItem(TAG_FILTER_STATS_KEY);
+                    if (statsRaw) {
+                        var parsedStats = JSON.parse(statsRaw);
+                        inMemoryTagFilterStats = normalizeTagFilterStats(parsedStats);
+                    }
                 } catch (e) { }
                 hasLoaded = true;
                 resolve(inMemoryTags);
                 return;
             }
 
-            storage.get([STORAGE_KEY], function (result) {
+            storage.get([STORAGE_KEY, TAG_FILTER_STATS_KEY], function (result) {
                 try {
                     var tags = result && result[STORAGE_KEY] ? result[STORAGE_KEY] : null;
                     if (tags) {
                         inMemoryTags = normalizeTags(tags);
+                    }
+                    var stats = result && result[TAG_FILTER_STATS_KEY] ? result[TAG_FILTER_STATS_KEY] : null;
+                    if (stats) {
+                        inMemoryTagFilterStats = normalizeTagFilterStats(stats);
                     }
                 } catch (e) { }
                 hasLoaded = true;
@@ -110,6 +138,23 @@
         return new Promise(function (resolve) {
             var data = {};
             data[STORAGE_KEY] = inMemoryTags;
+            storage.set(data, function () { resolve(); });
+        });
+    }
+
+    function saveTagFilterStats(stats) {
+        inMemoryTagFilterStats = normalizeTagFilterStats(stats || inMemoryTagFilterStats);
+        var storage = getStorageArea();
+        if (!storage) {
+            try {
+                localStorage.setItem(TAG_FILTER_STATS_KEY, JSON.stringify(inMemoryTagFilterStats));
+            } catch (e) { }
+            notifyTagsUpdated();
+            return Promise.resolve();
+        }
+        return new Promise(function (resolve) {
+            var data = {};
+            data[TAG_FILTER_STATS_KEY] = inMemoryTagFilterStats;
             storage.set(data, function () { resolve(); });
         });
     }
@@ -183,7 +228,9 @@
         } else {
             table[id] = normalized;
         }
-        return saveTags(inMemoryTags);
+        return saveTags(inMemoryTags).then(function () {
+            return pruneTagFilterStats(getAllTags());
+        });
     }
 
     function removeAllTagsForItem(type, id) {
@@ -191,7 +238,9 @@
         if (table && id != null) {
             delete table[id];
         }
-        return saveTags(inMemoryTags);
+        return saveTags(inMemoryTags).then(function () {
+            return pruneTagFilterStats(getAllTags());
+        });
     }
 
     // ========== 清理 API ==========
@@ -228,9 +277,56 @@
         }
 
         if (changed) {
-            return saveTags(inMemoryTags);
+            return saveTags(inMemoryTags).then(function () {
+                return pruneTagFilterStats(getAllTags());
+            });
         }
-        return Promise.resolve();
+        return pruneTagFilterStats(getAllTags());
+    }
+
+    function recordTagFilterUsage(tag) {
+        var name = (tag || '').toString().trim();
+        if (!name) return Promise.resolve();
+        var key = name.toLowerCase();
+        var existing = inMemoryTagFilterStats[key] || { label: name, hitCount: 0, lastUsedAt: 0 };
+        if (!existing.label) existing.label = name;
+        existing.hitCount = (Number(existing.hitCount) || 0) + 1;
+        existing.lastUsedAt = Date.now();
+        inMemoryTagFilterStats[key] = existing;
+        return saveTagFilterStats(inMemoryTagFilterStats);
+    }
+
+    function getTagFilterStats() {
+        var clone = {};
+        var keys = Object.keys(inMemoryTagFilterStats);
+        for (var i = 0; i < keys.length; i++) {
+            var key = keys[i];
+            clone[key] = {
+                label: inMemoryTagFilterStats[key].label,
+                hitCount: inMemoryTagFilterStats[key].hitCount,
+                lastUsedAt: inMemoryTagFilterStats[key].lastUsedAt
+            };
+        }
+        return clone;
+    }
+
+    function pruneTagFilterStats(validTags) {
+        var validSet = {};
+        for (var i = 0; i < validTags.length; i++) {
+            var k = (validTags[i] || '').toString().trim().toLowerCase();
+            if (k) validSet[k] = true;
+        }
+
+        var changed = false;
+        var keys = Object.keys(inMemoryTagFilterStats);
+        for (var j = 0; j < keys.length; j++) {
+            if (!validSet[keys[j]]) {
+                delete inMemoryTagFilterStats[keys[j]];
+                changed = true;
+            }
+        }
+        if (!changed) return Promise.resolve();
+        return saveTagFilterStats(inMemoryTagFilterStats);
     }
 
     // ========== 颜色生成 ==========
@@ -266,6 +362,9 @@
         getAllTags: getAllTags,
         getItemsByTag: getItemsByTag,
         pruneOrphanTags: pruneOrphanTags,
+        recordTagFilterUsage: recordTagFilterUsage,
+        getTagFilterStats: getTagFilterStats,
+        pruneTagFilterStats: pruneTagFilterStats,
         generateTagColor: generateTagColor,
         normalizeTagList: normalizeTagList,
         hasLoaded: function () { return hasLoaded; },
@@ -278,10 +377,19 @@
             chrome.storage.onChanged.addListener(function (changes, areaName) {
                 try {
                     if (areaName !== 'local') return;
-                    if (!changes || !changes[STORAGE_KEY]) return;
-                    var newTags = changes[STORAGE_KEY].newValue || {};
-                    inMemoryTags = normalizeTags(newTags);
-                    notifyTagsUpdated();
+                    if (!changes) return;
+                    var changed = false;
+                    if (changes[STORAGE_KEY]) {
+                        var newTags = changes[STORAGE_KEY].newValue || {};
+                        inMemoryTags = normalizeTags(newTags);
+                        changed = true;
+                    }
+                    if (changes[TAG_FILTER_STATS_KEY]) {
+                        var newStats = changes[TAG_FILTER_STATS_KEY].newValue || {};
+                        inMemoryTagFilterStats = normalizeTagFilterStats(newStats);
+                        changed = true;
+                    }
+                    if (changed) notifyTagsUpdated();
                 } catch (e) { }
             });
         }

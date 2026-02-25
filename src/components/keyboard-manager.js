@@ -63,7 +63,7 @@ KeyboardManager.prototype.handleKeyDown = function (e) {
   if (!this.isModalVisible) return;
 
   // 标签编辑弹窗打开时，暂停全局键盘快捷键，避免 Enter/Escape/Tab 穿透到主列表
-  if (window.modalManager && window.modalManager.isTagEditorOpen) {
+  if (window.modalManager && (window.modalManager.isTagEditorOpen || window.modalManager.isTagFilterPopoverOpen)) {
     return;
   }
 

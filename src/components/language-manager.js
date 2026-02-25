@@ -88,7 +88,10 @@ function LanguageManager() {
       filterTagEmpty: '未选择',
       filterSummaryPrefix: '筛选',
       filterSummaryType: '类型',
-      filterSummaryTag: '标签'
+      filterSummaryTag: '标签',
+      moreTags: '更多标签',
+      tagFilterSearchPlaceholder: '搜索标签...',
+      noMatchingTags: '没有匹配标签'
     },
     en: {
       // Modal titles and buttons
@@ -172,7 +175,10 @@ function LanguageManager() {
       filterTagEmpty: 'Not selected',
       filterSummaryPrefix: 'Filter',
       filterSummaryType: 'Type',
-      filterSummaryTag: 'Tag'
+      filterSummaryTag: 'Tag',
+      moreTags: 'More Tags',
+      tagFilterSearchPlaceholder: 'Search tags...',
+      noMatchingTags: 'No matching tags'
     }
   };
 
@@ -358,11 +364,31 @@ LanguageManager.prototype.updateUI = function () {
   var filterTagEmpty = this.getRoot().getElementById('smart-bookmark-filter-tag-empty');
   if (filterTagEmpty) filterTagEmpty.textContent = this.t('filterTagEmpty');
 
+  var moreTagsBtn = this.getRoot().getElementById('smart-bookmark-more-tags-btn');
+  if (moreTagsBtn) {
+    var baseMoreText = this.t('moreTags');
+    moreTagsBtn.setAttribute('data-base-label', baseMoreText);
+    moreTagsBtn.textContent = baseMoreText;
+  }
+
+  var tagPopoverSearch = this.getRoot().getElementById('smart-bookmark-tag-popover-search');
+  if (tagPopoverSearch) {
+    tagPopoverSearch.placeholder = this.t('tagFilterSearchPlaceholder');
+  }
+
   // 更新主题下拉菜单
   this.updateThemeDropdown();
 
   if (window.modalManager && typeof window.modalManager.refreshFilterBarState === 'function') {
     window.modalManager.refreshFilterBarState();
+  }
+  if (window.modalManager && window.modalManager.uiManager &&
+    typeof window.modalManager.uiManager.updateTagFilterTabs === 'function' &&
+    window.SMART_BOOKMARK_TAGS) {
+    window.modalManager.uiManager.updateTagFilterTabs(
+      window.SMART_BOOKMARK_TAGS.getAllTags(),
+      window.modalManager.currentTagFilter
+    );
   }
 };
 

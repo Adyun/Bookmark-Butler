@@ -54,6 +54,10 @@ function ModalManager() {
   this.contextMenuCleanup = null;
   this.isTagEditorOpen = false;
   this.tagEditorCleanup = null;
+  this.isTagFilterPopoverOpen = false;
+  this.tagFilterPopoverSearch = '';
+  this.tagFilterPopoverFocusedIndex = -1;
+  this.tagFilterPopoverFilteredTags = [];
 
   this.init();
 }
@@ -140,6 +144,9 @@ ModalManager.prototype.initializeComponents = function () {
         var allTags = window.SMART_BOOKMARK_TAGS.getAllTags();
         if (self.uiManager && typeof self.uiManager.updateTagFilterTabs === 'function') {
           self.uiManager.updateTagFilterTabs(allTags, self.currentTagFilter);
+        }
+        if (self.isTagFilterPopoverOpen && typeof self.renderTagFilterPopoverList === 'function') {
+          self.renderTagFilterPopoverList(self.tagFilterPopoverSearch || '');
         }
         // 刷新列表
         if (self.uiManager.currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH) {
@@ -411,6 +418,18 @@ ModalManager.prototype.bindEvents = function () {
   var filterBar = this.getRoot().getElementById('smart-bookmark-filter-bar');
   if (filterBar) {
     addEventListenerFn(filterBar, 'click', function (e) {
+      var moreBtn = e.target.closest('[data-more-tags-toggle]');
+      if (moreBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (self.isTagFilterPopoverOpen) {
+          self.closeTagFilterPopover();
+        } else {
+          self.openTagFilterPopover();
+        }
+        return;
+      }
+
       var tab = e.target.closest('.smart-bookmark-filter-tab');
       if (!tab) return;
 
@@ -428,6 +447,27 @@ ModalManager.prototype.bindEvents = function () {
         } else {
           self.setTagFilter(clickedTag);
         }
+        if (self.isTagFilterPopoverOpen) {
+          self.closeTagFilterPopover();
+        }
+      }
+    });
+  }
+
+  // 在ShadowRoot内点击外部区域时关闭“更多标签”Popover
+  var rootRef = this.getRoot();
+  if (rootRef) {
+    addEventListenerFn(rootRef, 'click', function (e) {
+      if (!self.isTagFilterPopoverOpen) return;
+      var pop = rootRef.getElementById('smart-bookmark-tag-popover');
+      var moreBtn = rootRef.getElementById('smart-bookmark-more-tags-btn');
+      if (!pop) return;
+
+      var target = e.target;
+      var clickedInsidePopover = !!(target && pop.contains(target));
+      var clickedMoreBtn = !!(moreBtn && target && moreBtn.contains(target));
+      if (!clickedInsidePopover && !clickedMoreBtn) {
+        self.closeTagFilterPopover();
       }
     });
   }
@@ -600,6 +640,9 @@ ModalManager.prototype.show = function (pageInfo) {
  */
 
 ModalManager.prototype.hide = function () {
+  if (typeof this.closeTagFilterPopover === 'function') {
+    this.closeTagFilterPopover();
+  }
   if (typeof this.dismissTagEditor === 'function') {
     this.dismissTagEditor();
   }
@@ -624,6 +667,10 @@ ModalManager.prototype.hide = function () {
   this.navigationStack = [];
   this.lastSearchQuery = '';
   this.isTagEditorOpen = false;
+  this.isTagFilterPopoverOpen = false;
+  this.tagFilterPopoverSearch = '';
+  this.tagFilterPopoverFocusedIndex = -1;
+  this.tagFilterPopoverFilteredTags = [];
   if (typeof this.refreshFilterBarState === 'function') {
     this.refreshFilterBarState();
   }
@@ -658,6 +705,9 @@ ModalManager.prototype.scheduleBuildIndexes = function () {
  */
 
 ModalManager.prototype.handleLayoutRecalculated = function () {
+  if (window.SMART_BOOKMARK_TAGS && this.uiManager && typeof this.uiManager.updateTagFilterTabs === 'function') {
+    this.uiManager.updateTagFilterTabs(window.SMART_BOOKMARK_TAGS.getAllTags(), this.currentTagFilter);
+  }
   // 强制更新虚拟滚动器
   if (this.folderVirtualScroller) {
     this.folderVirtualScroller.forceUpdate();
@@ -756,6 +806,9 @@ ModalManager.prototype.getDefaultFolderResults = function () {
  */
 
 ModalManager.prototype.cleanup = function () {
+  if (typeof this.closeTagFilterPopover === 'function') {
+    this.closeTagFilterPopover();
+  }
   if (typeof this.dismissTagEditor === 'function') {
     this.dismissTagEditor();
   }

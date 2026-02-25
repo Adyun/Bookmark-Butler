@@ -134,6 +134,11 @@ UIManager.prototype.createModal = function () {
     '<div class="smart-bookmark-filter-tabs-row" id="smart-bookmark-filter-tag-tabs">' +
     '<span class="smart-bookmark-filter-tag-empty" id="smart-bookmark-filter-tag-empty">未选择</span>' +
     '</div>' +
+    '<button class="smart-bookmark-filter-more-btn" id="smart-bookmark-more-tags-btn" data-more-tags-toggle="1" type="button" style="display:none;">更多标签</button>' +
+    '<div class="smart-bookmark-tag-popover" id="smart-bookmark-tag-popover">' +
+    '<input class="smart-bookmark-tag-popover-search" id="smart-bookmark-tag-popover-search" type="text" placeholder="搜索标签...">' +
+    '<div class="smart-bookmark-tag-popover-list" id="smart-bookmark-tag-popover-list"></div>' +
+    '</div>' +
     '</div>' +
     '</div>' +
     '<div class="smart-bookmark-list-container">' +
@@ -678,6 +683,44 @@ UIManager.prototype.cleanup = function () {
 };
 
 /**
+ * 标签筛选排序：当前选中优先，其次最近使用，再按命中次数，最后按字母
+ * @param {Array} tags
+ * @param {string|null} activeTag
+ * @returns {Array}
+ */
+UIManager.prototype.sortTagsForFilter = function (tags, activeTag) {
+  var list = Array.isArray(tags) ? tags.slice() : [];
+  var stats = {};
+  if (window.SMART_BOOKMARK_TAGS && typeof window.SMART_BOOKMARK_TAGS.getTagFilterStats === 'function') {
+    stats = window.SMART_BOOKMARK_TAGS.getTagFilterStats() || {};
+  }
+  var activeKey = (activeTag || '').toLowerCase();
+
+  list.sort(function (a, b) {
+    var aKey = (a || '').toLowerCase();
+    var bKey = (b || '').toLowerCase();
+
+    var aActive = !!(activeKey && aKey === activeKey);
+    var bActive = !!(activeKey && bKey === activeKey);
+    if (aActive !== bActive) return aActive ? -1 : 1;
+
+    var aStats = stats[aKey] || {};
+    var bStats = stats[bKey] || {};
+    var aLast = Number(aStats.lastUsedAt) || 0;
+    var bLast = Number(bStats.lastUsedAt) || 0;
+    if (aLast !== bLast) return bLast - aLast;
+
+    var aHit = Number(aStats.hitCount) || 0;
+    var bHit = Number(bStats.hitCount) || 0;
+    if (aHit !== bHit) return bHit - aHit;
+
+    return (a || '').localeCompare((b || ''), undefined, { sensitivity: 'base' });
+  });
+
+  return list;
+};
+
+/**
  * 更新筛选栏中的标签 tab
  * @param {Array} tags - 所有标签列表
  * @param {string|null} activeTag - 当前激活的标签
@@ -685,7 +728,8 @@ UIManager.prototype.cleanup = function () {
 UIManager.prototype.updateTagFilterTabs = function (tags, activeTag) {
   var root = this.getRoot();
   var tagRow = root.getElementById('smart-bookmark-filter-tag-tabs');
-  if (!tagRow) return;
+  var moreBtn = root.getElementById('smart-bookmark-more-tags-btn');
+  if (!tagRow || !moreBtn) return;
 
   // 移除旧的标签 tab（保留空态提示）
   var existingTagTabs = tagRow.querySelectorAll('[data-filter-tag]');
@@ -698,20 +742,97 @@ UIManager.prototype.updateTagFilterTabs = function (tags, activeTag) {
   // 追加新的标签 tab
   if (!tags || tags.length === 0) {
     if (emptyEl) emptyEl.style.display = '';
+    moreBtn.style.display = 'none';
+    moreBtn.classList.remove('active');
     return;
   }
 
-  if (emptyEl) emptyEl.style.display = 'none';
+  var sortedTags = this.sortTagsForFilter(tags, activeTag);
+  var activeKey = (activeTag || '').toLowerCase();
 
-  for (var j = 0; j < tags.length; j++) {
+  // 快捷层候选：Top 8（若当前选中标签不在候选中则补入）
+  var candidates = sortedTags.slice(0, 8);
+  if (activeKey) {
+    var inCandidates = false;
+    for (var ci = 0; ci < candidates.length; ci++) {
+      if ((candidates[ci] || '').toLowerCase() === activeKey) {
+        inCandidates = true;
+        break;
+      }
+    }
+    if (!inCandidates) {
+      for (var si = 0; si < sortedTags.length; si++) {
+        if ((sortedTags[si] || '').toLowerCase() === activeKey) {
+          candidates.unshift(sortedTags[si]);
+          break;
+        }
+      }
+    }
+  }
+
+  var baseMoreText = moreBtn.getAttribute('data-base-label') || moreBtn.textContent || '更多标签';
+  moreBtn.textContent = baseMoreText;
+  moreBtn.style.display = 'inline-flex';
+  moreBtn.style.visibility = 'hidden';
+  var moreBtnWidth = (moreBtn.offsetWidth || 72) + 8;
+  moreBtn.style.display = 'none';
+  moreBtn.style.visibility = '';
+
+  var availableWidth = tagRow.clientWidth;
+  if (!availableWidth || availableWidth <= 0) {
+    availableWidth = 260;
+  }
+
+  var visible = [];
+  var usedWidth = 0;
+
+  var buildTagButton = function (tagText) {
     var btn = document.createElement('button');
+    btn.type = 'button';
     btn.className = 'smart-bookmark-filter-tab smart-bookmark-filter-tab-tag';
-    btn.setAttribute('data-filter-tag', tags[j]);
-    btn.textContent = '🏷️ ' + tags[j];
-    if (activeTag && tags[j] && tags[j].toLowerCase() === activeTag.toLowerCase()) {
+    btn.setAttribute('data-filter-tag', tagText);
+    btn.textContent = '🏷️ ' + tagText;
+    if (activeTag && tagText && tagText.toLowerCase() === activeTag.toLowerCase()) {
       btn.classList.add('active');
     }
-    tagRow.appendChild(btn);
+    return btn;
+  };
+
+  for (var j = 0; j < candidates.length; j++) {
+    var btnToMeasure = buildTagButton(candidates[j]);
+    btnToMeasure.style.visibility = 'hidden';
+    tagRow.appendChild(btnToMeasure);
+    var btnWidth = (btnToMeasure.offsetWidth || 46) + 6;
+    btnToMeasure.remove();
+
+    var remainingCount = tags.length - (visible.length + 1);
+    var reserveForMore = remainingCount > 0 ? moreBtnWidth : 0;
+    if (visible.length > 0 && (usedWidth + btnWidth + reserveForMore > availableWidth)) {
+      break;
+    }
+    visible.push(candidates[j]);
+    usedWidth += btnWidth;
+  }
+
+  if (visible.length === 0 && candidates.length > 0) {
+    visible.push(candidates[0]);
+  }
+
+  for (var k = 0; k < visible.length; k++) {
+    tagRow.appendChild(buildTagButton(visible[k]));
+  }
+
+  var hiddenCount = Math.max(0, tags.length - visible.length);
+  if (hiddenCount > 0) {
+    moreBtn.textContent = baseMoreText + ' +' + hiddenCount;
+    moreBtn.style.display = 'inline-flex';
+  } else {
+    moreBtn.style.display = 'none';
+    moreBtn.classList.remove('active');
+  }
+
+  if (emptyEl) {
+    emptyEl.style.display = visible.length > 0 ? 'none' : '';
   }
 };
 

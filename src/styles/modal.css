@@ -396,13 +396,7 @@
   gap: 14px;
   padding: 14px 0 2px;
   flex-wrap: nowrap;
-  overflow-x: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.smart-bookmark-filter-bar::-webkit-scrollbar {
-  display: none;
+  overflow: visible;
 }
 
 .smart-bookmark-filter-group {
@@ -410,6 +404,7 @@
   align-items: center;
   gap: 10px;
   min-width: 0;
+  flex-shrink: 0;
 }
 
 .smart-bookmark-filter-label {
@@ -427,6 +422,53 @@
   gap: 6px;
   min-width: 0;
   flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+.smart-bookmark-filter-group-tag {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  overflow: visible;
+}
+
+.smart-bookmark-filter-group-tag .smart-bookmark-filter-tabs-row {
+  flex: 1;
+}
+
+.smart-bookmark-filter-more-btn {
+  padding: 4px 12px;
+  border-radius: 16px;
+  border: 1px solid var(--sb-border);
+  background: transparent;
+  color: var(--sb-muted-foreground);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+  outline: none;
+}
+
+.smart-bookmark-filter-more-btn:hover {
+  border-color: var(--sb-ring);
+  background: var(--sb-ring-light);
+  color: var(--sb-foreground);
+}
+
+.smart-bookmark-filter-more-btn:focus,
+.smart-bookmark-filter-more-btn:focus-visible {
+  outline: 2px solid var(--sb-ring-light);
+  outline-offset: 1px;
+  border-color: var(--sb-ring);
+}
+
+.smart-bookmark-filter-more-btn.active {
+  border-color: var(--sb-ring);
+  background: var(--sb-ring);
+  color: #fff;
 }
 
 .smart-bookmark-filter-tag-empty {
@@ -1729,6 +1771,93 @@
   background: var(--sb-ring);
   color: #fff;
   border-color: var(--sb-ring);
+}
+
+.smart-bookmark-tag-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 280px;
+  max-width: min(90vw, 360px);
+  background: var(--sb-popover);
+  border: 1px solid var(--sb-border);
+  border-radius: 10px;
+  box-shadow:
+    0 12px 24px rgba(0, 0, 0, 0.14),
+    0 2px 6px rgba(0, 0, 0, 0.08);
+  padding: 10px;
+  z-index: 10005;
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.smart-bookmark-tag-popover.show {
+  display: flex;
+}
+
+.smart-bookmark-tag-popover-search {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--sb-border);
+  background: var(--sb-input);
+  color: var(--sb-foreground);
+  font-size: 13px;
+  outline: none;
+}
+
+.smart-bookmark-tag-popover-search:focus {
+  border-color: var(--sb-ring);
+}
+
+.smart-bookmark-tag-popover-list {
+  max-height: 220px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.smart-bookmark-tag-popover-item {
+  width: 100%;
+  text-align: left;
+  border-radius: 8px;
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--sb-popover-foreground);
+  font-size: 13px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.smart-bookmark-tag-popover-item:hover,
+.smart-bookmark-tag-popover-item.focused {
+  background: var(--sb-accent);
+  border-color: var(--sb-border);
+  color: var(--sb-accent-foreground);
+}
+
+.smart-bookmark-tag-popover-item.active {
+  background: var(--sb-ring);
+  border-color: var(--sb-ring);
+  color: #fff;
+  font-weight: 600;
+}
+
+.smart-bookmark-tag-popover-item.active:hover,
+.smart-bookmark-tag-popover-item.active.focused {
+  background: var(--sb-ring);
+  border-color: var(--sb-ring);
+  color: #fff;
+}
+
+.smart-bookmark-tag-popover-empty {
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--sb-muted-foreground);
 }
 
 /* ========== Tag Editor Dialog ========== */

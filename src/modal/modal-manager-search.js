@@ -146,6 +146,9 @@ ModalManager.prototype.setFilter = function (filterType) {
 
   if (this.currentFilter === filterType) return;
   this.currentFilter = filterType;
+  if (this.isTagFilterPopoverOpen && typeof this.closeTagFilterPopover === 'function') {
+    this.closeTagFilterPopover();
+  }
 
   // 刷新筛选栏 active 状态
   this.refreshFilterBarState();
@@ -160,6 +163,15 @@ ModalManager.prototype.setFilter = function (filterType) {
  */
 ModalManager.prototype.setTagFilter = function (tag) {
   this.currentTagFilter = tag || null;
+
+  if (window.SMART_BOOKMARK_TAGS && this.currentTagFilter &&
+    typeof window.SMART_BOOKMARK_TAGS.recordTagFilterUsage === 'function') {
+    window.SMART_BOOKMARK_TAGS.recordTagFilterUsage(this.currentTagFilter);
+  }
+  if (window.SMART_BOOKMARK_TAGS && this.uiManager && typeof this.uiManager.updateTagFilterTabs === 'function') {
+    this.uiManager.updateTagFilterTabs(window.SMART_BOOKMARK_TAGS.getAllTags(), this.currentTagFilter);
+  }
+
   this.refreshFilterBarState();
   this.updateBookmarkList();
 };
@@ -169,6 +181,9 @@ ModalManager.prototype.setTagFilter = function (tag) {
  */
 ModalManager.prototype.clearTagFilter = function () {
   this.currentTagFilter = null;
+  if (window.SMART_BOOKMARK_TAGS && this.uiManager && typeof this.uiManager.updateTagFilterTabs === 'function') {
+    this.uiManager.updateTagFilterTabs(window.SMART_BOOKMARK_TAGS.getAllTags(), this.currentTagFilter);
+  }
   this.refreshFilterBarState();
   this.updateBookmarkList();
 };
@@ -206,11 +221,176 @@ ModalManager.prototype.refreshFilterBarState = function () {
   // 空态标签提示显示控制
   var tagEmpty = this.getRoot().getElementById('smart-bookmark-filter-tag-empty');
   var tagRow = this.getRoot().getElementById('smart-bookmark-filter-tag-tabs');
+  var moreBtn = this.getRoot().getElementById('smart-bookmark-more-tags-btn');
   if (tagEmpty && tagRow) {
     var hasTagTabs = tagRow.querySelectorAll('[data-filter-tag]').length > 0;
-    tagEmpty.style.display = hasTagTabs ? 'none' : '';
+    var hasMoreBtn = !!(moreBtn && moreBtn.style.display !== 'none');
+    tagEmpty.style.display = (hasTagTabs || hasMoreBtn) ? 'none' : '';
   }
 
+};
+
+/**
+ * 打开“更多标签”筛选面板
+ */
+ModalManager.prototype.openTagFilterPopover = function () {
+  var root = this.getRoot();
+  var pop = root.getElementById('smart-bookmark-tag-popover');
+  var searchInput = root.getElementById('smart-bookmark-tag-popover-search');
+  var moreBtn = root.getElementById('smart-bookmark-more-tags-btn');
+  if (!pop || !searchInput || !moreBtn) return;
+
+  this.isTagFilterPopoverOpen = true;
+  pop.classList.add('show');
+  moreBtn.classList.add('active');
+  searchInput.value = this.tagFilterPopoverSearch || '';
+  this.renderTagFilterPopoverList(this.tagFilterPopoverSearch || '');
+
+  var self = this;
+  requestAnimationFrame(function () {
+    searchInput.focus();
+    if (searchInput.value) searchInput.select();
+  });
+
+  if (!searchInput._tagPopoverHandlersBound) {
+    searchInput._tagPopoverHandlersBound = true;
+    searchInput.addEventListener('keydown', function (e) {
+      if (!self.isTagFilterPopoverOpen) return;
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        self.closeTagFilterPopover({ focusToggle: true });
+        return;
+      }
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        self.moveTagFilterPopoverFocus(1);
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        self.moveTagFilterPopoverFocus(-1);
+        return;
+      }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        self.applyTagFilterFromPopover();
+      }
+    });
+    searchInput.addEventListener('input', function () {
+      self.tagFilterPopoverSearch = searchInput.value || '';
+      self.renderTagFilterPopoverList(self.tagFilterPopoverSearch);
+    });
+  }
+};
+
+/**
+ * 关闭“更多标签”筛选面板
+ * @param {{focusToggle?: boolean}} options
+ */
+ModalManager.prototype.closeTagFilterPopover = function (options) {
+  options = options || {};
+  var root = this.getRoot();
+  var pop = root.getElementById('smart-bookmark-tag-popover');
+  var moreBtn = root.getElementById('smart-bookmark-more-tags-btn');
+  if (pop) pop.classList.remove('show');
+  if (moreBtn) moreBtn.classList.remove('active');
+  this.isTagFilterPopoverOpen = false;
+  this.tagFilterPopoverSearch = '';
+  this.tagFilterPopoverFocusedIndex = -1;
+  this.tagFilterPopoverFilteredTags = [];
+  var searchInput = root.getElementById('smart-bookmark-tag-popover-search');
+  if (searchInput) searchInput.value = '';
+  if (options.focusToggle && moreBtn && typeof moreBtn.focus === 'function') {
+    moreBtn.focus();
+  }
+};
+
+ModalManager.prototype.renderTagFilterPopoverList = function (searchText) {
+  var root = this.getRoot();
+  var listEl = root.getElementById('smart-bookmark-tag-popover-list');
+  if (!listEl || !window.SMART_BOOKMARK_TAGS) return;
+
+  var allTags = window.SMART_BOOKMARK_TAGS.getAllTags();
+  var sorted = this.uiManager && typeof this.uiManager.sortTagsForFilter === 'function'
+    ? this.uiManager.sortTagsForFilter(allTags, this.currentTagFilter)
+    : allTags.slice();
+  var q = (searchText || '').toLowerCase().trim();
+  var filtered = [];
+  for (var i = 0; i < sorted.length; i++) {
+    if (!q || (sorted[i] || '').toLowerCase().indexOf(q) > -1) {
+      filtered.push(sorted[i]);
+    }
+  }
+
+  this.tagFilterPopoverFilteredTags = filtered;
+  if (this.tagFilterPopoverFocusedIndex < 0 || this.tagFilterPopoverFocusedIndex >= filtered.length) {
+    this.tagFilterPopoverFocusedIndex = filtered.length > 0 ? 0 : -1;
+  }
+
+  listEl.innerHTML = '';
+  if (filtered.length === 0) {
+    var empty = document.createElement('div');
+    empty.className = 'smart-bookmark-tag-popover-empty';
+    empty.textContent = this.languageManager ? this.languageManager.t('noMatchingTags') : '没有匹配标签';
+    listEl.appendChild(empty);
+    return;
+  }
+
+  for (var j = 0; j < filtered.length; j++) {
+    var tag = filtered[j];
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'smart-bookmark-tag-popover-item smart-bookmark-filter-tab';
+    btn.setAttribute('data-filter-tag', tag);
+    btn.setAttribute('data-index', j);
+    btn.textContent = '🏷️ ' + tag;
+    if (this.currentTagFilter && tag.toLowerCase() === this.currentTagFilter.toLowerCase()) {
+      btn.classList.add('active');
+    }
+    if (j === this.tagFilterPopoverFocusedIndex) {
+      btn.classList.add('focused');
+    }
+    listEl.appendChild(btn);
+  }
+};
+
+ModalManager.prototype.moveTagFilterPopoverFocus = function (direction) {
+  if (!this.tagFilterPopoverFilteredTags || this.tagFilterPopoverFilteredTags.length === 0) return;
+  var len = this.tagFilterPopoverFilteredTags.length;
+  var idx = this.tagFilterPopoverFocusedIndex;
+  if (idx < 0) idx = 0;
+  idx = (idx + direction + len) % len;
+  this.tagFilterPopoverFocusedIndex = idx;
+
+  var root = this.getRoot();
+  var listEl = root.getElementById('smart-bookmark-tag-popover-list');
+  if (!listEl) return;
+  var items = listEl.querySelectorAll('.smart-bookmark-tag-popover-item');
+  for (var i = 0; i < items.length; i++) {
+    if (i === idx) {
+      items[i].classList.add('focused');
+      if (typeof items[i].scrollIntoView === 'function') {
+        items[i].scrollIntoView({ block: 'nearest' });
+      }
+    } else {
+      items[i].classList.remove('focused');
+    }
+  }
+};
+
+ModalManager.prototype.applyTagFilterFromPopover = function () {
+  if (!this.tagFilterPopoverFilteredTags || this.tagFilterPopoverFilteredTags.length === 0) return;
+  var idx = this.tagFilterPopoverFocusedIndex;
+  if (idx < 0 || idx >= this.tagFilterPopoverFilteredTags.length) idx = 0;
+  var tag = this.tagFilterPopoverFilteredTags[idx];
+  if (!tag) return;
+
+  if (this.currentTagFilter && this.currentTagFilter.toLowerCase() === tag.toLowerCase()) {
+    this.clearTagFilter();
+  } else {
+    this.setTagFilter(tag);
+  }
+  this.closeTagFilterPopover({ focusToggle: false });
 };
 
 /**

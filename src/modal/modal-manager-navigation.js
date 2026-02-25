@@ -4,6 +4,9 @@ ModalManager.prototype.enterFolder = function (folderId, folderTitle, options) {
   var self = this;
   options = options || {};
   var skipHistoryPush = !!options.skipHistoryPush;
+  if (typeof this.closeTagFilterPopover === 'function') {
+    this.closeTagFilterPopover();
+  }
 
   // 保存当前状态到导航栈
   if (!skipHistoryPush) {
@@ -1198,6 +1201,9 @@ ModalManager.prototype.handleConfirm = function () {
 
 ModalManager.prototype.setMode = function (mode) {
   this.cancelPendingSearch();
+  if (typeof this.closeTagFilterPopover === 'function') {
+    this.closeTagFilterPopover();
+  }
   this.uiManager.setMode(mode);
   this.keyboardManager.setMode(mode);
 
@@ -1230,6 +1236,9 @@ ModalManager.prototype.setMode = function (mode) {
 
 ModalManager.prototype.toggleMode = function () {
   this.cancelPendingSearch();
+  if (typeof this.closeTagFilterPopover === 'function') {
+    this.closeTagFilterPopover();
+  }
   this.uiManager.toggleMode();
   this.keyboardManager.setMode(this.uiManager.currentMode);
 
