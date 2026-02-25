@@ -35,6 +35,7 @@
   --sb-radius: 8px;
   --sb-primary-hover: #1f2a37;
   /* 深一阶 */
+  --sb-list-item-height: 108px;
 }
 
 .dark-mode {
@@ -579,6 +580,8 @@
   position: relative;
   box-sizing: border-box;
   margin-bottom: 2px;
+  min-height: var(--sb-list-item-height);
+  height: var(--sb-list-item-height);
 }
 
 .smart-bookmark-folder-item.has-actions,
@@ -662,6 +665,8 @@
   position: relative;
   box-sizing: border-box;
   margin-bottom: 2px;
+  min-height: var(--sb-list-item-height);
+  height: var(--sb-list-item-height);
 }
 
 .smart-bookmark-bookmark-item:hover {
@@ -1396,9 +1401,10 @@
   background: var(--sb-muted);
   border: 1px solid var(--sb-border);
   margin-bottom: 2px;
-  min-height: 36px;
+  min-height: var(--sb-list-item-height);
+  height: var(--sb-list-item-height);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
 }
 
 .smart-bookmark-bookmark-item.is-back-btn:hover {
@@ -1793,6 +1799,29 @@
 
 .smart-bookmark-tag:hover {
   opacity: 0.8;
+}
+
+/* 无标签占位（虚线风格） */
+.smart-bookmark-tag-empty {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  line-height: 1.4;
+  color: rgba(100, 116, 139, 0.88);
+  border: 1px dashed rgba(148, 163, 184, 0.45);
+  background: rgba(148, 163, 184, 0.12);
+  user-select: none;
+  cursor: default;
+}
+
+.dark-mode .smart-bookmark-tag-empty {
+  color: rgba(203, 213, 225, 0.74);
+  border-color: rgba(148, 163, 184, 0.42);
+  background: rgba(148, 163, 184, 0.14);
 }
 
 /* +N 多余标签提示 */

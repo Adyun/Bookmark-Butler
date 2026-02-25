@@ -1132,10 +1132,14 @@ ModalManager.prototype.handleConfirm = function () {
         return;
       }
       window.SMART_BOOKMARK_API.createBookmark(folderId, pageTitle, pageUrl)
-        .then(function () {
+        .then(function (createdBookmark) {
           self.isDuplicateCheckInProgress = false;
           window.SMART_BOOKMARK_HELPERS.showToast(self.languageManager.t('bookmarkAdded'));
-          self.hide();
+          if (typeof self.openTagEditorAfterCreate === 'function') {
+            self.openTagEditorAfterCreate(createdBookmark, folderId);
+          } else {
+            self.hide();
+          }
         })
         .catch(function (error) {
           self.isDuplicateCheckInProgress = false;
@@ -1354,16 +1358,18 @@ ModalManager.prototype.findFolderById = function (folderId) {
  * 显示标签编辑弹窗
  * @param {Object} item - 书签/文件夹对象
  * @param {string} type - 'bookmarks' 或 'folders'
+ * @param {{onSaved?: Function, onCancel?: Function}=} options
  */
-ModalManager.prototype.showTagEditor = function (item, type) {
+ModalManager.prototype.showTagEditor = function (item, type, options) {
   if (!item || !item.id || !window.SMART_BOOKMARK_TAGS) return;
+  options = options || {};
 
   var self = this;
   // 先关闭可能存在的旧弹窗，避免重复实例和悬挂监听器
   self.dismissTagEditor();
   if (!window.SMART_BOOKMARK_TAGS.hasLoaded()) {
     window.SMART_BOOKMARK_TAGS.loadTags().then(function () {
-      self.showTagEditor(item, type);
+      self.showTagEditor(item, type, options);
     });
     return;
   }
@@ -1444,6 +1450,19 @@ ModalManager.prototype.showTagEditor = function (item, type) {
   var hintEl = overlay.querySelector('#smart-bookmark-tag-editor-hint');
   var activeAutocompleteIndex = -1;
   var autocompleteCandidates = [];
+  var callbackSettled = false;
+
+  function invokeEditorCallback(kind, payload) {
+    if (callbackSettled) return;
+    callbackSettled = true;
+    try {
+      if (kind === 'saved' && typeof options.onSaved === 'function') {
+        options.onSaved(payload);
+      } else if (kind === 'cancel' && typeof options.onCancel === 'function') {
+        options.onCancel();
+      }
+    } catch (e) { }
+  }
 
   function addTagToCurrent(tag) {
     var normalized = window.SMART_BOOKMARK_TAGS.normalizeTagList(currentTags.concat([tag]));
@@ -1600,7 +1619,7 @@ ModalManager.prototype.showTagEditor = function (item, type) {
     } else if (e.key === 'Escape') {
       e.preventDefault();
       e.stopPropagation();
-      dismissEditor();
+      cancelAndDismissEditor();
     }
   });
 
@@ -1621,10 +1640,46 @@ ModalManager.prototype.showTagEditor = function (item, type) {
 
     if (!insideEditor) return;
 
+    if (e.key === 'Tab') {
+      var focusable = overlay.querySelectorAll('input:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])');
+      var focusableList = [];
+      for (var fi = 0; fi < focusable.length; fi++) {
+        if (focusable[fi] && focusable[fi].offsetParent !== null) {
+          focusableList.push(focusable[fi]);
+        }
+      }
+
+      if (focusableList.length > 0) {
+        var activeElement = (root && root.activeElement) || document.activeElement;
+        var currentIndex = -1;
+        for (var ci = 0; ci < focusableList.length; ci++) {
+          if (focusableList[ci] === activeElement) {
+            currentIndex = ci;
+            break;
+          }
+        }
+
+        var nextIndex;
+        if (e.shiftKey) {
+          nextIndex = currentIndex <= 0 ? focusableList.length - 1 : currentIndex - 1;
+        } else {
+          nextIndex = currentIndex >= focusableList.length - 1 ? 0 : currentIndex + 1;
+        }
+        focusableList[nextIndex].focus();
+      }
+
+      e.preventDefault();
+      e.stopPropagation();
+      if (typeof e.stopImmediatePropagation === 'function') {
+        e.stopImmediatePropagation();
+      }
+      return;
+    }
+
     // 输入框自己处理 Escape/Enter；这里只兜底处理非输入焦点下的 Escape
     if (e.key === 'Escape' && e.target !== input) {
       e.preventDefault();
-      dismissEditor();
+      cancelAndDismissEditor();
       return;
     }
 
@@ -1663,10 +1718,15 @@ ModalManager.prototype.showTagEditor = function (item, type) {
     cleanupEditor(false);
   }
 
+  function cancelAndDismissEditor() {
+    invokeEditorCallback('cancel');
+    dismissEditor();
+  }
+
   // 取消
   cancelBtn.addEventListener('click', function (e) {
     e.stopPropagation();
-    dismissEditor();
+    cancelAndDismissEditor();
   });
 
   // 保存
@@ -1749,6 +1809,7 @@ ModalManager.prototype.showTagEditor = function (item, type) {
     }).then(function () {
       var msg = self.languageManager ? self.languageManager.t('tagSaved') : '标签已保存';
       window.SMART_BOOKMARK_HELPERS.showToast(msg);
+      invokeEditorCallback('saved', tagsToSave.slice());
       dismissEditor();
     }).catch(function () {
       var errMsg = self.languageManager ? self.languageManager.t('tagSaveFailed') : '标签保存失败';
@@ -1757,9 +1818,15 @@ ModalManager.prototype.showTagEditor = function (item, type) {
   });
 
   // 点击 overlay 背景关闭
+  overlay.addEventListener('mousedown', function (e) {
+    if (e.target === overlay) {
+      e.preventDefault();
+      cancelAndDismissEditor();
+    }
+  });
   overlay.addEventListener('click', function (e) {
     if (e.target === overlay) {
-      dismissEditor();
+      cancelAndDismissEditor();
     }
   });
 
@@ -1774,3 +1841,35 @@ ModalManager.prototype.showTagEditor = function (item, type) {
     }, 200);
   });
 };
+
+/**
+ * 添加书签成功后，立即进入标签编辑流程
+ * @param {Object} createdBookmark - 新创建的书签对象
+ * @param {string} parentFolderId - 目标文件夹ID（兜底）
+ */
+ModalManager.prototype.openTagEditorAfterCreate = function (createdBookmark, parentFolderId) {
+  var self = this;
+  if (!createdBookmark || !createdBookmark.id || typeof this.showTagEditor !== 'function') {
+    this.hide();
+    return;
+  }
+
+  var bookmarkForEditor = {
+    id: createdBookmark.id,
+    title: createdBookmark.title || '',
+    url: createdBookmark.url || '',
+    parentId: createdBookmark.parentId || parentFolderId || '',
+    itemType: 'bookmark',
+    tags: []
+  };
+
+  this.showTagEditor(bookmarkForEditor, 'bookmarks', {
+    onSaved: function () {
+      self.hide();
+    },
+    onCancel: function () {
+      self.hide();
+    }
+  });
+};
+

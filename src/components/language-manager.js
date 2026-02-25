@@ -19,6 +19,7 @@ function LanguageManager() {
       keyboardHintSelect: '↑↓ 选择',
       keyboardHintConfirm: 'Enter 确认',
       keyboardHintToggle: 'Space 切换模式',
+      keyboardHintFilterCycle: 'Tab 切换筛选',
 
       // 状态提示
       loadingText: '加载中...',
@@ -71,6 +72,11 @@ function LanguageManager() {
 
       // 面包屑
       rootDirectory: '根目录',
+      folderSummaryContains: '内含 {parts}',
+      folderSummaryPartFolders: '{count} 个文件夹',
+      folderSummaryPartBookmarks: '{count} 个书签',
+      folderSummaryJoiner: '，',
+      folderSummaryEmpty: '空文件夹',
 
       // 标签功能
       editTags: '编辑标签',
@@ -87,6 +93,9 @@ function LanguageManager() {
       // 筛选分组
       filterTypeLabel: '类型',
       filterTagLabel: '标签',
+      filterAllTab: '全部',
+      filterBookmarkTab: '链接',
+      filterFolderTab: '文件夹',
       filterTagEmpty: '未选择',
       filterSummaryPrefix: '筛选',
       filterSummaryType: '类型',
@@ -108,6 +117,7 @@ function LanguageManager() {
       keyboardHintSelect: '↑↓ Select',
       keyboardHintConfirm: 'Enter Confirm',
       keyboardHintToggle: 'Space Toggle Mode',
+      keyboardHintFilterCycle: 'Tab Cycle Filter',
 
       // Status messages
       loadingText: 'Loading...',
@@ -160,6 +170,11 @@ function LanguageManager() {
 
       // Breadcrumbs
       rootDirectory: 'Root Directory',
+      folderSummaryContains: 'Contains {parts}',
+      folderSummaryPartFolders: '{count} folder{suffix}',
+      folderSummaryPartBookmarks: '{count} bookmark{suffix}',
+      folderSummaryJoiner: ', ',
+      folderSummaryEmpty: 'Empty folder',
 
       // Tags
       editTags: 'Edit Tags',
@@ -176,6 +191,9 @@ function LanguageManager() {
       // Filter groups
       filterTypeLabel: 'Type',
       filterTagLabel: 'Tag',
+      filterAllTab: 'All',
+      filterBookmarkTab: 'Links',
+      filterFolderTab: 'Folders',
       filterTagEmpty: 'Not selected',
       filterSummaryPrefix: 'Filter',
       filterSummaryType: 'Type',
@@ -357,7 +375,20 @@ LanguageManager.prototype.updateUI = function () {
     hints[0].textContent = this.t('keyboardHintSelect');
     hints[1].textContent = this.t('keyboardHintConfirm');
     hints[2].textContent = this.t('keyboardHintToggle');
+    if (hints.length >= 4) {
+      hints[3].textContent = this.t('keyboardHintFilterCycle');
+    }
   }
+
+  // 更新顶部类型筛选 tabs
+  var allFilterTab = this.getRoot().querySelector('#smart-bookmark-filter-type-tabs [data-filter="all"]');
+  if (allFilterTab) allFilterTab.textContent = this.t('filterAllTab');
+
+  var bookmarkFilterTab = this.getRoot().querySelector('#smart-bookmark-filter-type-tabs [data-filter="bookmark"]');
+  if (bookmarkFilterTab) bookmarkFilterTab.innerHTML = '🔗 ' + this.t('filterBookmarkTab');
+
+  var folderFilterTab = this.getRoot().querySelector('#smart-bookmark-filter-type-tabs [data-filter="folder"]');
+  if (folderFilterTab) folderFilterTab.innerHTML = '📁 ' + this.t('filterFolderTab');
 
   var filterTypeLabel = this.getRoot().getElementById('smart-bookmark-filter-type-label');
   if (filterTypeLabel) filterTypeLabel.textContent = this.t('filterTypeLabel');
@@ -396,6 +427,22 @@ LanguageManager.prototype.updateUI = function () {
       visibleTags,
       window.modalManager.currentTagFilter
     );
+  }
+
+  // 语言切换后立即重绘当前列表，确保列表项文案实时同步
+  if (window.modalManager) {
+    var modalEl = this.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.MODAL_ID);
+    var isModalActive = !!(modalEl && modalEl.classList.contains(window.SMART_BOOKMARK_CONSTANTS.MODAL_ACTIVE_CLASS));
+    if (isModalActive) {
+      if (window.modalManager.uiManager &&
+        window.modalManager.uiManager.currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_FOLDER_SELECT) {
+        if (typeof window.modalManager.updateFolderList === 'function') {
+          window.modalManager.updateFolderList();
+        }
+      } else if (typeof window.modalManager.updateBookmarkList === 'function') {
+        window.modalManager.updateBookmarkList();
+      }
+    }
   }
 };
 

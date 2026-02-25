@@ -12,7 +12,7 @@ function ModalManager() {
   this.allBookmarks = [];
   this.filteredBookmarks = [];
   this.searchEngine = new window.SearchEngine();
-  this.itemHeight = 58; // 每个项目的高度（像素）- 与CSS min-height保持一致（文件夹52px+书签56px的平均值）
+  this.itemHeight = 108; // 虚拟滚动基准行高（覆盖标题/副标题/路径/标签，避免标签行被截断）
   this.folderById = new Map(); // 快速查找用
 
   // 面包屑缓存，避免重复计算
@@ -291,6 +291,19 @@ ModalManager.prototype.bindEvents = function () {
   };
 
   addEventListenerFn(document, 'click', handleClickOutside);
+
+  // 主窗口：点击 backdrop 空白区立即关闭（更符合“点外关闭”直觉）
+  var modalBackdrop = this.getRoot().querySelector('.smart-bookmark-modal-backdrop');
+  if (modalBackdrop) {
+    addEventListenerFn(modalBackdrop, 'mousedown', function (e) {
+      var modal = self.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.MODAL_ID);
+      if (!modal || !modal.classList.contains(window.SMART_BOOKMARK_CONSTANTS.MODAL_ACTIVE_CLASS)) return;
+      if (e.target === modalBackdrop) {
+        e.preventDefault();
+        self.hide();
+      }
+    });
+  }
 
   // 搜索输入事件（动态防抖）
   var searchInput = this.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);

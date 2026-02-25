@@ -5,7 +5,8 @@
  */
 function VirtualScroller(container, itemHeight, totalItems, renderItem) {
   this.container = container;
-  this.itemHeight = itemHeight; // 固定项目高度
+  this.defaultItemHeight = Math.max(72, Number(itemHeight) || 88); // 基准项目高度
+  this.itemHeight = this.defaultItemHeight; // 固定项目高度
   this.totalItems = totalItems;
   this.renderItem = renderItem; // 渲染单个项目的函数
   this.visibleItems = 0;
@@ -16,7 +17,8 @@ function VirtualScroller(container, itemHeight, totalItems, renderItem) {
   this.scrollTop = 0;
   this.contentContainer = null;
   this.scrollHandler = null;
-  this.hasMeasuredItemHeight = false; // 是否已自动测量真实高度
+  this.autoMeasureItemHeight = false; // 统一固定行高，禁用自动测量避免跨模式错位
+  this.hasMeasuredItemHeight = !this.autoMeasureItemHeight; // 是否已自动测量真实高度
   this.enableItemAnimations = false; // 关闭虚拟列表入场动画，减少闪烁与重绘抖动
   this.shouldAnimateOnNextRender = this.enableItemAnimations; // 仅在首次或数据更新后为true
   this.isRenderScheduled = false; // rAF合帧标记
@@ -187,11 +189,13 @@ VirtualScroller.prototype.render = function () {
       // 正确计算top位置：每个项目的位置 = (索引 * (项目高度 + 间距))
       itemElement.style.top = (i * (this.itemHeight + itemMarginBottom)) + 'px';
       itemElement.style.width = 'calc(100% - ' + itemMarginRight + 'px)';
-      // 在未测量真实高度前，不强制设置高度，避免测量被干扰
+      // 固定行高模式统一强制高度；自动测量模式仅在测量后强制高度
       if (this.hasMeasuredItemHeight) {
         itemElement.style.height = this.itemHeight + 'px';
+        itemElement.style.minHeight = this.itemHeight + 'px';
       } else {
         itemElement.style.height = '';
+        itemElement.style.minHeight = '';
       }
       itemElement.style.boxSizing = 'border-box';
       itemElement.style.left = '0';
@@ -204,8 +208,8 @@ VirtualScroller.prototype.render = function () {
       // 追加到DOM
       this.contentContainer.appendChild(itemElement);
 
-      // 首次渲染时，自动测量真实高度（取可见窗口中的最大值，处理不同类型项高度差异）
-      if (!this.hasMeasuredItemHeight) {
+      // 首次渲染时，自动测量真实高度（仅自动测量模式）
+      if (this.autoMeasureItemHeight && !this.hasMeasuredItemHeight) {
         var measured = itemElement.offsetHeight;
         if (measured > measuredMax) measuredMax = measured;
       }
@@ -224,8 +228,14 @@ VirtualScroller.prototype.render = function () {
   }
 
   // 渲染后统一更新测量高度，避免只测到第一项过小的问题
-  if (!this.hasMeasuredItemHeight) {
+  if (this.autoMeasureItemHeight && !this.hasMeasuredItemHeight) {
     this.hasMeasuredItemHeight = true;
+    // 约束自动测量区间，避免极端值导致整列表行高异常
+    var AUTO_MIN_HEIGHT = 84;
+    var AUTO_MAX_HEIGHT = 132;
+    if (measuredMax > 0) {
+      measuredMax = Math.ceil(Math.max(AUTO_MIN_HEIGHT, Math.min(AUTO_MAX_HEIGHT, measuredMax)));
+    }
     if (measuredMax && Math.abs(measuredMax - this.itemHeight) > 1) {
       // 高度校准时不再触发第二次入场动画
       this.setItemHeight(measuredMax, true);
@@ -259,11 +269,12 @@ VirtualScroller.prototype.updateData = function (items, animateOnUpdate) {
   this.items = items || [];
   this.totalItems = this.items.length;
   var shouldAnimate = animateOnUpdate !== false;
-  // 数据变化后允许再次自动测量高度
-  this.hasMeasuredItemHeight = false;
-  // 高度归一化：在搜索清空或返回初始状态时，重置到默认高度，避免因上次测量残留
-  if (this.totalItems === 0) {
-    this.itemHeight = this.itemHeight || 58;
+  // 高度模式：固定行高默认始终使用基准高度；自动测量模式在数据变化后重测
+  if (this.autoMeasureItemHeight) {
+    this.hasMeasuredItemHeight = false;
+  } else {
+    this.hasMeasuredItemHeight = true;
+    this.itemHeight = this.defaultItemHeight;
   }
 
   // 数据更新：标记下一次渲染需要动画，并重置动画状态
@@ -282,6 +293,9 @@ VirtualScroller.prototype.updateData = function (items, animateOnUpdate) {
 
   // 重新计算可见范围
   this.updateVisibleRange();
+  // 数据已更新：强制本次重绘，避免范围相同导致语言/文案更新被跳过
+  this.lastStartIndex = -1;
+  this.lastEndIndex = -1;
 
   // 重新渲染
   this.render();

@@ -200,14 +200,51 @@ ModalManager.prototype.renderFolderListWithVirtualScroll = function (folderList,
  * @returns {string}
  */
 ModalManager.prototype.getFolderCountText = function (folder) {
+  var hasI18n = !!this.languageManager;
+  var t = hasI18n ? this.languageManager.t.bind(this.languageManager) : null;
+  var formatText = function (template, vars) {
+    var out = template || '';
+    for (var key in vars) {
+      if (!Object.prototype.hasOwnProperty.call(vars, key)) continue;
+      var reg = new RegExp('\\{' + key + '\\}', 'g');
+      out = out.replace(reg, String(vars[key]));
+    }
+    return out;
+  };
+
   var countParts = [];
   if (folder && folder.subFolderCount > 0) {
-    countParts.push(folder.subFolderCount + ' 个文件夹');
+    if (hasI18n) {
+      countParts.push(formatText(t('folderSummaryPartFolders'), {
+        count: folder.subFolderCount,
+        suffix: folder.subFolderCount === 1 ? '' : 's'
+      }));
+    } else {
+      countParts.push(folder.subFolderCount + ' 个文件夹');
+    }
   }
   if (folder && folder.bookmarkCount > 0) {
-    countParts.push(folder.bookmarkCount + ' 个书签');
+    if (hasI18n) {
+      countParts.push(formatText(t('folderSummaryPartBookmarks'), {
+        count: folder.bookmarkCount,
+        suffix: folder.bookmarkCount === 1 ? '' : 's'
+      }));
+    } else {
+      countParts.push(folder.bookmarkCount + ' 个书签');
+    }
   }
-  return countParts.length > 0 ? '内含 ' + countParts.join('，') : '空文件夹';
+
+  if (countParts.length === 0) {
+    return hasI18n ? t('folderSummaryEmpty') : '空文件夹';
+  }
+
+  if (hasI18n) {
+    return formatText(t('folderSummaryContains'), {
+      parts: countParts.join(t('folderSummaryJoiner'))
+    });
+  }
+
+  return '内含 ' + countParts.join('，');
 };
 
 /**
@@ -506,10 +543,15 @@ ModalManager.prototype.renderBookmarkItem = function (bookmark, index, hasSearch
  */
 ModalManager.prototype.renderTagsHtml = function (item, searchTerm) {
   var tags = item.tags || [];
-  if (tags.length === 0) return '';
+  var html = '<div class="smart-bookmark-tags-container">';
+  if (tags.length === 0) {
+    var noTagsText = this.languageManager ? this.languageManager.t('noTags') : '暂无标签';
+    html += '<span class="smart-bookmark-tag-empty">' + this.escapeHtml(noTagsText) + '</span>';
+    html += '</div>';
+    return html;
+  }
 
   var MAX_VISIBLE = 5;
-  var html = '<div class="smart-bookmark-tags-container">';
 
   var visibleCount = Math.min(tags.length, MAX_VISIBLE);
   for (var i = 0; i < visibleCount; i++) {
