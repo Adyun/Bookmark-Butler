@@ -169,11 +169,15 @@ ModalManager.prototype.setTagFilter = function (tag) {
     window.SMART_BOOKMARK_TAGS.recordTagFilterUsage(this.currentTagFilter);
   }
   if (window.SMART_BOOKMARK_TAGS && this.uiManager && typeof this.uiManager.updateTagFilterTabs === 'function') {
-    this.uiManager.updateTagFilterTabs(window.SMART_BOOKMARK_TAGS.getAllTags(), this.currentTagFilter);
+    this.uiManager.updateTagFilterTabs(this.getAvailableFilterTags(), this.currentTagFilter);
   }
 
   this.refreshFilterBarState();
-  this.updateBookmarkList();
+  if (this.uiManager.currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH) {
+    this.updateBookmarkList();
+  } else {
+    this.updateFolderList();
+  }
 };
 
 /**
@@ -182,10 +186,14 @@ ModalManager.prototype.setTagFilter = function (tag) {
 ModalManager.prototype.clearTagFilter = function () {
   this.currentTagFilter = null;
   if (window.SMART_BOOKMARK_TAGS && this.uiManager && typeof this.uiManager.updateTagFilterTabs === 'function') {
-    this.uiManager.updateTagFilterTabs(window.SMART_BOOKMARK_TAGS.getAllTags(), this.currentTagFilter);
+    this.uiManager.updateTagFilterTabs(this.getAvailableFilterTags(), this.currentTagFilter);
   }
   this.refreshFilterBarState();
-  this.updateBookmarkList();
+  if (this.uiManager.currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH) {
+    this.updateBookmarkList();
+  } else {
+    this.updateFolderList();
+  }
 };
 
 /**
@@ -310,7 +318,7 @@ ModalManager.prototype.renderTagFilterPopoverList = function (searchText) {
   var listEl = root.getElementById('smart-bookmark-tag-popover-list');
   if (!listEl || !window.SMART_BOOKMARK_TAGS) return;
 
-  var allTags = window.SMART_BOOKMARK_TAGS.getAllTags();
+  var allTags = this.getAvailableFilterTags();
   var sorted = this.uiManager && typeof this.uiManager.sortTagsForFilter === 'function'
     ? this.uiManager.sortTagsForFilter(allTags, this.currentTagFilter, { preferUsage: true })
     : allTags.slice();

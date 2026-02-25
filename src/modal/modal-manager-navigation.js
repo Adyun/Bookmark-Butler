@@ -180,8 +180,9 @@ ModalManager.prototype.selectFolder = function (folderItem) {
 
   // 更新键盘管理器的选中索引
   var folderId = folderItem.getAttribute('data-folder-id');
-  for (var j = 0; j < this.filteredFolders.length; j++) {
-    if (this.filteredFolders[j].id === folderId) {
+  var currentItems = this.keyboardManager && this.keyboardManager.currentItems ? this.keyboardManager.currentItems : [];
+  for (var j = 0; j < currentItems.length; j++) {
+    if (currentItems[j] && currentItems[j].id === folderId) {
       this.keyboardManager.setSelectedIndex(j);
       break;
     }
@@ -1042,10 +1043,8 @@ ModalManager.prototype.jumpToExistingBookmark = function (bookmark) {
     this.cancelPendingSearch();
     this.uiManager.setMode(window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH);
     this.keyboardManager.setMode(window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH);
-
-    var filterBar = this.getRoot().getElementById('smart-bookmark-filter-bar');
-    if (filterBar) {
-      filterBar.style.display = '';
+    if (typeof this.applyFilterBarModeState === 'function') {
+      this.applyFilterBarModeState();
     }
   }
 
@@ -1207,13 +1206,13 @@ ModalManager.prototype.setMode = function (mode) {
   this.uiManager.setMode(mode);
   this.keyboardManager.setMode(mode);
 
-  // 切换到书签模式时，统一重置筛选器状态，避免残留标签筛选
-  if (mode === window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH) {
-    this.currentFilter = 'all';
-    this.currentTagFilter = null;
-    if (typeof this.refreshFilterBarState === 'function') {
-      this.refreshFilterBarState();
-    }
+  // 模式切换统一重置筛选状态，避免跨模式残留造成误筛选
+  this.currentFilter = 'all';
+  this.currentTagFilter = null;
+  if (typeof this.applyFilterBarModeState === 'function') {
+    this.applyFilterBarModeState();
+  } else if (typeof this.refreshFilterBarState === 'function') {
+    this.refreshFilterBarState();
   }
 
   if (mode === window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH) {
@@ -1241,19 +1240,13 @@ ModalManager.prototype.toggleMode = function () {
   }
   this.uiManager.toggleMode();
   this.keyboardManager.setMode(this.uiManager.currentMode);
-
-  // 控制筛选器栏的显示/隐藏
-  var filterBar = this.getRoot().getElementById('smart-bookmark-filter-bar');
-  if (filterBar) {
-    if (this.uiManager.currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH) {
-      filterBar.style.display = '';
-      // 重置筛选为"全部"
-      this.currentFilter = 'all';
-      this.currentTagFilter = null;
-      this.refreshFilterBarState();
-    } else {
-      filterBar.style.display = 'none';
-    }
+  // 模式切换统一重置筛选并刷新筛选栏结构
+  this.currentFilter = 'all';
+  this.currentTagFilter = null;
+  if (typeof this.applyFilterBarModeState === 'function') {
+    this.applyFilterBarModeState();
+  } else {
+    this.refreshFilterBarState();
   }
 
   if (this.uiManager.currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH) {
@@ -1386,6 +1379,14 @@ ModalManager.prototype.showTagEditor = function (item, type) {
   overlay.setAttribute('role', 'presentation');
 
   var editorTitle = self.languageManager ? self.languageManager.t('tagEditorTitle') : '管理标签';
+  var targetTypeLabel = type === 'folders'
+    ? (self.languageManager ? self.languageManager.t('tagEditorFolderLabel') : '文件夹')
+    : (self.languageManager ? self.languageManager.t('tagEditorBookmarkLabel') : '链接');
+  var targetTitle = (item && item.title ? item.title : '').toString().trim();
+  if (!targetTitle) {
+    targetTitle = type === 'folders' ? '未命名文件夹' : '未命名书签';
+  }
+  var editorTitleWithTarget = editorTitle + ' · ' + targetTypeLabel + '：' + targetTitle;
   var placeholderText = self.languageManager ? self.languageManager.t('tagPlaceholder') : '输入标签名称...';
   var hintText = self.languageManager ? self.languageManager.t('tagEditorHint') : '↑↓ 选建议 · Enter 添加 · Ctrl+Enter 保存 · Esc 取消';
 
@@ -1393,7 +1394,7 @@ ModalManager.prototype.showTagEditor = function (item, type) {
     '<div class="smart-bookmark-tag-editor-dialog">' +
     '<div class="smart-bookmark-tag-editor-header">' +
     '<span>🏷️</span>' +
-    '<h3 class="smart-bookmark-tag-editor-title">' + editorTitle + '</h3>' +
+    '<h3 class="smart-bookmark-tag-editor-title" title="' + self.escapeHtml(editorTitleWithTarget) + '">' + self.escapeHtml(editorTitleWithTarget) + '</h3>' +
     '</div>' +
     '<div class="smart-bookmark-tag-editor-body">' +
     '<div class="smart-bookmark-tag-editor-chips" id="smart-bookmark-tag-chips"></div>' +
@@ -1720,7 +1721,9 @@ ModalManager.prototype.showTagEditor = function (item, type) {
 
       // 刷新筛选栏标签 tabs 与 active 状态
       if (self.uiManager && typeof self.uiManager.updateTagFilterTabs === 'function') {
-        var allTags = window.SMART_BOOKMARK_TAGS.getAllTags();
+        var allTags = (typeof self.getAvailableFilterTags === 'function')
+          ? self.getAvailableFilterTags()
+          : window.SMART_BOOKMARK_TAGS.getAllTags();
         self.uiManager.updateTagFilterTabs(allTags, self.currentTagFilter);
       }
       if (typeof self.refreshFilterBarState === 'function') {

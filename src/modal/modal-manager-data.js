@@ -32,6 +32,15 @@ ModalManager.prototype.loadFolders = function () {
       return Promise.resolve(ensureTagsLoaded).then(function () {
         attachFolderTags();
         self._folderDataReadyForTagPrune = true;
+        if (self.uiManager && typeof self.uiManager.updateTagFilterTabs === 'function') {
+          var folderModeTags = (typeof self.getAvailableFilterTags === 'function')
+            ? self.getAvailableFilterTags()
+            : (window.SMART_BOOKMARK_TAGS ? window.SMART_BOOKMARK_TAGS.getAllTags() : []);
+          self.uiManager.updateTagFilterTabs(folderModeTags, self.currentTagFilter);
+        }
+        if (typeof self.refreshFilterBarState === 'function') {
+          self.refreshFilterBarState();
+        }
         return self.maybePruneOrphanTags();
       }).then(function () {
 
@@ -150,6 +159,13 @@ ModalManager.prototype.loadBookmarks = function () {
           }
         }
       };
+      var attachFolderTags = function () {
+        if (window.SMART_BOOKMARK_TAGS) {
+          for (var fi = 0; fi < self.allFolders.length; fi++) {
+            self.allFolders[fi].tags = window.SMART_BOOKMARK_TAGS.getTagsForItem('folders', self.allFolders[fi].id);
+          }
+        }
+      };
 
       var ensureTagsLoaded = Promise.resolve();
       if (window.SMART_BOOKMARK_TAGS && !window.SMART_BOOKMARK_TAGS.hasLoaded()) {
@@ -158,7 +174,17 @@ ModalManager.prototype.loadBookmarks = function () {
 
       return Promise.resolve(ensureTagsLoaded).then(function () {
         attachBookmarkTags();
+        attachFolderTags();
         self._bookmarkDataReadyForTagPrune = true;
+        if (self.uiManager && typeof self.uiManager.updateTagFilterTabs === 'function') {
+          var bookmarkModeTags = (typeof self.getAvailableFilterTags === 'function')
+            ? self.getAvailableFilterTags()
+            : (window.SMART_BOOKMARK_TAGS ? window.SMART_BOOKMARK_TAGS.getAllTags() : []);
+          self.uiManager.updateTagFilterTabs(bookmarkModeTags, self.currentTagFilter);
+        }
+        if (typeof self.refreshFilterBarState === 'function') {
+          self.refreshFilterBarState();
+        }
         return self.maybePruneOrphanTags();
       }).then(function () {
         // console.log('Retrieved ' + bookmarks.length + ' bookmarks');

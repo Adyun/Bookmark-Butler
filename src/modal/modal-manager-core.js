@@ -131,7 +131,7 @@ ModalManager.prototype.initializeComponents = function () {
     window.SMART_BOOKMARK_TAGS.loadTags().then(function () {
       // 标签加载完成后更新筛选栏标签 tabs
       try {
-        var allTags = window.SMART_BOOKMARK_TAGS.getAllTags();
+        var allTags = self.getAvailableFilterTags();
         if (allTags.length > 0 && self.uiManager && typeof self.uiManager.updateTagFilterTabs === 'function') {
           self.uiManager.updateTagFilterTabs(allTags, self.currentTagFilter);
         }
@@ -141,7 +141,7 @@ ModalManager.prototype.initializeComponents = function () {
     // 监听标签变化
     window.SMART_BOOKMARK_TAGS.addChangeListener(function () {
       try {
-        var allTags = window.SMART_BOOKMARK_TAGS.getAllTags();
+        var allTags = self.getAvailableFilterTags();
         if (self.uiManager && typeof self.uiManager.updateTagFilterTabs === 'function') {
           self.uiManager.updateTagFilterTabs(allTags, self.currentTagFilter);
         }
@@ -151,6 +151,8 @@ ModalManager.prototype.initializeComponents = function () {
         // 刷新列表
         if (self.uiManager.currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH) {
           self.updateBookmarkList();
+        } else {
+          self.updateFolderList();
         }
       } catch (e) { }
     });
@@ -472,22 +474,27 @@ ModalManager.prototype.bindEvents = function () {
     });
   }
 
-  // 列表内标签点击触发筛选（事件委托）
-  var bookmarkList = this.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.BOOKMARK_LIST_ID);
-  if (bookmarkList) {
-    addEventListenerFn(bookmarkList, 'click', function (e) {
+  // 列表内标签点击触发筛选（事件委托）：书签列表与文件夹列表共用
+  var bindTagClickFilterDelegation = function (listEl) {
+    if (!listEl) return;
+    addEventListenerFn(listEl, 'click', function (e) {
       var tagEl = e.target.closest('.smart-bookmark-tag');
-      if (tagEl && tagEl.dataset.tag) {
-        e.stopPropagation();
-        var clickedTag = tagEl.dataset.tag;
-        if (self.currentTagFilter && self.currentTagFilter.toLowerCase() === clickedTag.toLowerCase()) {
-          self.clearTagFilter();
-        } else {
-          self.setTagFilter(clickedTag);
-        }
+      if (!tagEl || !tagEl.dataset.tag) return;
+
+      e.stopPropagation();
+      var clickedTag = tagEl.dataset.tag;
+      if (self.currentTagFilter && self.currentTagFilter.toLowerCase() === clickedTag.toLowerCase()) {
+        self.clearTagFilter();
+      } else {
+        self.setTagFilter(clickedTag);
       }
     });
-  }
+  };
+
+  var bookmarkList = this.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.BOOKMARK_LIST_ID);
+  var folderList = this.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.FOLDER_LIST_ID);
+  bindTagClickFilterDelegation(bookmarkList);
+  bindTagClickFilterDelegation(folderList);
 
   // 确认按钮事件
   var confirmBtn = this.getRoot().getElementById('smart-bookmark-confirm');
@@ -617,11 +624,8 @@ ModalManager.prototype.show = function (pageInfo) {
   // 设置当前模式（触发动画）
   this.setMode(this.uiManager.currentMode);
 
-  // 根据模式控制筛选器栏的显示
-  var filterBar = this.getRoot().getElementById('smart-bookmark-filter-bar');
-  if (filterBar) {
-    filterBar.style.display = this.uiManager.currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH ? '' : 'none';
-  }
+  // 根据模式控制筛选器层级（书签模式：类型+标签；添加模式：仅标签）
+  this.applyFilterBarModeState();
   // 标记：窗口出现时下一次渲染需要动画
   if (this.folderVirtualScroller) this.folderVirtualScroller.shouldAnimateOnNextRender = true;
   if (this.bookmarkVirtualScroller) this.bookmarkVirtualScroller.shouldAnimateOnNextRender = true;
@@ -706,7 +710,7 @@ ModalManager.prototype.scheduleBuildIndexes = function () {
 
 ModalManager.prototype.handleLayoutRecalculated = function () {
   if (window.SMART_BOOKMARK_TAGS && this.uiManager && typeof this.uiManager.updateTagFilterTabs === 'function') {
-    this.uiManager.updateTagFilterTabs(window.SMART_BOOKMARK_TAGS.getAllTags(), this.currentTagFilter);
+    this.uiManager.updateTagFilterTabs(this.getAvailableFilterTags(), this.currentTagFilter);
   }
   // 强制更新虚拟滚动器
   if (this.folderVirtualScroller) {
@@ -799,6 +803,46 @@ ModalManager.prototype.getDefaultFolderResults = function () {
   }
 
   return folders;
+};
+
+/**
+ * 获取当前模式下筛选栏应展示的标签集合
+ * - 书签搜索模式：书签+文件夹标签
+ * - 添加书签模式：仅文件夹标签
+ * @returns {Array}
+ */
+ModalManager.prototype.getAvailableFilterTags = function () {
+  if (!window.SMART_BOOKMARK_TAGS) return [];
+  if (this.uiManager && this.uiManager.currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_FOLDER_SELECT) {
+    return window.SMART_BOOKMARK_TAGS.getAllTags('folders');
+  }
+  return window.SMART_BOOKMARK_TAGS.getAllTags();
+};
+
+/**
+ * 根据当前模式更新筛选栏显示状态
+ * - 书签搜索模式：显示类型+标签
+ * - 添加书签模式：显示标签，隐藏类型
+ */
+ModalManager.prototype.applyFilterBarModeState = function () {
+  var root = this.getRoot();
+  var filterBar = root.getElementById('smart-bookmark-filter-bar');
+  if (!filterBar) return;
+
+  var typeGroup = root.querySelector('.smart-bookmark-filter-group-type');
+  var isFolderMode = !!(this.uiManager && this.uiManager.currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_FOLDER_SELECT);
+
+  filterBar.style.display = '';
+  if (typeGroup) {
+    typeGroup.style.display = isFolderMode ? 'none' : '';
+  }
+
+  if (window.SMART_BOOKMARK_TAGS && this.uiManager && typeof this.uiManager.updateTagFilterTabs === 'function') {
+    this.uiManager.updateTagFilterTabs(this.getAvailableFilterTags(), this.currentTagFilter);
+  }
+  if (typeof this.refreshFilterBarState === 'function') {
+    this.refreshFilterBarState();
+  }
 };
 
 /**

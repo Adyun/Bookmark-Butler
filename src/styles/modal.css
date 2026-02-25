@@ -671,11 +671,11 @@
 /* 通用右侧操作区与置顶按钮 */
 .smart-bookmark-item-actions {
   position: absolute;
-  top: 50%;
+  top: 8px;
   right: 8px;
-  transform: translateY(-50%);
+  transform: none;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
 }
 
@@ -1959,6 +1959,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
 }
 
 .smart-bookmark-tag-editor-title {
@@ -1966,6 +1967,10 @@
   font-weight: 600;
   color: var(--sb-foreground, #0f172a);
   margin: 0;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .smart-bookmark-tag-editor-body {

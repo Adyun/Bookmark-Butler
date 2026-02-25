@@ -81,6 +81,8 @@ function LanguageManager() {
       tagSaveBtn: '保存',
       noTags: '暂无标签',
       tagEditorHint: '↑↓ 选建议 · Enter 添加 · Ctrl+Enter 保存 · Esc 取消',
+      tagEditorFolderLabel: '文件夹',
+      tagEditorBookmarkLabel: '链接',
 
       // 筛选分组
       filterTypeLabel: '类型',
@@ -168,6 +170,8 @@ function LanguageManager() {
       tagSaveBtn: 'Save',
       noTags: 'No tags',
       tagEditorHint: '↑↓ choose · Enter add · Ctrl+Enter save · Esc cancel',
+      tagEditorFolderLabel: 'Folder',
+      tagEditorBookmarkLabel: 'Link',
 
       // Filter groups
       filterTypeLabel: 'Type',
@@ -385,8 +389,11 @@ LanguageManager.prototype.updateUI = function () {
   if (window.modalManager && window.modalManager.uiManager &&
     typeof window.modalManager.uiManager.updateTagFilterTabs === 'function' &&
     window.SMART_BOOKMARK_TAGS) {
+    var visibleTags = (typeof window.modalManager.getAvailableFilterTags === 'function')
+      ? window.modalManager.getAvailableFilterTags()
+      : window.SMART_BOOKMARK_TAGS.getAllTags();
     window.modalManager.uiManager.updateTagFilterTabs(
-      window.SMART_BOOKMARK_TAGS.getAllTags(),
+      visibleTags,
       window.modalManager.currentTagFilter
     );
   }
