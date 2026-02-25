@@ -122,15 +122,13 @@ UIManager.prototype.createModal = function () {
     '<input type="text" id="' + window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID + '" class="smart-bookmark-search" placeholder="搜索书签..." autofocus>' +
     '<div class="smart-bookmark-filter-bar" id="smart-bookmark-filter-bar">' +
     '<div class="smart-bookmark-filter-group smart-bookmark-filter-group-type">' +
-    '<span class="smart-bookmark-filter-label" id="smart-bookmark-filter-type-label">类型</span>' +
-    '<div class="smart-bookmark-filter-tabs-row" id="smart-bookmark-filter-type-tabs">' +
+    '<div class="smart-bookmark-filter-type-nav" id="smart-bookmark-filter-type-tabs">' +
     '<button class="smart-bookmark-filter-tab smart-bookmark-filter-tab-type active" data-filter="all">全部</button>' +
     '<button class="smart-bookmark-filter-tab smart-bookmark-filter-tab-type" data-filter="bookmark">🔗 链接</button>' +
     '<button class="smart-bookmark-filter-tab smart-bookmark-filter-tab-type" data-filter="folder">📁 文件夹</button>' +
     '</div>' +
     '</div>' +
     '<div class="smart-bookmark-filter-group smart-bookmark-filter-group-tag">' +
-    '<span class="smart-bookmark-filter-label" id="smart-bookmark-filter-tag-label">标签</span>' +
     '<div class="smart-bookmark-filter-tabs-row" id="smart-bookmark-filter-tag-tabs">' +
     '<span class="smart-bookmark-filter-tag-empty" id="smart-bookmark-filter-tag-empty">未选择</span>' +
     '</div>' +
@@ -683,36 +681,36 @@ UIManager.prototype.cleanup = function () {
 };
 
 /**
- * 标签筛选排序：当前选中优先，其次最近使用，再按命中次数，最后按字母
+ * 标签筛选排序
+ * 默认按名称稳定排序；可选在弹层中启用“使用频率优先”
  * @param {Array} tags
  * @param {string|null} activeTag
+ * @param {{preferUsage?: boolean}=} options
  * @returns {Array}
  */
-UIManager.prototype.sortTagsForFilter = function (tags, activeTag) {
+UIManager.prototype.sortTagsForFilter = function (tags, activeTag, options) {
   var list = Array.isArray(tags) ? tags.slice() : [];
+  options = options || {};
+  var preferUsage = !!options.preferUsage;
   var stats = {};
-  if (window.SMART_BOOKMARK_TAGS && typeof window.SMART_BOOKMARK_TAGS.getTagFilterStats === 'function') {
+  if (preferUsage && window.SMART_BOOKMARK_TAGS && typeof window.SMART_BOOKMARK_TAGS.getTagFilterStats === 'function') {
     stats = window.SMART_BOOKMARK_TAGS.getTagFilterStats() || {};
   }
-  var activeKey = (activeTag || '').toLowerCase();
 
   list.sort(function (a, b) {
     var aKey = (a || '').toLowerCase();
     var bKey = (b || '').toLowerCase();
+    if (preferUsage) {
+      var aStats = stats[aKey] || {};
+      var bStats = stats[bKey] || {};
+      var aLast = Number(aStats.lastUsedAt) || 0;
+      var bLast = Number(bStats.lastUsedAt) || 0;
+      if (aLast !== bLast) return bLast - aLast;
 
-    var aActive = !!(activeKey && aKey === activeKey);
-    var bActive = !!(activeKey && bKey === activeKey);
-    if (aActive !== bActive) return aActive ? -1 : 1;
-
-    var aStats = stats[aKey] || {};
-    var bStats = stats[bKey] || {};
-    var aLast = Number(aStats.lastUsedAt) || 0;
-    var bLast = Number(bStats.lastUsedAt) || 0;
-    if (aLast !== bLast) return bLast - aLast;
-
-    var aHit = Number(aStats.hitCount) || 0;
-    var bHit = Number(bStats.hitCount) || 0;
-    if (aHit !== bHit) return bHit - aHit;
+      var aHit = Number(aStats.hitCount) || 0;
+      var bHit = Number(bStats.hitCount) || 0;
+      if (aHit !== bHit) return bHit - aHit;
+    }
 
     return (a || '').localeCompare((b || ''), undefined, { sensitivity: 'base' });
   });
@@ -747,10 +745,10 @@ UIManager.prototype.updateTagFilterTabs = function (tags, activeTag) {
     return;
   }
 
-  var sortedTags = this.sortTagsForFilter(tags, activeTag);
+  var sortedTags = this.sortTagsForFilter(tags, activeTag, { preferUsage: false });
   var activeKey = (activeTag || '').toLowerCase();
 
-  // 快捷层候选：Top 8（若当前选中标签不在候选中则补入）
+  // 快捷层候选：Top 8（稳定顺序，避免点击后标签跳位）
   var candidates = sortedTags.slice(0, 8);
   if (activeKey) {
     var inCandidates = false;
@@ -763,7 +761,7 @@ UIManager.prototype.updateTagFilterTabs = function (tags, activeTag) {
     if (!inCandidates) {
       for (var si = 0; si < sortedTags.length; si++) {
         if ((sortedTags[si] || '').toLowerCase() === activeKey) {
-          candidates.unshift(sortedTags[si]);
+          candidates.push(sortedTags[si]);
           break;
         }
       }

@@ -312,7 +312,7 @@ ModalManager.prototype.renderTagFilterPopoverList = function (searchText) {
 
   var allTags = window.SMART_BOOKMARK_TAGS.getAllTags();
   var sorted = this.uiManager && typeof this.uiManager.sortTagsForFilter === 'function'
-    ? this.uiManager.sortTagsForFilter(allTags, this.currentTagFilter)
+    ? this.uiManager.sortTagsForFilter(allTags, this.currentTagFilter, { preferUsage: true })
     : allTags.slice();
   var q = (searchText || '').toLowerCase().trim();
   var filtered = [];

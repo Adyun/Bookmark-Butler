@@ -62,8 +62,13 @@ KeyboardManager.prototype.handleKeyDown = function (e) {
   // 如果模态框不可见，不处理键盘事件
   if (!this.isModalVisible) return;
 
-  // 标签编辑弹窗打开时，暂停全局键盘快捷键，避免 Enter/Escape/Tab 穿透到主列表
-  if (window.modalManager && (window.modalManager.isTagEditorOpen || window.modalManager.isTagFilterPopoverOpen)) {
+  // 子弹窗/浮层打开时，暂停主窗口快捷键，避免 Tab/Enter/Escape 穿透
+  var mm = window.modalManager;
+  if (mm && (mm.isTagEditorOpen ||
+    mm.isTagFilterPopoverOpen ||
+    mm.isDeleteDialogOpen ||
+    mm.isDuplicateDialogOpen ||
+    mm.isContextMenuOpen)) {
     return;
   }
 
