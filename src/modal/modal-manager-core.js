@@ -121,10 +121,11 @@ ModalManager.prototype.initializeComponents = function () {
     }
   });
 
-  // 监听布局重新计算事件
-  window.addEventListener('layout-recalculated', function () {
+  // 监听布局重新计算事件（保存引用以便 cleanup 移除）
+  this._layoutRecalcHandler = function () {
     self.handleLayoutRecalculated();
-  });
+  };
+  window.addEventListener('layout-recalculated', this._layoutRecalcHandler);
 
   // 预加载标签数据
   if (window.SMART_BOOKMARK_TAGS && typeof window.SMART_BOOKMARK_TAGS.loadTags === 'function') {
@@ -199,7 +200,8 @@ ModalManager.prototype.initializeComponents = function () {
       };
 
       if (typeof window !== 'undefined' && window.addEventListener) {
-        window.addEventListener('smart-bookmark-pins-updated', onPinsChanged);
+        self._pinsUpdatedHandler = onPinsChanged;
+        window.addEventListener('smart-bookmark-pins-updated', self._pinsUpdatedHandler);
       }
       if (typeof window.SMART_BOOKMARK_PINS.addChangeListener === 'function') {
         window.SMART_BOOKMARK_PINS.addChangeListener(onPinsChanged);
@@ -879,6 +881,16 @@ ModalManager.prototype.cleanup = function () {
     this.dismissContextMenu();
   }
   this.isDuplicateCheckInProgress = false;
+
+  // 清理 window 级别的事件监听器（防止监听器累积）
+  if (this._layoutRecalcHandler) {
+    window.removeEventListener('layout-recalculated', this._layoutRecalcHandler);
+    this._layoutRecalcHandler = null;
+  }
+  if (this._pinsUpdatedHandler) {
+    window.removeEventListener('smart-bookmark-pins-updated', this._pinsUpdatedHandler);
+    this._pinsUpdatedHandler = null;
+  }
 
   // 清理组件
   if (this.uiManager) {

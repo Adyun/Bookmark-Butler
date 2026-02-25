@@ -1,5 +1,6 @@
 // Background script to handle extension commands
-console.log("Smart Bookmark Extension background script loaded");
+const DEBUG = false;
+if (DEBUG) console.log("Smart Bookmark Extension background script loaded");
 
 // 内存管理器
 const memoryManager = {
@@ -67,7 +68,7 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 
 // 监听来自内容脚本的消息
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  console.log("Message received in background script:", request);
+  if (DEBUG) console.log("Message received in background script:", request);
 
   // 记录内容脚本已加载
   if (sender.tab && request.action === "contentScriptLoaded") {
@@ -321,19 +322,35 @@ function invalidatePersistentCache() {
 
 function broadcastBookmarksChanged(reason, payload) {
   try {
-    // 书签变更时清理持久化缓存，避免未加载 content script 的页面读到旧数据
     invalidatePersistentCache();
+    var message = { action: 'bookmarksChanged', reason: reason, payload: payload };
+    var targetedTabs = new Set();
+
+    // 优先向已知加载了 content script 的标签页广播（O(k) 而非 O(n)）
+    if (loadedTabs.size > 0) {
+      for (const tabId of loadedTabs) {
+        targetedTabs.add(tabId);
+        try {
+          chrome.tabs.sendMessage(tabId, message)
+            .catch(() => { loadedTabs.delete(tabId); });
+        } catch (e) {
+          loadedTabs.delete(tabId);
+        }
+      }
+    }
+
+    // 再扫描当前标签页：向未覆盖到的可用标签页兜底广播，避免 loadedTabs 部分失真导致漏发
     chrome.tabs.query({}, (tabs) => {
       for (const tab of tabs) {
+        if (!tab || typeof tab.id !== 'number') continue;
+        if (targetedTabs.has(tab.id)) continue;
+        if (isRestrictedUrl(tab.url)) continue;
+
         try {
-          // 使用 .catch() 处理 Promise rejection，避免 Uncaught (in promise) 错误
-          chrome.tabs.sendMessage(tab.id, { action: 'bookmarksChanged', reason, payload })
-            .catch(() => {
-              // 静默忽略：content script 可能未加载或页面不支持
-            });
-        } catch (e) {
-          // 忽略不可达的标签页
-        }
+          chrome.tabs.sendMessage(tab.id, message)
+            .then(() => { loadedTabs.add(tab.id); })
+            .catch(() => { });
+        } catch (e) { }
       }
     });
   } catch (e) {
@@ -413,6 +430,10 @@ function sendMessageToContentScript(tabId, message, maxRetries = 3) {
  * 检查URL是否为受限制的URL
  */
 function isRestrictedUrl(url) {
+  if (typeof url !== 'string' || url.length === 0) {
+    return true;
+  }
+
   const restrictedProtocols = [
     'chrome://',
     'chrome-extension://',

@@ -151,6 +151,9 @@ ModalManager.prototype.loadBookmarks = function () {
 
       self.allBookmarks = visibleBookmarks;
 
+      // 构建 parentId → 书签索引（供 enterFolder O(1) 查找）
+      self.buildBookmarkParentMap();
+
       // 附着标签数据（确保标签已加载）
       var attachBookmarkTags = function () {
         if (window.SMART_BOOKMARK_TAGS) {
@@ -335,13 +338,103 @@ ModalManager.prototype.handlePermissionRequest = function () {
 ModalManager.prototype.buildFolderIdMap = function () {
   try {
     this.folderById = new Map();
+    this.folderChildrenByParent = new Map(); // parentId → [folder, ...]
     for (var i = 0; i < (this.allFolders || []).length; i++) {
       var f = this.allFolders[i];
-      if (f && f.id) this.folderById.set(f.id, f);
+      if (f && f.id) {
+        this.folderById.set(f.id, f);
+        // 构建 parentId → children 索引
+        if (f.parentId) {
+          if (!this.folderChildrenByParent.has(f.parentId)) {
+            this.folderChildrenByParent.set(f.parentId, []);
+          }
+          this.folderChildrenByParent.get(f.parentId).push(f);
+        }
+      }
     }
   } catch (e) {
     // 忽略
   }
+};
+
+/**
+ * 构建书签 parentId → [bookmark, ...] 索引（书签数据加载后调用）
+ */
+ModalManager.prototype.buildBookmarkParentMap = function () {
+  try {
+    this.bookmarkChildrenByParent = new Map();
+    for (var i = 0; i < (this.allBookmarks || []).length; i++) {
+      var bm = this.allBookmarks[i];
+      if (bm && bm.id && bm.parentId) {
+        if (!this.bookmarkChildrenByParent.has(bm.parentId)) {
+          this.bookmarkChildrenByParent.set(bm.parentId, []);
+        }
+        this.bookmarkChildrenByParent.get(bm.parentId).push(bm);
+      }
+    }
+  } catch (e) {
+    // 忽略
+  }
+};
+
+/**
+ * 从本地索引获取子文件夹（O(1)），带 subFolderCount 计算
+ * @param {string} folderId
+ * @returns {Array|null} 子文件夹列表，索引不可用时返回 null
+ */
+ModalManager.prototype.getLocalSubFolders = function (folderId) {
+  if (!this.folderChildrenByParent) return null;
+  var children = this.folderChildrenByParent.get(folderId) || [];
+  // 补充每个子文件夹的 subFolderCount
+  for (var i = 0; i < children.length; i++) {
+    var sub = children[i];
+    if (typeof sub.subFolderCount === 'undefined') {
+      sub.subFolderCount = (this.folderChildrenByParent.get(sub.id) || []).length;
+    }
+  }
+  return children;
+};
+
+/**
+ * 从本地索引获取文件夹内书签（O(1)）
+ * @param {string} folderId
+ * @returns {Array|null} 书签列表，索引不可用时返回 null
+ */
+ModalManager.prototype.getLocalBookmarksByFolder = function (folderId) {
+  if (!this.bookmarkChildrenByParent) return null;
+  return this.bookmarkChildrenByParent.get(folderId) || [];
+};
+
+/**
+ * 仅刷新文件夹数据与 parentId 索引（不触发列表 UI 切换）
+ * 用于书签模式下接收外部变更后保持 enterFolder 导航数据新鲜
+ * @returns {Promise<void>}
+ */
+ModalManager.prototype.refreshFoldersForNavigation = function () {
+  var self = this;
+  if (!window.SMART_BOOKMARK_API || typeof window.SMART_BOOKMARK_API.getAllFolders !== 'function') {
+    return Promise.resolve();
+  }
+
+  return window.SMART_BOOKMARK_API.getAllFolders()
+    .then(function (folders) {
+      if (!folders || !Array.isArray(folders)) return;
+
+      self.allFolders = folders;
+
+      // 若标签已加载，补齐文件夹标签，保持过滤与显示一致
+      if (window.SMART_BOOKMARK_TAGS && window.SMART_BOOKMARK_TAGS.hasLoaded()) {
+        for (var i = 0; i < self.allFolders.length; i++) {
+          self.allFolders[i].tags = window.SMART_BOOKMARK_TAGS.getTagsForItem('folders', self.allFolders[i].id);
+        }
+      }
+
+      self.buildFolderIdMap();
+      self.clearBreadcrumbCache();
+    })
+    .catch(function () {
+      // 忽略导航索引刷新失败，不影响主流程
+    });
 };
 
 /**

@@ -434,8 +434,10 @@ SearchEngine.prototype.search = function (query, folders) {
     indexedResults = this.folderIndex.search(query, 'folders');
   }
 
-  // 总是执行回退搜索以确保完整性，特别是对中文搜索
-  fallbackResults = this.fallbackSearch(query, folders, 'folders');
+  // 条件 fallback：索引未构建或索引结果不足时才执行全量搜索（兼顾中文搜索完整性）
+  if (!this.indexBuilt || indexedResults.length < 3) {
+    fallbackResults = this.fallbackSearch(query, folders, 'folders');
+  }
 
   // 合并结果并去重
   var combinedResults = this.combineSearchResults(indexedResults, fallbackResults);
@@ -466,8 +468,10 @@ SearchEngine.prototype.searchBookmarks = function (query, bookmarks) {
     indexedResults = this.bookmarkIndex.search(query, 'bookmarks');
   }
 
-  // 总是执行回退搜索以确保完整性，特别是对中文搜索
-  fallbackResults = this.fallbackSearch(query, bookmarks, 'bookmarks');
+  // 条件 fallback：索引未构建或索引结果不足时才执行全量搜索（兼顾中文搜索完整性）
+  if (!this.indexBuilt || indexedResults.length < 3) {
+    fallbackResults = this.fallbackSearch(query, bookmarks, 'bookmarks');
+  }
 
   // 合并结果并去重
   var combinedResults = this.combineSearchResults(indexedResults, fallbackResults);

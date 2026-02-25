@@ -542,18 +542,17 @@ UIManager.prototype.updateModalHeight = function () {
   // 临时设置为auto来测量实际需要的高度
   var originalHeight = modal.style.height;
   modal.style.height = 'auto';
-  var actualHeight = modal.offsetHeight;
+  var actualHeight = modal.offsetHeight; // 必要回流：测量 auto 高度
 
-  // 恢复原始高度（如果有的话）
-  if (originalHeight) {
+  if (originalHeight && originalHeight !== 'auto' && originalHeight !== (actualHeight + 'px')) {
+    // FLIP 动画：恢复旧高度 → 强制回流 → 设置新高度触发 transition
     modal.style.height = originalHeight;
+    void modal.offsetHeight; // 强制回流使浏览器记录起始值
+    modal.style.height = actualHeight + 'px';
+  } else {
+    // 首次设置或高度未变，无需动画回流
+    modal.style.height = actualHeight + 'px';
   }
-
-  // 强制重排
-  modal.offsetHeight;
-
-  // 设置新的高度，触发transition动画
-  modal.style.height = actualHeight + 'px';
 };
 
 /**
@@ -729,6 +728,25 @@ UIManager.prototype.updateTagFilterTabs = function (tags, activeTag) {
   var moreBtn = root.getElementById('smart-bookmark-more-tags-btn');
   if (!tagRow || !moreBtn) return;
 
+  var availableWidth = tagRow.clientWidth;
+  if (!availableWidth || availableWidth <= 0) {
+    availableWidth = 260;
+  }
+  var widthKey = Math.round(availableWidth);
+
+  // 缓存检查：输入不变时跳过重建（含语言维度，语言切换后按钮文本不同）
+  var langKey = (window.modalManager && window.modalManager.languageManager)
+    ? window.modalManager.languageManager.currentLanguage : '';
+  var cacheKey = langKey + '|' + widthKey + '|' + (tags || []).join(',') + '|' + (activeTag || '');
+  if (this._lastTagTabsCacheKey === cacheKey) return;
+  this._lastTagTabsCacheKey = cacheKey;
+
+  // 语言变化时清空宽度缓存
+  if (!this._tagWidthCache || this._tagWidthCacheLang !== langKey) {
+    this._tagWidthCache = {};
+    this._tagWidthCacheLang = langKey;
+  }
+
   // 移除旧的标签 tab（保留空态提示）
   var existingTagTabs = tagRow.querySelectorAll('[data-filter-tag]');
   for (var i = 0; i < existingTagTabs.length; i++) {
@@ -776,11 +794,6 @@ UIManager.prototype.updateTagFilterTabs = function (tags, activeTag) {
   moreBtn.style.display = 'none';
   moreBtn.style.visibility = '';
 
-  var availableWidth = tagRow.clientWidth;
-  if (!availableWidth || availableWidth <= 0) {
-    availableWidth = 260;
-  }
-
   var visible = [];
   var usedWidth = 0;
 
@@ -797,11 +810,18 @@ UIManager.prototype.updateTagFilterTabs = function (tags, activeTag) {
   };
 
   for (var j = 0; j < candidates.length; j++) {
-    var btnToMeasure = buildTagButton(candidates[j]);
-    btnToMeasure.style.visibility = 'hidden';
-    tagRow.appendChild(btnToMeasure);
-    var btnWidth = (btnToMeasure.offsetWidth || 46) + 6;
-    btnToMeasure.remove();
+    var btnWidth;
+    var widthCacheKey = candidates[j];
+    if (this._tagWidthCache[widthCacheKey]) {
+      btnWidth = this._tagWidthCache[widthCacheKey];
+    } else {
+      var btnToMeasure = buildTagButton(candidates[j]);
+      btnToMeasure.style.visibility = 'hidden';
+      tagRow.appendChild(btnToMeasure);
+      btnWidth = (btnToMeasure.offsetWidth || 46) + 6;
+      btnToMeasure.remove();
+      this._tagWidthCache[widthCacheKey] = btnWidth;
+    }
 
     var remainingCount = tags.length - (visible.length + 1);
     var reserveForMore = remainingCount > 0 ? moreBtnWidth : 0;

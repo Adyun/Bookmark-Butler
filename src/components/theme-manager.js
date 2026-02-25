@@ -1,4 +1,5 @@
 // Theme Manager for the Smart Bookmark Extension
+var DEBUG_THEME = false;
 
 /**
  * 主题管理器 - 处理深色模式切换和系统主题监听
@@ -27,33 +28,27 @@ ThemeManager.prototype.getRoot = function () {
 ThemeManager.prototype.init = function () {
   var self = this;
 
-  console.log('ThemeManager.init called, isInitialized:', this.isInitialized);
+  if (DEBUG_THEME) console.log('ThemeManager.init called, isInitialized:', this.isInitialized);
 
   if (this.isInitialized) {
-    console.log('ThemeManager already initialized, skipping');
+    if (DEBUG_THEME) console.log('ThemeManager already initialized, skipping');
     return;
   }
 
   // 同步加载设置，避免异步问题
-  console.log('Loading dark mode setting...');
   this.loadDarkModeSetting();
-  console.log('Dark mode loaded:', this.darkMode);
-
-  console.log('Loading theme color setting...');
   this.loadThemeColorSetting();
-  console.log('Theme color loaded:', this.themeColor);
 
   // 与 chrome.storage 同步（确保各上下文共享设置）
   this.setupStorageChangeListener();
   this.syncFromChromeStorage();
 
   // 设置系统主题监听
-  console.log('Setting up system theme listener...');
   this.setupSystemThemeListener();
 
   // 标记初始化完成
   this.isInitialized = true;
-  console.log('ThemeManager initialization completed');
+  if (DEBUG_THEME) console.log('ThemeManager initialization completed');
 };
 
 /**

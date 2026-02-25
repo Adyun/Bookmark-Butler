@@ -36,15 +36,21 @@ ModalManager.prototype.enterFolder = function (folderId, folderTitle, options) {
     searchInput.value = '';
   }
 
-  // 获取文件夹内容（子文件夹 + 书签），并确保标签数据已加载
+  // 获取文件夹内容：优先从本地 parentId 索引查找（O(1)），索引不可用时回退到 API
+  var localSubs = (typeof self.getLocalSubFolders === 'function') ? self.getLocalSubFolders(folderId) : null;
+  var localBms = (typeof self.getLocalBookmarksByFolder === 'function') ? self.getLocalBookmarksByFolder(folderId) : null;
+
+  var subFoldersPromise = localSubs !== null ? Promise.resolve(localSubs) : window.SMART_BOOKMARK_API.getSubFolders(folderId);
+  var bookmarksPromise = localBms !== null ? Promise.resolve(localBms) : window.SMART_BOOKMARK_API.getBookmarksByFolder(folderId);
+
   var tagsReadyPromise = Promise.resolve();
   if (window.SMART_BOOKMARK_TAGS && !window.SMART_BOOKMARK_TAGS.hasLoaded()) {
     tagsReadyPromise = window.SMART_BOOKMARK_TAGS.loadTags();
   }
 
   return Promise.all([
-    window.SMART_BOOKMARK_API.getSubFolders(folderId),
-    window.SMART_BOOKMARK_API.getBookmarksByFolder(folderId),
+    subFoldersPromise,
+    bookmarksPromise,
     tagsReadyPromise
   ]).then(function (results) {
     var subFolders = results[0];

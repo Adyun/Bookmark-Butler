@@ -303,6 +303,10 @@ function handleMessage(request, sender, sendResponse) {
           // 根据当前模式增量刷新
           if (memoryManager.modalManager.uiManager && memoryManager.modalManager.uiManager.currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH) {
             memoryManager.modalManager.loadBookmarks();
+            // 书签模式下也刷新文件夹索引，避免 enterFolder 读取到旧目录结构
+            if (typeof memoryManager.modalManager.refreshFoldersForNavigation === 'function') {
+              memoryManager.modalManager.refreshFoldersForNavigation();
+            }
           } else {
             memoryManager.modalManager.loadFolders();
           }

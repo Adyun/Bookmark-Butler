@@ -8,12 +8,9 @@ ModalManager.prototype.handleSearch = function (query) {
 
 
 
-  // 记录当前高度
+  // 标记高度动画（延迟到搜索结果渲染后执行，避免搜索前同步回流）
   var modal = this.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.MODAL_ID);
-  var currentHeight = null;
   if (modal && shouldAnimateModalHeight) {
-    currentHeight = modal.offsetHeight;
-    modal.style.height = currentHeight + 'px'; // 设置当前高度
     modal.classList.add('content-changing');
   } else if (modal) {
     modal.classList.remove('content-changing');
@@ -91,29 +88,31 @@ ModalManager.prototype.handleSearch = function (query) {
     this.updateFolderList();
   }
 
-  // 计算新高度并应用动画
-  setTimeout(function () {
+  // 使用 rAF 批量处理高度过渡，减少强制回流次数
+  requestAnimationFrame(function () {
     if (searchGeneration !== self.searchGeneration) return;
     if (modal && shouldAnimateModalHeight) {
-      // 临时设置为auto来测量新高度
+      // FLIP: 读取当前实际高度 → 设为 auto 测量目标高度 → 恢复 → 动画到目标
+      var fromHeight = modal.offsetHeight; // 回流 1（必要：读取当前渲染高度）
       modal.style.height = 'auto';
-      var newHeight = modal.offsetHeight;
+      var toHeight = modal.offsetHeight;   // 回流 2（必要：测量 auto 高度）
 
-      // 恢复原高度触发重排
-      modal.style.height = currentHeight + 'px';
-      modal.offsetHeight; // 强制重排
-
-      // 设置新高度触发动画
-      modal.style.height = newHeight + 'px';
+      if (fromHeight !== toHeight) {
+        modal.style.height = fromHeight + 'px';
+        void modal.offsetHeight; // 强制浏览器记录起始值
+        modal.style.height = toHeight + 'px';
+      } else {
+        modal.style.height = toHeight + 'px';
+      }
 
       // 动画完成后清理
       setTimeout(function () {
         if (modal) {
           modal.classList.remove('content-changing');
         }
-      }, 400);
+      }, 350);
     }
-  }, 50);
+  });
 
   // 延迟设置选中索引，确保虚拟滚动器完全渲染后再进行选择
   setTimeout(function () {
