@@ -121,9 +121,20 @@ UIManager.prototype.createModal = function () {
     '<div class="smart-bookmark-modal-body">' +
     '<input type="text" id="' + window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID + '" class="smart-bookmark-search" placeholder="搜索书签..." autofocus>' +
     '<div class="smart-bookmark-filter-bar" id="smart-bookmark-filter-bar">' +
-    '<button class="smart-bookmark-filter-tab active" data-filter="all">全部</button>' +
-    '<button class="smart-bookmark-filter-tab" data-filter="bookmark">🔗 链接</button>' +
-    '<button class="smart-bookmark-filter-tab" data-filter="folder">📁 文件夹</button>' +
+    '<div class="smart-bookmark-filter-group smart-bookmark-filter-group-type">' +
+    '<span class="smart-bookmark-filter-label" id="smart-bookmark-filter-type-label">类型</span>' +
+    '<div class="smart-bookmark-filter-tabs-row" id="smart-bookmark-filter-type-tabs">' +
+    '<button class="smart-bookmark-filter-tab smart-bookmark-filter-tab-type active" data-filter="all">全部</button>' +
+    '<button class="smart-bookmark-filter-tab smart-bookmark-filter-tab-type" data-filter="bookmark">🔗 链接</button>' +
+    '<button class="smart-bookmark-filter-tab smart-bookmark-filter-tab-type" data-filter="folder">📁 文件夹</button>' +
+    '</div>' +
+    '</div>' +
+    '<div class="smart-bookmark-filter-group smart-bookmark-filter-group-tag">' +
+    '<span class="smart-bookmark-filter-label" id="smart-bookmark-filter-tag-label">标签</span>' +
+    '<div class="smart-bookmark-filter-tabs-row" id="smart-bookmark-filter-tag-tabs">' +
+    '<span class="smart-bookmark-filter-tag-empty" id="smart-bookmark-filter-tag-empty">未选择</span>' +
+    '</div>' +
+    '</div>' +
     '</div>' +
     '<div class="smart-bookmark-list-container">' +
     '<ul id="' + window.SMART_BOOKMARK_CONSTANTS.BOOKMARK_LIST_ID + '" class="smart-bookmark-bookmark-list"></ul>' +
@@ -664,6 +675,44 @@ UIManager.prototype.cleanup = function () {
   this.selectedIndex = -1;
   this.currentMode = window.SMART_BOOKMARK_CONSTANTS.DEFAULT_MODE;
   this.isModalVisible = false;
+};
+
+/**
+ * 更新筛选栏中的标签 tab
+ * @param {Array} tags - 所有标签列表
+ * @param {string|null} activeTag - 当前激活的标签
+ */
+UIManager.prototype.updateTagFilterTabs = function (tags, activeTag) {
+  var root = this.getRoot();
+  var tagRow = root.getElementById('smart-bookmark-filter-tag-tabs');
+  if (!tagRow) return;
+
+  // 移除旧的标签 tab（保留空态提示）
+  var existingTagTabs = tagRow.querySelectorAll('[data-filter-tag]');
+  for (var i = 0; i < existingTagTabs.length; i++) {
+    existingTagTabs[i].remove();
+  }
+
+  var emptyEl = root.getElementById('smart-bookmark-filter-tag-empty');
+
+  // 追加新的标签 tab
+  if (!tags || tags.length === 0) {
+    if (emptyEl) emptyEl.style.display = '';
+    return;
+  }
+
+  if (emptyEl) emptyEl.style.display = 'none';
+
+  for (var j = 0; j < tags.length; j++) {
+    var btn = document.createElement('button');
+    btn.className = 'smart-bookmark-filter-tab smart-bookmark-filter-tab-tag';
+    btn.setAttribute('data-filter-tag', tags[j]);
+    btn.textContent = '🏷️ ' + tags[j];
+    if (activeTag && tags[j] && tags[j].toLowerCase() === activeTag.toLowerCase()) {
+      btn.classList.add('active');
+    }
+    tagRow.appendChild(btn);
+  }
 };
 
 // 将类附加到全局window对象

@@ -70,7 +70,25 @@ function LanguageManager() {
       grantPermission: '授予权限',
 
       // 面包屑
-      rootDirectory: '根目录'
+      rootDirectory: '根目录',
+
+      // 标签功能
+      editTags: '编辑标签',
+      tagEditorTitle: '管理标签',
+      tagPlaceholder: '输入标签名称...',
+      tagSaved: '标签已保存',
+      tagSaveFailed: '标签保存失败',
+      tagSaveBtn: '保存',
+      noTags: '暂无标签',
+      tagEditorHint: '↑↓ 选建议 · Enter 添加 · Ctrl+Enter 保存 · Esc 取消',
+
+      // 筛选分组
+      filterTypeLabel: '类型',
+      filterTagLabel: '标签',
+      filterTagEmpty: '未选择',
+      filterSummaryPrefix: '筛选',
+      filterSummaryType: '类型',
+      filterSummaryTag: '标签'
     },
     en: {
       // Modal titles and buttons
@@ -136,7 +154,25 @@ function LanguageManager() {
       grantPermission: 'Grant Permission',
 
       // Breadcrumbs
-      rootDirectory: 'Root Directory'
+      rootDirectory: 'Root Directory',
+
+      // Tags
+      editTags: 'Edit Tags',
+      tagEditorTitle: 'Manage Tags',
+      tagPlaceholder: 'Enter tag name...',
+      tagSaved: 'Tags saved',
+      tagSaveFailed: 'Failed to save tags',
+      tagSaveBtn: 'Save',
+      noTags: 'No tags',
+      tagEditorHint: '↑↓ choose · Enter add · Ctrl+Enter save · Esc cancel',
+
+      // Filter groups
+      filterTypeLabel: 'Type',
+      filterTagLabel: 'Tag',
+      filterTagEmpty: 'Not selected',
+      filterSummaryPrefix: 'Filter',
+      filterSummaryType: 'Type',
+      filterSummaryTag: 'Tag'
     }
   };
 
@@ -313,8 +349,21 @@ LanguageManager.prototype.updateUI = function () {
     hints[2].textContent = this.t('keyboardHintToggle');
   }
 
+  var filterTypeLabel = this.getRoot().getElementById('smart-bookmark-filter-type-label');
+  if (filterTypeLabel) filterTypeLabel.textContent = this.t('filterTypeLabel');
+
+  var filterTagLabel = this.getRoot().getElementById('smart-bookmark-filter-tag-label');
+  if (filterTagLabel) filterTagLabel.textContent = this.t('filterTagLabel');
+
+  var filterTagEmpty = this.getRoot().getElementById('smart-bookmark-filter-tag-empty');
+  if (filterTagEmpty) filterTagEmpty.textContent = this.t('filterTagEmpty');
+
   // 更新主题下拉菜单
   this.updateThemeDropdown();
+
+  if (window.modalManager && typeof window.modalManager.refreshFilterBarState === 'function') {
+    window.modalManager.refreshFilterBarState();
+  }
 };
 
 /**

@@ -147,21 +147,70 @@ ModalManager.prototype.setFilter = function (filterType) {
   if (this.currentFilter === filterType) return;
   this.currentFilter = filterType;
 
-  // 更新标签的 active 状态
+  // 刷新筛选栏 active 状态
+  this.refreshFilterBarState();
+
+  // 应用筛选并刷新列表
+  this.updateBookmarkList();
+};
+
+/**
+ * 设置标签筛选
+ * @param {string} tag - 标签名
+ */
+ModalManager.prototype.setTagFilter = function (tag) {
+  this.currentTagFilter = tag || null;
+  this.refreshFilterBarState();
+  this.updateBookmarkList();
+};
+
+/**
+ * 清除标签筛选
+ */
+ModalManager.prototype.clearTagFilter = function () {
+  this.currentTagFilter = null;
+  this.refreshFilterBarState();
+  this.updateBookmarkList();
+};
+
+/**
+ * 统一刷新筛选栏 tab 的 active 状态
+ */
+ModalManager.prototype.refreshFilterBarState = function () {
   var filterBar = this.getRoot().getElementById('smart-bookmark-filter-bar');
-  if (filterBar) {
-    var tabs = filterBar.querySelectorAll('.smart-bookmark-filter-tab');
-    for (var i = 0; i < tabs.length; i++) {
-      if (tabs[i].getAttribute('data-filter') === filterType) {
-        tabs[i].classList.add('active');
+  if (!filterBar) return;
+
+  var tabs = filterBar.querySelectorAll('.smart-bookmark-filter-tab');
+  for (var i = 0; i < tabs.length; i++) {
+    var tab = tabs[i];
+    // 类型 tab
+    if (tab.dataset.filter) {
+      if (tab.dataset.filter === this.currentFilter) {
+        tab.classList.add('active');
       } else {
-        tabs[i].classList.remove('active');
+        tab.classList.remove('active');
+      }
+    }
+    // 标签 tab
+    if (tab.dataset.filterTag) {
+      var tabTag = (tab.dataset.filterTag || '').toLowerCase();
+      var activeTag = (this.currentTagFilter || '').toLowerCase();
+      if (tabTag && activeTag && tabTag === activeTag) {
+        tab.classList.add('active');
+      } else {
+        tab.classList.remove('active');
       }
     }
   }
 
-  // 应用筛选并刷新列表
-  this.updateBookmarkList();
+  // 空态标签提示显示控制
+  var tagEmpty = this.getRoot().getElementById('smart-bookmark-filter-tag-empty');
+  var tagRow = this.getRoot().getElementById('smart-bookmark-filter-tag-tabs');
+  if (tagEmpty && tagRow) {
+    var hasTagTabs = tagRow.querySelectorAll('[data-filter-tag]').length > 0;
+    tagEmpty.style.display = hasTagTabs ? 'none' : '';
+  }
+
 };
 
 /**

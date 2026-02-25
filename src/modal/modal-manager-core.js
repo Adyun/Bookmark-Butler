@@ -39,7 +39,10 @@ function ModalManager() {
 
   // 标签筛选器状态
   this.currentFilter = 'all';       // 当前筛选类型
+  this.currentTagFilter = null;     // 当前标签筛选（null 或标签名）
   this.filterTypes = ['all', 'bookmark', 'folder']; // 可用筛选类型列表
+  this._folderDataReadyForTagPrune = false;
+  this._bookmarkDataReadyForTagPrune = false;
   this.dynamicDebouncedSearch = null;
   this.searchGeneration = 0;
   this.isDuplicateCheckInProgress = false;
@@ -49,6 +52,8 @@ function ModalManager() {
   this.deleteDialogCleanup = null;
   this.isContextMenuOpen = false;
   this.contextMenuCleanup = null;
+  this.isTagEditorOpen = false;
+  this.tagEditorCleanup = null;
 
   this.init();
 }
@@ -116,6 +121,33 @@ ModalManager.prototype.initializeComponents = function () {
   window.addEventListener('layout-recalculated', function () {
     self.handleLayoutRecalculated();
   });
+
+  // 预加载标签数据
+  if (window.SMART_BOOKMARK_TAGS && typeof window.SMART_BOOKMARK_TAGS.loadTags === 'function') {
+    window.SMART_BOOKMARK_TAGS.loadTags().then(function () {
+      // 标签加载完成后更新筛选栏标签 tabs
+      try {
+        var allTags = window.SMART_BOOKMARK_TAGS.getAllTags();
+        if (allTags.length > 0 && self.uiManager && typeof self.uiManager.updateTagFilterTabs === 'function') {
+          self.uiManager.updateTagFilterTabs(allTags, self.currentTagFilter);
+        }
+      } catch (e) { }
+    });
+
+    // 监听标签变化
+    window.SMART_BOOKMARK_TAGS.addChangeListener(function () {
+      try {
+        var allTags = window.SMART_BOOKMARK_TAGS.getAllTags();
+        if (self.uiManager && typeof self.uiManager.updateTagFilterTabs === 'function') {
+          self.uiManager.updateTagFilterTabs(allTags, self.currentTagFilter);
+        }
+        // 刷新列表
+        if (self.uiManager.currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH) {
+          self.updateBookmarkList();
+        }
+      } catch (e) { }
+    });
+  }
 
   // 预加载置顶数据，以便空搜索时应用置顶排序
   if (window.SMART_BOOKMARK_PINS && typeof window.SMART_BOOKMARK_PINS.loadPins === 'function') {
@@ -380,8 +412,39 @@ ModalManager.prototype.bindEvents = function () {
   if (filterBar) {
     addEventListenerFn(filterBar, 'click', function (e) {
       var tab = e.target.closest('.smart-bookmark-filter-tab');
-      if (tab && tab.dataset.filter) {
+      if (!tab) return;
+
+      // 类型筛选 tab
+      if (tab.dataset.filter) {
         self.setFilter(tab.dataset.filter);
+        return;
+      }
+
+      // 标签筛选 tab（toggle 行为）
+      if (tab.dataset.filterTag) {
+        var clickedTag = tab.dataset.filterTag;
+        if (self.currentTagFilter && self.currentTagFilter.toLowerCase() === clickedTag.toLowerCase()) {
+          self.clearTagFilter();
+        } else {
+          self.setTagFilter(clickedTag);
+        }
+      }
+    });
+  }
+
+  // 列表内标签点击触发筛选（事件委托）
+  var bookmarkList = this.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.BOOKMARK_LIST_ID);
+  if (bookmarkList) {
+    addEventListenerFn(bookmarkList, 'click', function (e) {
+      var tagEl = e.target.closest('.smart-bookmark-tag');
+      if (tagEl && tagEl.dataset.tag) {
+        e.stopPropagation();
+        var clickedTag = tagEl.dataset.tag;
+        if (self.currentTagFilter && self.currentTagFilter.toLowerCase() === clickedTag.toLowerCase()) {
+          self.clearTagFilter();
+        } else {
+          self.setTagFilter(clickedTag);
+        }
       }
     });
   }
@@ -537,6 +600,9 @@ ModalManager.prototype.show = function (pageInfo) {
  */
 
 ModalManager.prototype.hide = function () {
+  if (typeof this.dismissTagEditor === 'function') {
+    this.dismissTagEditor();
+  }
   if (typeof this.dismissDuplicateDialog === 'function') {
     this.dismissDuplicateDialog();
   }
@@ -550,6 +616,17 @@ ModalManager.prototype.hide = function () {
   this.uiManager.hideModal();
   this.keyboardManager.setModalVisible(false);
   this.currentPageInfo = null;
+  this.currentFilter = 'all';
+  this.currentTagFilter = null;
+  this.isInFolderView = false;
+  this.currentFolderId = null;
+  this.currentFolderTitle = null;
+  this.navigationStack = [];
+  this.lastSearchQuery = '';
+  this.isTagEditorOpen = false;
+  if (typeof this.refreshFilterBarState === 'function') {
+    this.refreshFilterBarState();
+  }
 };
 
 /**
@@ -679,6 +756,9 @@ ModalManager.prototype.getDefaultFolderResults = function () {
  */
 
 ModalManager.prototype.cleanup = function () {
+  if (typeof this.dismissTagEditor === 'function') {
+    this.dismissTagEditor();
+  }
   if (typeof this.dismissDuplicateDialog === 'function') {
     this.dismissDuplicateDialog();
   }

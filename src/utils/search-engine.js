@@ -57,6 +57,21 @@ SearchIndex.prototype.indexFolder = function (folder) {
 
   // 添加到Trie索引用于前缀搜索
   this.trieIndex.insert(title, folder);
+
+  // 索引标签
+  if (folder.tags && Array.isArray(folder.tags)) {
+    for (var t = 0; t < folder.tags.length; t++) {
+      var tagText = folder.tags[t].toLowerCase();
+      var tagWords = this.tokenize(tagText);
+      for (var tw = 0; tw < tagWords.length; tw++) {
+        if (!this.titleIndex.has(tagWords[tw])) {
+          this.titleIndex.set(tagWords[tw], []);
+        }
+        this.titleIndex.get(tagWords[tw]).push(folder);
+      }
+      this.trieIndex.insert(tagText, folder);
+    }
+  }
 };
 
 /**
@@ -94,6 +109,21 @@ SearchIndex.prototype.indexBookmark = function (bookmark) {
         this.urlIndex.set(word, []);
       }
       this.urlIndex.get(word).push(bookmark);
+    }
+  }
+
+  // 索引标签
+  if (bookmark.tags && Array.isArray(bookmark.tags)) {
+    for (var t = 0; t < bookmark.tags.length; t++) {
+      var tagText = bookmark.tags[t].toLowerCase();
+      var tagWords = this.tokenize(tagText);
+      for (var tw = 0; tw < tagWords.length; tw++) {
+        if (!this.titleIndex.has(tagWords[tw])) {
+          this.titleIndex.set(tagWords[tw], []);
+        }
+        this.titleIndex.get(tagWords[tw]).push(bookmark);
+      }
+      this.trieIndex.insert(tagText, bookmark);
     }
   }
 };
@@ -252,6 +282,22 @@ SearchIndex.prototype.calculateScore = function (item, query) {
     } else if (title.indexOf(queryLower) > -1) {
       score += 0.5; // 包含匹配
     }
+  }
+
+  // 标签匹配
+  if (item.tags && Array.isArray(item.tags)) {
+    var tagScore = 0;
+    for (var t = 0; t < item.tags.length; t++) {
+      var tag = item.tags[t].toLowerCase();
+      if (tag === queryLower) {
+        tagScore = Math.max(tagScore, 0.7);
+      } else if (tag.indexOf(queryLower) === 0) {
+        tagScore = Math.max(tagScore, 0.55);
+      } else if (tag.indexOf(queryLower) > -1) {
+        tagScore = Math.max(tagScore, 0.4);
+      }
+    }
+    score = Math.max(score, tagScore);
   }
 
   // URL匹配（仅书签）
@@ -444,7 +490,7 @@ SearchEngine.prototype.fallbackSearch = function (query, items, type) {
     var score;
 
     if (type === 'folders') {
-      score = this.calculateScore(item.title, query);
+      score = this.calculateFolderScore(item, query);
     } else {
       score = this.calculateBookmarkScore(item, query);
     }
@@ -453,7 +499,8 @@ SearchEngine.prototype.fallbackSearch = function (query, items, type) {
     var itemWithScore = {
       id: item.id,
       title: item.title,
-      score: score
+      score: score,
+      tags: item.tags || []
     };
 
     if (type === 'folders') {
@@ -489,6 +536,31 @@ SearchEngine.prototype.fallbackSearch = function (query, items, type) {
 SearchEngine.prototype.calculateScore = function (folderName, query) {
   // 使用全局帮助函数
   return window.SMART_BOOKMARK_HELPERS.calculateSearchScore(folderName, query);
+};
+
+/**
+ * 计算文件夹匹配分数（标题 + 标签）
+ * @param {Object} folder - 文件夹对象
+ * @param {string} query - 搜索关键词
+ * @returns {number} 匹配分数 (0-1)
+ */
+SearchEngine.prototype.calculateFolderScore = function (folder, query) {
+  var titleScore = this.calculateScore(folder.title, query);
+  var tagScore = 0;
+  if (folder.tags && Array.isArray(folder.tags)) {
+    var searchTerm = query.toLowerCase().trim();
+    for (var t = 0; t < folder.tags.length; t++) {
+      var tag = folder.tags[t].toLowerCase();
+      if (tag === searchTerm) {
+        tagScore = Math.max(tagScore, 0.7);
+      } else if (tag.indexOf(searchTerm) === 0) {
+        tagScore = Math.max(tagScore, 0.55);
+      } else if (tag.indexOf(searchTerm) > -1) {
+        tagScore = Math.max(tagScore, 0.4);
+      }
+    }
+  }
+  return Math.max(titleScore, tagScore);
 };
 
 /**
@@ -567,7 +639,8 @@ SearchEngine.prototype.calculateBookmarkScore = function (bookmark, query) {
   var scores = [];
   for (var i = 0; i < keywords.length; i++) {
     var keyword = keywords[i];
-    var score = this.calculateSingleKeywordBookmarkScore(title, url, keyword);
+    var tags = bookmark.tags || [];
+    var score = this.calculateSingleKeywordBookmarkScore(title, url, tags, keyword);
 
     // 如果任意一个关键词完全不匹配，返回0
     if (score === 0) return 0;
@@ -590,7 +663,7 @@ SearchEngine.prototype.calculateBookmarkScore = function (bookmark, query) {
  * @param {string} keyword - 单个关键词（小写）
  * @returns {number} 匹配分数 (0-1)
  */
-SearchEngine.prototype.calculateSingleKeywordBookmarkScore = function (title, url, keyword) {
+SearchEngine.prototype.calculateSingleKeywordBookmarkScore = function (title, url, tags, keyword) {
   // 计算标题匹配分数
   var titleScore = 0;
   if (title === keyword) {
@@ -600,17 +673,30 @@ SearchEngine.prototype.calculateSingleKeywordBookmarkScore = function (title, ur
   } else if (title.indexOf(keyword) > -1) {
     titleScore = 0.5; // 包含匹配
   }
-  // 不再使用模糊匹配（逐字符匹配），因为太容易误匹配
+
+  // 计算标签匹配分数
+  var tagScore = 0;
+  if (tags && Array.isArray(tags)) {
+    for (var t = 0; t < tags.length; t++) {
+      var tag = tags[t].toLowerCase();
+      if (tag === keyword) {
+        tagScore = Math.max(tagScore, 0.7);
+      } else if (tag.indexOf(keyword) === 0) {
+        tagScore = Math.max(tagScore, 0.55);
+      } else if (tag.indexOf(keyword) > -1) {
+        tagScore = Math.max(tagScore, 0.4);
+      }
+    }
+  }
 
   // 计算URL匹配分数
   var urlScore = 0;
   if (url.indexOf(keyword) > -1) {
-    // URL匹配的权重较低
     urlScore = 0.3;
   }
 
-  // 综合分数，标题匹配权重更高
-  return Math.max(titleScore, urlScore * 0.5);
+  // 综合分数：标题 > 标签 > URL
+  return Math.max(titleScore, tagScore, urlScore * 0.5);
 };
 
 /**
@@ -634,6 +720,7 @@ SearchEngine.prototype.searchAll = function (query, bookmarks, folders) {
       url: b.url,
       parentId: b.parentId,
       score: b.score,
+      tags: b.tags || [],
       itemType: 'bookmark'
     });
   }
@@ -648,6 +735,7 @@ SearchEngine.prototype.searchAll = function (query, bookmarks, folders) {
       bookmarkCount: f.bookmarkCount,
       subFolderCount: f.subFolderCount,
       score: f.score,
+      tags: f.tags || [],
       itemType: 'folder'
     });
   }

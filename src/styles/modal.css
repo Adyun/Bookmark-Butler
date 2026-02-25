@@ -393,9 +393,50 @@
 .smart-bookmark-filter-bar {
   display: flex;
   align-items: center;
+  gap: 14px;
+  padding: 14px 0 2px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.smart-bookmark-filter-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.smart-bookmark-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.smart-bookmark-filter-label {
+  width: 34px;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sb-muted-foreground);
+  text-align: left;
+}
+
+.smart-bookmark-filter-tabs-row {
+  display: flex;
+  align-items: center;
   gap: 6px;
-  padding: 16px 0 0px;
-  flex-wrap: wrap;
+  min-width: 0;
+  flex-wrap: nowrap;
+}
+
+.smart-bookmark-filter-tag-empty {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 14px;
+  border: 1px dashed var(--sb-border);
+  color: var(--sb-muted-foreground);
+  font-size: 12px;
 }
 
 .smart-bookmark-filter-tab {
@@ -1620,4 +1661,242 @@
   height: 1px;
   background: var(--sb-border);
   margin: 4px 0;
+}
+
+/* ========== Tag System Styles ========== */
+
+/* 列表项内标签容器（单行，never wrap） */
+.smart-bookmark-tags-container {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  flex-wrap: nowrap;
+  overflow: hidden;
+  max-width: 100%;
+}
+
+/* 单个标签 */
+.smart-bookmark-tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+  max-width: 96px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
+}
+
+.smart-bookmark-tag:hover {
+  opacity: 0.8;
+}
+
+/* +N 多余标签提示 */
+.smart-bookmark-tag-more {
+  font-size: 10px;
+  color: var(--sb-muted-foreground);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* 深色模式标签颜色通过 JS 动态设置 darkBg/darkText */
+
+/* 筛选栏标签 tab */
+.smart-bookmark-filter-tab-tag {
+  font-size: 12px;
+  border-style: dashed;
+  background: transparent;
+  color: var(--sb-foreground);
+}
+
+.smart-bookmark-filter-tab-tag:hover {
+  background: var(--sb-ring-light);
+  color: var(--sb-foreground);
+  border-color: var(--sb-ring);
+}
+
+.smart-bookmark-filter-tab-tag.active {
+  border-style: solid;
+}
+
+.smart-bookmark-filter-tab-tag.active:hover {
+  background: var(--sb-ring);
+  color: #fff;
+  border-color: var(--sb-ring);
+}
+
+/* ========== Tag Editor Dialog ========== */
+
+.smart-bookmark-tag-editor-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 10003;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease-out;
+}
+
+.smart-bookmark-tag-editor-overlay.active {
+  opacity: 1;
+}
+
+.smart-bookmark-tag-editor-dialog {
+  background: var(--sb-background, #ffffff);
+  border: 1px solid var(--sb-border, #e2e8f0);
+  border-radius: var(--sb-radius, 8px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15);
+  width: 400px;
+  max-width: 90vw;
+  display: flex;
+  flex-direction: column;
+  transform: scale(0.95);
+  transition: transform 0.2s ease-out;
+}
+
+.smart-bookmark-tag-editor-overlay.active .smart-bookmark-tag-editor-dialog {
+  transform: scale(1);
+}
+
+.smart-bookmark-tag-editor-header {
+  padding: 20px 20px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.smart-bookmark-tag-editor-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--sb-foreground, #0f172a);
+  margin: 0;
+}
+
+.smart-bookmark-tag-editor-body {
+  padding: 0 20px 16px;
+}
+
+.smart-bookmark-tag-editor-hint {
+  margin-top: 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--sb-muted-foreground, #64748b);
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.16s ease, opacity 0.16s ease, margin-top 0.16s ease;
+}
+
+.smart-bookmark-tag-editor-hint.show {
+  margin-top: 10px;
+  max-height: 40px;
+  opacity: 1;
+}
+
+.smart-bookmark-tag-editor-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+  min-height: 24px;
+}
+
+.smart-bookmark-tag-editor-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: default;
+}
+
+.smart-bookmark-tag-editor-chip-remove {
+  cursor: pointer;
+  font-size: 14px;
+  opacity: 0.6;
+  transition: opacity 0.15s ease;
+  line-height: 1;
+}
+
+.smart-bookmark-tag-editor-chip-remove:hover {
+  opacity: 1;
+}
+
+.smart-bookmark-tag-editor-input-wrap {
+  position: relative;
+}
+
+.smart-bookmark-tag-editor-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--sb-border);
+  border-radius: calc(var(--sb-radius, 8px) - 2px);
+  background: var(--sb-input);
+  color: var(--sb-foreground);
+  font-size: 14px;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease;
+}
+
+.smart-bookmark-tag-editor-input:focus {
+  border-color: var(--sb-ring);
+}
+
+.smart-bookmark-tag-autocomplete {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--sb-popover);
+  border: 1px solid var(--sb-border);
+  border-radius: calc(var(--sb-radius, 8px) - 2px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  max-height: 150px;
+  overflow-y: auto;
+  z-index: 10004;
+  display: none;
+}
+
+.smart-bookmark-tag-autocomplete.show {
+  display: block;
+}
+
+.smart-bookmark-tag-autocomplete-item {
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--sb-popover-foreground);
+  transition: background 0.1s ease;
+}
+
+.smart-bookmark-tag-autocomplete-item:hover,
+.smart-bookmark-tag-autocomplete-item.focused {
+  background: var(--sb-accent);
+}
+
+.smart-bookmark-tag-editor-footer {
+  padding: 16px 20px;
+  border-top: 1px solid var(--sb-border, #e2e8f0);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.smart-bookmark-tag-editor-footer .smart-bookmark-btn {
+  font-size: 13px;
+  padding: 6px 14px;
 }

@@ -14,16 +14,38 @@ ModalManager.prototype.loadFolders = function () {
       }
 
       self.allFolders = folders;
-      // 构建快速查找表
-      self.buildFolderIdMap();
-      // console.log('Retrieved ' + folders.length + ' folders');
 
-      if (folders.length === 0) {
-        self.uiManager.showEmptyState('folders');
-        return;
+      // 附着标签数据（确保标签已加载）
+      var attachFolderTags = function () {
+        if (window.SMART_BOOKMARK_TAGS) {
+          for (var ti = 0; ti < self.allFolders.length; ti++) {
+            self.allFolders[ti].tags = window.SMART_BOOKMARK_TAGS.getTagsForItem('folders', self.allFolders[ti].id);
+          }
+        }
+      };
+
+      var ensureTagsLoaded = Promise.resolve();
+      if (window.SMART_BOOKMARK_TAGS && !window.SMART_BOOKMARK_TAGS.hasLoaded()) {
+        ensureTagsLoaded = window.SMART_BOOKMARK_TAGS.loadTags();
       }
 
-      return window.SMART_BOOKMARK_SORTING.updateFolderActivity(self.allFolders);
+      return Promise.resolve(ensureTagsLoaded).then(function () {
+        attachFolderTags();
+        self._folderDataReadyForTagPrune = true;
+        return self.maybePruneOrphanTags();
+      }).then(function () {
+
+        // 构建快速查找表
+        self.buildFolderIdMap();
+        // console.log('Retrieved ' + folders.length + ' folders');
+
+        if (folders.length === 0) {
+          self.uiManager.showEmptyState('folders');
+          return;
+        }
+
+        return window.SMART_BOOKMARK_SORTING.updateFolderActivity(self.allFolders);
+      });
     })
     .then(function (foldersWithActivity) {
       if (!foldersWithActivity) return;
@@ -84,6 +106,7 @@ ModalManager.prototype.loadBookmarks = function () {
       .then(function (folders) {
         if (folders && Array.isArray(folders)) {
           self.allFolders = folders;
+          self._folderDataReadyForTagPrune = true;
           self.foldersPrefetched = true;
           // 预取后构建查找表
           self.buildFolderIdMap();
@@ -118,42 +141,89 @@ ModalManager.prototype.loadBookmarks = function () {
       }
 
       self.allBookmarks = visibleBookmarks;
-      // console.log('Retrieved ' + bookmarks.length + ' bookmarks');
 
-      if (self.allBookmarks.length === 0) {
-        self.uiManager.showEmptyState('bookmarks');
-        return;
+      // 附着标签数据（确保标签已加载）
+      var attachBookmarkTags = function () {
+        if (window.SMART_BOOKMARK_TAGS) {
+          for (var ti = 0; ti < self.allBookmarks.length; ti++) {
+            self.allBookmarks[ti].tags = window.SMART_BOOKMARK_TAGS.getTagsForItem('bookmarks', self.allBookmarks[ti].id);
+          }
+        }
+      };
+
+      var ensureTagsLoaded = Promise.resolve();
+      if (window.SMART_BOOKMARK_TAGS && !window.SMART_BOOKMARK_TAGS.hasLoaded()) {
+        ensureTagsLoaded = window.SMART_BOOKMARK_TAGS.loadTags();
       }
 
-      // 使用空字符串搜索来获取默认视图（包含文件夹和书签，且按规则排序）
-      self.filteredBookmarks = self.searchEngine.searchAll('', self.allBookmarks, self.allFolders);
+      return Promise.resolve(ensureTagsLoaded).then(function () {
+        attachBookmarkTags();
+        self._bookmarkDataReadyForTagPrune = true;
+        return self.maybePruneOrphanTags();
+      }).then(function () {
+        // console.log('Retrieved ' + bookmarks.length + ' bookmarks');
 
-      // 清理面包屑缓存，因为数据已更新
-      self.clearBreadcrumbCache();
+        if (self.allBookmarks.length === 0) {
+          self.uiManager.showEmptyState('bookmarks');
+          return;
+        }
 
-      // 索引后台空闲时构建（不阻塞首屏）
-      self.scheduleBuildIndexes();
+        // 使用空字符串搜索来获取默认视图（包含文件夹和书签，且按规则排序）
+        self.filteredBookmarks = self.searchEngine.searchAll('', self.allBookmarks, self.allFolders);
 
-      // 更新键盘管理器的当前项目
-      self.keyboardManager.setCurrentItems(self.filteredBookmarks);
+        // 清理面包屑缓存，因为数据已更新
+        self.clearBreadcrumbCache();
 
-      // 更新显示
-      self.updateBookmarkList();
+        // 索引后台空闲时构建（不阻塞首屏）
+        self.scheduleBuildIndexes();
 
-      // 修复Bug 1: 默认打开时选中第一个项目
-      if (self.filteredBookmarks.length > 0) {
-        self.keyboardManager.setSelectedIndex(0);
-      }
+        // 更新键盘管理器的当前项目
+        self.keyboardManager.setCurrentItems(self.filteredBookmarks);
 
-      // 进入模式不自动选中，只有搜索后才默认选中
+        // 更新显示
+        self.updateBookmarkList();
 
-      var endTime = performance.now();
-      // console.log('Load bookmarks took ' + (endTime - startTime) + ' milliseconds');
+        // 修复Bug 1: 默认打开时选中第一个项目
+        if (self.filteredBookmarks.length > 0) {
+          self.keyboardManager.setSelectedIndex(0);
+        }
+
+        // 进入模式不自动选中，只有搜索后才默认选中
+
+        var endTime = performance.now();
+        // console.log('Load bookmarks took ' + (endTime - startTime) + ' milliseconds');
+      });
     })
     .catch(function (error) {
       console.error('Failed to load bookmarks:', error);
       self.handleLoadError('bookmarks', error);
     });
+};
+
+/**
+ * 在书签与文件夹都就绪后清理孤儿标签，避免单侧触发误删
+ * @returns {Promise<void>}
+ */
+ModalManager.prototype.maybePruneOrphanTags = function () {
+  if (!window.SMART_BOOKMARK_TAGS) return Promise.resolve();
+  if (!window.SMART_BOOKMARK_TAGS.hasLoaded()) return Promise.resolve();
+  if (!this._folderDataReadyForTagPrune || !this._bookmarkDataReadyForTagPrune) return Promise.resolve();
+
+  var validBmIds = [];
+  for (var bi = 0; bi < this.allBookmarks.length; bi++) {
+    if (this.allBookmarks[bi] && this.allBookmarks[bi].id) {
+      validBmIds.push(this.allBookmarks[bi].id);
+    }
+  }
+
+  var validFdIds = [];
+  for (var fi = 0; fi < this.allFolders.length; fi++) {
+    if (this.allFolders[fi] && this.allFolders[fi].id) {
+      validFdIds.push(this.allFolders[fi].id);
+    }
+  }
+
+  return window.SMART_BOOKMARK_TAGS.pruneOrphanTags(validBmIds, validFdIds);
 };
 
 /**

@@ -62,6 +62,11 @@ KeyboardManager.prototype.handleKeyDown = function (e) {
   // 如果模态框不可见，不处理键盘事件
   if (!this.isModalVisible) return;
 
+  // 标签编辑弹窗打开时，暂停全局键盘快捷键，避免 Enter/Escape/Tab 穿透到主列表
+  if (window.modalManager && window.modalManager.isTagEditorOpen) {
+    return;
+  }
+
   var root = this.getRoot();
   var searchInput = root.getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
 

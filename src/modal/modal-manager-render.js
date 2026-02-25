@@ -22,6 +22,27 @@ ModalManager.prototype.updateBookmarkList = function () {
     }
   }
 
+  // 叠加标签筛选（back 项豁免）
+  if (this.currentTagFilter) {
+    var tagFiltered = [];
+    for (var ti = 0; ti < filtered.length; ti++) {
+      var item = filtered[ti];
+      if (item.itemType === 'back') {
+        tagFiltered.push(item);
+        continue;
+      }
+      var itemTags = item.tags || [];
+      var tagFilterLower = this.currentTagFilter.toLowerCase();
+      for (var tj = 0; tj < itemTags.length; tj++) {
+        if ((itemTags[tj] || '').toLowerCase() === tagFilterLower) {
+          tagFiltered.push(item);
+          break;
+        }
+      }
+    }
+    filtered = tagFiltered;
+  }
+
 
   // 检查是否有结果
   if (hasSearchQuery && filtered.length === 0) {
@@ -350,6 +371,7 @@ ModalManager.prototype.renderBookmarkItem = function (bookmark, index, hasSearch
 
     var countText = countParts.length > 0 ? '内含 ' + countParts.join('，') : '空文件夹';
     var countLine = '<div class="smart-bookmark-bookmark-url">' + countText + '</div>';
+    var folderTagsHtml = this.renderTagsHtml(bookmark, searchTerm);
     item.innerHTML =
       '<div class="smart-bookmark-bookmark-content">' +
       '<span class="smart-bookmark-bookmark-icon folder-icon">📁</span>' +
@@ -359,13 +381,28 @@ ModalManager.prototype.renderBookmarkItem = function (bookmark, index, hasSearch
       '</div>' +
       countLine +
       (breadcrumb ? breadcrumb : '') +
+      folderTagsHtml +
       '</div>' +
       '<span class="smart-bookmark-folder-arrow">›</span>' +
       '</div>';
 
     // 文件夹点击进入
     item.addEventListener('click', function (e) {
+      // 点击标签时不进入文件夹，由列表层事件委托处理标签筛选
+      if (e.target && typeof e.target.closest === 'function' && e.target.closest('.smart-bookmark-tag')) {
+        return;
+      }
       self.enterFolder(bookmark.id, bookmark.title);
+    });
+
+    // 文件夹右键菜单（编辑标签）
+    var selfRefFolder = this;
+    item.addEventListener('contextmenu', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (typeof selfRefFolder.showContextMenu === 'function') {
+        selfRefFolder.showContextMenu(e, bookmark, 'folder');
+      }
     });
   } else {
     // 渲染书签
@@ -373,6 +410,7 @@ ModalManager.prototype.renderBookmarkItem = function (bookmark, index, hasSearch
     var highlightedUrl = hasSearchQuery && searchTerm ?
       this.highlightText(displayUrl, searchTerm) : displayUrl;
 
+    var bookmarkTagsHtml = this.renderTagsHtml(bookmark, searchTerm);
     item.innerHTML =
       '<div class="smart-bookmark-bookmark-content">' +
       '<span class="smart-bookmark-bookmark-icon">🔗</span>' +
@@ -382,6 +420,7 @@ ModalManager.prototype.renderBookmarkItem = function (bookmark, index, hasSearch
       '</div>' +
       '<div class="smart-bookmark-bookmark-url" title="' + bookmark.url + '">' + highlightedUrl + '</div>' +
       (breadcrumb ? breadcrumb : '') +
+      bookmarkTagsHtml +
       '</div>' +
       '</div>';
 
@@ -429,11 +468,51 @@ ModalManager.prototype.renderBookmarkItem = function (bookmark, index, hasSearch
 
     // 书签点击打开
     item.addEventListener('click', function (e) {
+      // 点击标签时不打开书签，由列表层事件委托处理标签筛选
+      if (e.target && typeof e.target.closest === 'function' && e.target.closest('.smart-bookmark-tag')) {
+        return;
+      }
       self.selectBookmark(e.currentTarget);
     });
   }
 
   return item;
+};
+
+/**
+ * 生成标签 HTML（单行展示，最多 5 个 + +N）
+ * @param {Object} item - 书签/文件夹对象
+ * @param {string} searchTerm - 当前搜索词（用于高亮）
+ * @returns {string} HTML 字符串
+ */
+ModalManager.prototype.renderTagsHtml = function (item, searchTerm) {
+  var tags = item.tags || [];
+  if (tags.length === 0) return '';
+
+  var MAX_VISIBLE = 5;
+  var html = '<div class="smart-bookmark-tags-container">';
+
+  var visibleCount = Math.min(tags.length, MAX_VISIBLE);
+  for (var i = 0; i < visibleCount; i++) {
+    var tag = tags[i];
+    var safeTag = this.escapeHtml(tag);
+    var colors = window.SMART_BOOKMARK_TAGS ? window.SMART_BOOKMARK_TAGS.generateTagColor(tag) : { bg: '#f1f5f9', text: '#334155' };
+    var displayTag = safeTag;
+    // 搜索高亮（highlightText 本身会再转义，传原始 tag）
+    if (searchTerm) {
+      displayTag = this.highlightText(tag, searchTerm);
+    }
+    html += '<span class="smart-bookmark-tag" data-tag="' + safeTag.replace(/"/g, '&quot;') + '" ' +
+      'style="background:' + colors.bg + ';color:' + colors.text + '">' +
+      displayTag + '</span>';
+  }
+
+  if (tags.length > MAX_VISIBLE) {
+    html += '<span class="smart-bookmark-tag-more">+' + (tags.length - MAX_VISIBLE) + '</span>';
+  }
+
+  html += '</div>';
+  return html;
 };
 
 /**
