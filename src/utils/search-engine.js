@@ -8,32 +8,60 @@ function SearchIndex() {
   this.urlIndex = new Map();    // URL倒排索引
   this.trieIndex = null;        // Trie索引，用于前缀搜索
   this.built = false;           // 索引是否已构建
+  this._buildGeneration = 0;    // 防并发构建代次标识
 }
 
 /**
- * 构建搜索索引
+ * 构建搜索索引（分块异步构建以防阻塞）
  * @param {Array} items - 要索引的项目（文件夹或书签）
  * @param {string} type - 项目类型 ('folders' 或 'bookmarks')
+ * @param {Function} [onComplete] - 完成回调
  */
-SearchIndex.prototype.buildIndex = function (items, type) {
+SearchIndex.prototype.buildIndex = function (items, type, onComplete) {
   // 清空现有索引
   this.titleIndex.clear();
   this.urlIndex.clear();
   this.trieIndex = new Trie();
+  this.built = false;
 
-  // 构建倒排索引
-  for (var i = 0; i < items.length; i++) {
-    var item = items[i];
+  var self = this;
+  var i = 0;
+  var generation = ++this._buildGeneration;
 
-    if (type === 'folders') {
-      this.indexFolder(item);
-    } else if (type === 'bookmarks') {
-      this.indexBookmark(item);
+  function processChunk() {
+    // 发现已被新任务抢占，则中止执行
+    if (generation !== self._buildGeneration) return;
+
+    var start = performance.now();
+
+    // 每次处理一个分块，或直到时间超过 10ms，以免卡顿UI
+    while (i < items.length && (performance.now() - start < 10)) {
+      var item = items[i];
+
+      if (type === 'folders') {
+        self.indexFolder(item);
+      } else if (type === 'bookmarks') {
+        self.indexBookmark(item);
+      }
+      i++;
+    }
+
+    if (i < items.length) {
+      if (typeof window.requestIdleCallback === 'function') {
+        window.requestIdleCallback(processChunk);
+      } else {
+        setTimeout(processChunk, 0);
+      }
+    } else {
+      self.built = true;
+      if (typeof onComplete === 'function') {
+        onComplete();
+      }
+      // console.log('Search index built asynchronously for ' + items.length + ' ' + type);
     }
   }
 
-  this.built = true;
-  // console.log('Search index built for ' + items.length + ' ' + type);
+  processChunk();
 };
 
 /**
@@ -392,6 +420,7 @@ function SearchEngine() {
   this.folderIndex = new SearchIndex();
   this.bookmarkIndex = new SearchIndex();
   this.indexBuilt = false;
+  this._buildGeneration = 0; // 防并发构建代次标识
 }
 
 /**
@@ -401,14 +430,24 @@ function SearchEngine() {
  * @returns {Array} 匹配的文件夹，按相关性排序
  */
 /**
- * 构建搜索索引
+ * 构建搜索索引 (异步分块构建)
  * @param {Array} folders - 文件夹数组
  * @param {Array} bookmarks - 书签数组
  */
 SearchEngine.prototype.buildIndexes = function (folders, bookmarks) {
-  this.folderIndex.buildIndex(folders, 'folders');
-  this.bookmarkIndex.buildIndex(bookmarks, 'bookmarks');
-  this.indexBuilt = true;
+  var self = this;
+  var generation = ++this._buildGeneration;
+  this.indexBuilt = false;
+
+  this.folderIndex.buildIndex(folders, 'folders', function () {
+    // 旧任务的回调被新一轮 buildIndexes 抢占，中止后续构建
+    if (generation !== self._buildGeneration) return;
+    self.bookmarkIndex.buildIndex(bookmarks, 'bookmarks', function () {
+      // 同样校验代次，防止旧回调将 indexBuilt 提前置为 true
+      if (generation !== self._buildGeneration) return;
+      self.indexBuilt = true;
+    });
+  });
 };
 
 /**
@@ -612,6 +651,10 @@ SearchEngine.prototype.combineSearchResults = function (indexedResults, fallback
  * 清除索引
  */
 SearchEngine.prototype.clearIndexes = function () {
+  // 先递增代次，使正在进行中的异步分块任务检测到代次变化后自动停止
+  this._buildGeneration++;
+  this.folderIndex._buildGeneration++;
+  this.bookmarkIndex._buildGeneration++;
   this.folderIndex = new SearchIndex();
   this.bookmarkIndex = new SearchIndex();
   this.indexBuilt = false;

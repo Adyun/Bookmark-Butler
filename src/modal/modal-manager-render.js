@@ -156,6 +156,20 @@ ModalManager.prototype.updateFolderList = function () {
 
   // 使用虚拟滚动渲染文件夹列表
   this.renderFolderListWithVirtualScroll(folderList, hasSearchQuery, itemsToRender);
+
+  // 渲染后自动选中第一项（与 updateBookmarkList 保持一致）
+  // 修复 Bug: renderFolderListWithVirtualScroll 内部的 setCurrentItems 会重置
+  // keyboardManager.selectedIndex 为 -1，导致按 Enter 时 handleKeyDown 因
+  // selectedIndex < 0 而跳过 onConfirm 调用，尽管视觉上第一项仍显示为选中状态
+  var self = this;
+  setTimeout(function () {
+    var currentCount = self.keyboardManager.currentItems.length;
+    if (currentCount > 0) {
+      self.keyboardManager.setSelectedIndex(0);
+    } else {
+      self.keyboardManager.setSelectedIndex(-1);
+    }
+  }, 50);
 };
 
 /**
