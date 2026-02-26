@@ -29,6 +29,7 @@
         "src/utils/pin-manager.js",
         "src/utils/tag-manager.js",
         "src/utils/query-history.js",
+        "src/utils/data-export-import.js",
         "src/utils/search-engine.js",
         "src/components/virtual-scroller.js",
         "src/components/ui-manager.js",

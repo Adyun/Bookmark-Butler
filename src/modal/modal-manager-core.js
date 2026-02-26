@@ -237,6 +237,7 @@ ModalManager.prototype.bindEvents = function () {
       self.getRoot().getElementById('smart-bookmark-language-dropdown'),
       self.getRoot().getElementById('smart-bookmark-mode-dropdown'),
       self.getRoot().getElementById('smart-bookmark-theme-dropdown'),
+      self.getRoot().getElementById('smart-bookmark-data-dropdown'),
       self.getRoot().getElementById('smart-bookmark-dark-mode-dropdown') // 兼容性
     ];
 
@@ -253,6 +254,7 @@ ModalManager.prototype.bindEvents = function () {
       self.getRoot().getElementById('smart-bookmark-language-toggle'),
       self.getRoot().getElementById('smart-bookmark-mode-toggle'),
       self.getRoot().getElementById('smart-bookmark-theme-toggle'),
+      self.getRoot().getElementById('smart-bookmark-data-toggle'),
       self.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_TOGGLE_ID) // 兼容性
     ];
 
@@ -416,6 +418,55 @@ ModalManager.prototype.bindEvents = function () {
       if (theme) {
         self.themeManager.setTheme(theme);
         self.closeAllDropdowns();
+      }
+    });
+  }
+
+  // 数据管理按钮事件
+  var dataToggle = this.getRoot().getElementById('smart-bookmark-data-toggle');
+  if (dataToggle) {
+    addEventListenerFn(dataToggle, 'click', function (e) {
+      e.stopPropagation();
+      self.toggleDropdown('smart-bookmark-data-dropdown');
+    });
+  }
+
+  // 数据管理选项点击事件（导出/导入）
+  var dataOptions = this.getRoot().querySelectorAll('[data-action]');
+  for (var d = 0; d < dataOptions.length; d++) {
+    addEventListenerFn(dataOptions[d], 'click', function (e) {
+      e.stopPropagation();
+      var action = e.target.closest('[data-action]');
+      if (!action) return;
+      var actionName = action.getAttribute('data-action');
+      self.closeAllDropdowns();
+
+      if (actionName === 'export') {
+        if (window.SMART_BOOKMARK_DATA_IO && typeof window.SMART_BOOKMARK_DATA_IO.exportData === 'function') {
+          window.SMART_BOOKMARK_DATA_IO.exportData().then(function (result) {
+            if (result.success) {
+              window.SMART_BOOKMARK_HELPERS.showToast('✅ ' + (self.languageManager.currentLanguage === 'zh' ? '导出成功' : 'Export success') + ' (' + result.message + ')');
+            } else {
+              window.SMART_BOOKMARK_HELPERS.showToast('❌ ' + (self.languageManager.currentLanguage === 'zh' ? '导出失败' : 'Export failed') + ': ' + result.message);
+            }
+          });
+        }
+      } else if (actionName === 'import') {
+        if (window.SMART_BOOKMARK_DATA_IO && typeof window.SMART_BOOKMARK_DATA_IO.pickFileAndImport === 'function') {
+          window.SMART_BOOKMARK_DATA_IO.pickFileAndImport().then(function (result) {
+            if (result.success) {
+              window.SMART_BOOKMARK_HELPERS.showToast('✅ ' + (self.languageManager.currentLanguage === 'zh' ? '导入成功' : 'Import success') + ' (' + result.message + ')');
+              // 刷新当前列表
+              if (self.uiManager.currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH) {
+                self.loadBookmarks();
+              } else {
+                self.loadFolders();
+              }
+            } else {
+              window.SMART_BOOKMARK_HELPERS.showToast('❌ ' + (self.languageManager.currentLanguage === 'zh' ? '导入失败' : 'Import failed') + ': ' + result.message);
+            }
+          });
+        }
       }
     });
   }
@@ -781,6 +832,7 @@ ModalManager.prototype.closeAllDropdowns = function () {
     'smart-bookmark-language-dropdown',
     'smart-bookmark-mode-dropdown',
     'smart-bookmark-theme-dropdown',
+    'smart-bookmark-data-dropdown',
     'smart-bookmark-dark-mode-dropdown' // 兼容性
   ];
 

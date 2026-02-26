@@ -102,7 +102,12 @@ function LanguageManager() {
       filterSummaryTag: '标签',
       moreTags: '更多标签',
       tagFilterSearchPlaceholder: '搜索标签...',
-      noMatchingTags: '没有匹配标签'
+      noMatchingTags: '没有匹配标签',
+
+      // 数据管理
+      dataManagement: '数据管理',
+      exportData: '导出数据',
+      importData: '导入数据'
     },
     en: {
       // Modal titles and buttons
@@ -200,7 +205,12 @@ function LanguageManager() {
       filterSummaryTag: 'Tag',
       moreTags: 'More Tags',
       tagFilterSearchPlaceholder: 'Search tags...',
-      noMatchingTags: 'No matching tags'
+      noMatchingTags: 'No matching tags',
+
+      // Data management
+      dataManagement: 'Data Management',
+      exportData: 'Export Data',
+      importData: 'Import Data'
     }
   };
 
@@ -413,6 +423,14 @@ LanguageManager.prototype.updateUI = function () {
 
   // 更新主题下拉菜单
   this.updateThemeDropdown();
+
+  // 更新数据管理按钮标题和下拉选项文案
+  var dataToggle = this.getRoot().getElementById('smart-bookmark-data-toggle');
+  if (dataToggle) dataToggle.title = this.t('dataManagement');
+  var exportOption = this.getRoot().querySelector('[data-action="export"] [data-i18n="exportData"]');
+  if (exportOption) exportOption.textContent = this.t('exportData');
+  var importOption = this.getRoot().querySelector('[data-action="import"] [data-i18n="importData"]');
+  if (importOption) importOption.textContent = this.t('importData');
 
   if (window.modalManager && typeof window.modalManager.refreshFilterBarState === 'function') {
     window.modalManager.refreshFilterBarState();

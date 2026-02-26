@@ -115,6 +115,15 @@ UIManager.prototype.createModal = function () {
     '</div>' +
     '</div>' +
 
+    // 数据管理按钮和下拉
+    '<div class="smart-bookmark-control-group">' +
+    '<button id="smart-bookmark-data-toggle" class="smart-bookmark-control-toggle" title="数据管理">💾</button>' +
+    '<div id="smart-bookmark-data-dropdown" class="smart-bookmark-control-dropdown">' +
+    '<div class="smart-bookmark-control-option" data-action="export"><span class="smart-bookmark-option-icon">📤</span><span data-i18n="exportData">导出数据</span></div>' +
+    '<div class="smart-bookmark-control-option" data-action="import"><span class="smart-bookmark-option-icon">📥</span><span data-i18n="importData">导入数据</span></div>' +
+    '</div>' +
+    '</div>' +
+
     '</div>' +
     '</div>' +
     '</div>' +

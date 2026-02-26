@@ -237,13 +237,23 @@
         });
     }
 
+    /**
+     * 强制重新从 storage 加载历史（用于导入数据后刷新内存缓存）
+     * @returns {Promise} 返回历史数据对象
+     */
+    function reloadHistory() {
+        inMemoryHistory = null;
+        return loadHistory();
+    }
+
     // 导出到全局
     window.SMART_BOOKMARK_QUERY_HISTORY = {
         recordClick: recordClick,
         getBoostScore: getBoostScore,
         getBatchBoostScores: getBatchBoostScores,
         clearHistory: clearHistory,
-        getStats: getStats
+        getStats: getStats,
+        reloadHistory: reloadHistory
     };
 
 })(window);
