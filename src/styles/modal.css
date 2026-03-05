@@ -231,7 +231,8 @@
   max-width: 95vw;
   max-height: 80vh;
   height: auto;
-  min-height: 550px;
+  min-height: min(550px, calc(100vh - 24px));
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   opacity: 0;
@@ -298,7 +299,7 @@
 
 /* Modal Body */
 .smart-bookmark-modal-body {
-  padding: 24px;
+  padding: 24px 24px 0 24px;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -804,7 +805,10 @@
 .smart-bookmark-modal-footer {
   padding: 24px;
   border-top: 1px solid var(--sb-border);
-  background: transparent;
+  background: var(--sb-background);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
   display: flex;
   justify-content: space-between;
   align-items: center;

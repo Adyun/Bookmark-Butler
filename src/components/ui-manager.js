@@ -328,28 +328,37 @@ UIManager.prototype.setupModalLayout = function () {
     .smart-bookmark-modal {
       --header-height: 70px;
       --footer-height: 80px;
-      --padding: 40px;
+      overflow: hidden;
     }
     
     .smart-bookmark-modal-body {
-      /* 让body根据内容自适应高度 */
-      flex: 1;
-      min-height: 450px;
-      max-height: calc(70vh - var(--header-height) - var(--footer-height));
+      /* 允许在低高度视口下收缩，避免列表压到 footer 下方 */
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: hidden;
     }
     
     .smart-bookmark-list-container {
-      height: calc(100% - 80px); /* 减去搜索框和间距的高度 */
-      min-height: 400px;
+      flex: 1 1 auto;
+      height: auto;
+      min-height: 0;
+      overflow: hidden;
       display: flex;
       flex-direction: column;
     }
     
     .smart-bookmark-folder-list,
     .smart-bookmark-bookmark-list {
-      flex: 1;
+      flex: 1 1 auto;
       min-height: 0;
       margin: 16px 0 0;
+    }
+
+    .smart-bookmark-modal-footer {
+      flex-shrink: 0;
+      position: relative;
+      z-index: 1;
+      background: var(--sb-background);
     }
     
     /* 确保在小屏幕上也有合适的高度 */
@@ -359,14 +368,11 @@ UIManager.prototype.setupModalLayout = function () {
         --footer-height: 70px;
       }
       
-      .smart-bookmark-modal-body {
-        min-height: 200px;
-        max-height: calc(60vh - var(--header-height) - var(--footer-height));
-      }
-      
-      .smart-bookmark-list-container {
-        min-height: 150px;
-        height: calc(100% - 60px);
+      .smart-bookmark-modal-body,
+      .smart-bookmark-list-container,
+      .smart-bookmark-folder-list,
+      .smart-bookmark-bookmark-list {
+        min-height: 0;
       }
     }
   `;
