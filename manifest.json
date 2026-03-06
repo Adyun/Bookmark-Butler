@@ -10,42 +10,9 @@
     "scripting",
     "notifications"
   ],
-  "host_permissions": [
-    "<all_urls>"
-  ],
   "background": {
     "service_worker": "src/background.js"
   },
-  "content_scripts": [
-    {
-      "matches": [
-        "<all_urls>"
-      ],
-      "js": [
-        "src/utils/constants.js",
-        "src/utils/helpers.js",
-        "src/utils/bookmark-api.js",
-        "src/utils/sorting-algorithm.js",
-        "src/utils/pin-manager.js",
-        "src/utils/tag-manager.js",
-        "src/utils/query-history.js",
-        "src/utils/data-export-import.js",
-        "src/utils/search-engine.js",
-        "src/components/virtual-scroller.js",
-        "src/components/ui-manager.js",
-        "src/components/theme-manager.js",
-        "src/components/keyboard-manager.js",
-        "src/components/language-manager.js",
-        "src/modal/modal-manager-core.js",
-        "src/modal/modal-manager-data.js",
-        "src/modal/modal-manager-search.js",
-        "src/modal/modal-manager-render.js",
-        "src/modal/modal-manager-navigation.js",
-        "src/modal/modal-manager-export.js",
-        "src/content-script.js"
-      ]
-    }
-  ],
   "action": {
     "default_title": "智能书签扩展",
     "default_icon": {

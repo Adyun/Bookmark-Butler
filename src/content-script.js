@@ -1,14 +1,17 @@
 // Content script entry point
 // console.log("Smart Bookmark Extension content script loaded");
 
-// 向background script报告脚本已加载
-if (chrome.runtime && chrome.runtime.sendMessage) {
+function notifyBackgroundReady() {
+  if (!chrome.runtime || !chrome.runtime.sendMessage) {
+    return;
+  }
+
   chrome.runtime.sendMessage({
-    action: "contentScriptLoaded",
+    action: "contentScriptReady",
     url: window.location.href,
     timestamp: Date.now()
   }).catch((error) => {
-    // console.log("Could not send loaded message:", error);
+    // console.log("Could not send ready message:", error);
   });
 }
 
@@ -387,6 +390,7 @@ function initExtension() {
     }
 
     isInitialized = true;
+    notifyBackgroundReady();
     // console.log("Smart Bookmark Extension initialized successfully");
   } catch (error) {
     console.error("Error initializing extension:", error);

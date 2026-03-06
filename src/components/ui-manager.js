@@ -539,8 +539,6 @@ UIManager.prototype.toggleMode = function () {
  * 重新计算布局
  */
 UIManager.prototype.recalculateLayout = function () {
-  this.updateModalHeight();
-
   // 通知虚拟滚动器更新
   var event = new CustomEvent('layout-recalculated');
   window.dispatchEvent(event);
@@ -553,21 +551,8 @@ UIManager.prototype.updateModalHeight = function () {
   var root = this.getRoot();
   var modal = root.getElementById(window.SMART_BOOKMARK_CONSTANTS.MODAL_ID);
   if (!modal) return;
-
-  // 临时设置为auto来测量实际需要的高度
-  var originalHeight = modal.style.height;
-  modal.style.height = 'auto';
-  var actualHeight = modal.offsetHeight; // 必要回流：测量 auto 高度
-
-  if (originalHeight && originalHeight !== 'auto' && originalHeight !== (actualHeight + 'px')) {
-    // FLIP 动画：恢复旧高度 → 强制回流 → 设置新高度触发 transition
-    modal.style.height = originalHeight;
-    void modal.offsetHeight; // 强制回流使浏览器记录起始值
-    modal.style.height = actualHeight + 'px';
-  } else {
-    // 首次设置或高度未变，无需动画回流
-    modal.style.height = actualHeight + 'px';
-  }
+  // 高度固定由 CSS 控制，这里只清理旧的内联高度残留
+  modal.style.height = '';
 };
 
 /**

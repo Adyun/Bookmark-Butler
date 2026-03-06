@@ -58,22 +58,189 @@ const memoryManager = {
 // 初始化内存管理器
 memoryManager.init();
 
+const CONTENT_SCRIPT_FILES = [
+  'src/utils/constants.js',
+  'src/utils/helpers.js',
+  'src/utils/bookmark-api.js',
+  'src/utils/sorting-algorithm.js',
+  'src/utils/pin-manager.js',
+  'src/utils/tag-manager.js',
+  'src/utils/query-history.js',
+  'src/utils/data-export-import.js',
+  'src/utils/search-engine.js',
+  'src/components/virtual-scroller.js',
+  'src/components/ui-manager.js',
+  'src/components/theme-manager.js',
+  'src/components/keyboard-manager.js',
+  'src/components/language-manager.js',
+  'src/modal/modal-manager-core.js',
+  'src/modal/modal-manager-data.js',
+  'src/modal/modal-manager-search.js',
+  'src/modal/modal-manager-render.js',
+  'src/modal/modal-manager-navigation.js',
+  'src/modal/modal-manager-export.js',
+  'src/content-script.js'
+];
+
 // 存储已加载内容脚本的标签页
 const loadedTabs = new Set();
+const pendingReadyWaiters = new Map();
+const CONTENT_SCRIPT_READY_TIMEOUT_MS = 10000;
+const TAB_COMPLETE_TIMEOUT_MS = 10000;
+const MAX_INJECTION_ATTEMPTS = 2;
+
+function getErrorMessage(error) {
+  if (!error) return 'Unknown error';
+  if (typeof error.message === 'string' && error.message) {
+    return error.message;
+  }
+  return String(error);
+}
+
+function settlePendingReadyWaiters(tabId, resolverName, payload) {
+  const waiters = pendingReadyWaiters.get(tabId);
+  if (!waiters || waiters.length === 0) {
+    return;
+  }
+
+  pendingReadyWaiters.delete(tabId);
+
+  for (const waiter of waiters) {
+    clearTimeout(waiter.timeoutId);
+    waiter[resolverName](payload);
+  }
+}
+
+function markContentScriptReady(tabId) {
+  loadedTabs.add(tabId);
+  settlePendingReadyWaiters(tabId, 'resolve');
+}
+
+function clearContentScriptState(tabId, reason) {
+  loadedTabs.delete(tabId);
+  if (reason) {
+    settlePendingReadyWaiters(tabId, 'reject', new Error(reason));
+  }
+}
+
+function waitForContentScriptReady(tabId, timeoutMs = CONTENT_SCRIPT_READY_TIMEOUT_MS) {
+  if (loadedTabs.has(tabId)) {
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve, reject) => {
+    const waiter = {
+      resolve,
+      reject,
+      timeoutId: null
+    };
+
+    waiter.timeoutId = setTimeout(() => {
+      const waiters = pendingReadyWaiters.get(tabId) || [];
+      const remainingWaiters = waiters.filter((item) => item !== waiter);
+      if (remainingWaiters.length > 0) {
+        pendingReadyWaiters.set(tabId, remainingWaiters);
+      } else {
+        pendingReadyWaiters.delete(tabId);
+      }
+      reject(new Error('Timed out waiting for content script ready signal.'));
+    }, timeoutMs);
+
+    const waiters = pendingReadyWaiters.get(tabId) || [];
+    waiters.push(waiter);
+    pendingReadyWaiters.set(tabId, waiters);
+  });
+}
+
+async function getTabInfo(tabId) {
+  try {
+    return await chrome.tabs.get(tabId);
+  } catch (error) {
+    console.error("Failed to get tab info:", getErrorMessage(error));
+    return null;
+  }
+}
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitForTabComplete(tabId, timeoutMs = TAB_COMPLETE_TIMEOUT_MS) {
+  const tab = await getTabInfo(tabId);
+  if (!tab) {
+    return false;
+  }
+
+  if (tab.status === 'complete') {
+    return true;
+  }
+
+  return new Promise((resolve) => {
+    let settled = false;
+    let timeoutId = null;
+
+    function cleanup() {
+      if (settled) return;
+      settled = true;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      chrome.tabs.onUpdated.removeListener(handleUpdated);
+      chrome.tabs.onRemoved.removeListener(handleRemoved);
+    }
+
+    function handleUpdated(updatedTabId, changeInfo) {
+      if (updatedTabId !== tabId) return;
+      if (changeInfo && changeInfo.status === 'complete') {
+        cleanup();
+        resolve(true);
+      }
+    }
+
+    function handleRemoved(removedTabId) {
+      if (removedTabId !== tabId) return;
+      cleanup();
+      resolve(false);
+    }
+
+    chrome.tabs.onUpdated.addListener(handleUpdated);
+    chrome.tabs.onRemoved.addListener(handleRemoved);
+
+    timeoutId = setTimeout(() => {
+      cleanup();
+      resolve(false);
+    }, timeoutMs);
+  });
+}
 
 // 监听标签页关闭，清理记录
 chrome.tabs.onRemoved.addListener((tabId) => {
-  loadedTabs.delete(tabId);
+  clearContentScriptState(tabId, 'Tab was closed before the content script became ready.');
+});
+
+// 页面导航时，旧文档中的 content script 会失效；及时清掉陈旧注入状态
+chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+  if (!changeInfo) return;
+  if (changeInfo.status === 'loading' || typeof changeInfo.url === 'string') {
+    clearContentScriptState(tabId, 'Tab navigated before the content script became ready.');
+  }
 });
 
 // 监听来自内容脚本的消息
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (DEBUG) console.log("Message received in background script:", request);
 
-  // 记录内容脚本已加载
+  // 记录内容脚本已就绪（消息监听器已注册）
+  if (sender.tab && request.action === "contentScriptReady") {
+    console.log(`Content script ready in tab ${sender.tab.id}:`, request.url);
+    markContentScriptReady(sender.tab.id);
+    sendResponse({ status: "acknowledged" });
+    return;
+  }
+
+  // 兼容旧版本内容脚本的早期上报，不作为 ready 信号使用
   if (sender.tab && request.action === "contentScriptLoaded") {
-    console.log(`Content script loaded in tab ${sender.tab.id}:`, request.url);
-    loadedTabs.add(sender.tab.id);
+    console.log(`Legacy content script loaded signal received from tab ${sender.tab.id}:`, request.url);
     sendResponse({ status: "acknowledged" });
     return;
   }
@@ -324,35 +491,14 @@ function broadcastBookmarksChanged(reason, payload) {
   try {
     invalidatePersistentCache();
     var message = { action: 'bookmarksChanged', reason: reason, payload: payload };
-    var targetedTabs = new Set();
-
-    // 优先向已知加载了 content script 的标签页广播（O(k) 而非 O(n)）
-    if (loadedTabs.size > 0) {
-      for (const tabId of loadedTabs) {
-        targetedTabs.add(tabId);
-        try {
-          chrome.tabs.sendMessage(tabId, message)
-            .catch(() => { loadedTabs.delete(tabId); });
-        } catch (e) {
-          loadedTabs.delete(tabId);
-        }
+    for (const tabId of loadedTabs) {
+      try {
+        chrome.tabs.sendMessage(tabId, message)
+          .catch(() => { loadedTabs.delete(tabId); });
+      } catch (e) {
+        loadedTabs.delete(tabId);
       }
     }
-
-    // 再扫描当前标签页：向未覆盖到的可用标签页兜底广播，避免 loadedTabs 部分失真导致漏发
-    chrome.tabs.query({}, (tabs) => {
-      for (const tab of tabs) {
-        if (!tab || typeof tab.id !== 'number') continue;
-        if (targetedTabs.has(tab.id)) continue;
-        if (isRestrictedUrl(tab.url)) continue;
-
-        try {
-          chrome.tabs.sendMessage(tab.id, message)
-            .then(() => { loadedTabs.add(tab.id); })
-            .catch(() => { });
-        } catch (e) { }
-      }
-    });
   } catch (e) {
     console.warn('Failed to broadcast bookmarksChanged:', e);
   }
@@ -370,59 +516,100 @@ if (chrome.bookmarks && chrome.bookmarks.onCreated) {
 /**
  * 向内容脚本发送消息，带重试机制
  */
-function sendMessageToContentScript(tabId, message, maxRetries = 3) {
+async function sendMessageToContentScript(tabId, message, options) {
+  const settings = {
+    maxRetries: 3,
+    remainingInjectionAttempts: MAX_INJECTION_ATTEMPTS,
+    readyTimeoutMs: CONTENT_SCRIPT_READY_TIMEOUT_MS,
+    tabCompleteTimeoutMs: TAB_COMPLETE_TIMEOUT_MS
+  };
+
+  if (typeof options === 'number') {
+    settings.maxRetries = options;
+  } else if (options && typeof options === 'object') {
+    if (typeof options.maxRetries === 'number') {
+      settings.maxRetries = options.maxRetries;
+    }
+    if (typeof options.remainingInjectionAttempts === 'number') {
+      settings.remainingInjectionAttempts = options.remainingInjectionAttempts;
+    }
+    if (typeof options.readyTimeoutMs === 'number') {
+      settings.readyTimeoutMs = options.readyTimeoutMs;
+    }
+    if (typeof options.tabCompleteTimeoutMs === 'number') {
+      settings.tabCompleteTimeoutMs = options.tabCompleteTimeoutMs;
+    }
+  }
+
+  const tab = await getTabInfo(tabId);
+  if (!tab) {
+    return false;
+  }
+
+  if (isRestrictedUrl(tab.url)) {
+    console.warn("Cannot inject content script into restricted URL:", tab.url);
+    showNotificationFallback();
+    return false;
+  }
+
+  if (!loadedTabs.has(tabId)) {
+    console.log("Content script not ready in tab", tabId, "- injecting first");
+    const injectionResult = await injectContentScript(tabId, settings);
+    if (!injectionResult.ready) {
+      return false;
+    }
+    if (injectionResult.injected) {
+      settings.remainingInjectionAttempts = Math.max(0, settings.remainingInjectionAttempts - 1);
+    }
+  }
+
   let retryCount = 0;
+  while (true) {
+    try {
+      const response = await chrome.tabs.sendMessage(tabId, message);
+      console.log("Message sent successfully:", response);
+      return true;
+    } catch (error) {
+      const errorMessage = getErrorMessage(error);
+      console.error(`Attempt ${retryCount + 1} failed:`, errorMessage);
 
-  // 首先检查标签页是否可以注入脚本
-  chrome.tabs.get(tabId, (tab) => {
-    if (chrome.runtime.lastError) {
-      console.error("Failed to get tab info:", chrome.runtime.lastError);
-      return;
-    }
+      if (errorMessage.includes("Receiving end does not exist")) {
+        console.log("Content script receiver is unavailable, resetting ready state");
+        clearContentScriptState(tabId);
 
-    // 检查URL是否允许内容脚本
-    if (isRestrictedUrl(tab.url)) {
-      console.warn("Cannot inject content script into restricted URL:", tab.url);
-      showNotificationFallback();
-      return;
-    }
-
-    // 检查内容脚本是否已加载
-    if (!loadedTabs.has(tabId)) {
-      console.log("Content script not loaded in tab", tabId, "- injecting first");
-      injectContentScript(tabId, message);
-      return;
-    }
-
-    attemptSend();
-  });
-
-  function attemptSend() {
-    chrome.tabs.sendMessage(tabId, message, (response) => {
-      if (chrome.runtime.lastError) {
-        console.error(`Attempt ${retryCount + 1} failed:`, chrome.runtime.lastError.message);
-
-        // 如果连接失败，可能是内容脚本被卸载了
-        if (chrome.runtime.lastError.message.includes("Receiving end does not exist")) {
-          console.log("Content script appears to be unloaded, removing from loaded tabs");
-          loadedTabs.delete(tabId);
+        if (settings.remainingInjectionAttempts <= 0) {
+          console.error("Content script receiver unavailable after max reinjection attempts.");
+          return false;
         }
 
-        if (retryCount < maxRetries) {
-          retryCount++;
-          // 使用递增延迟策略：第一次500ms，第二次1000ms，第三次1500ms
-          const delay = retryCount * 500;
-          console.log(`Retrying in ${delay}ms... (${retryCount}/${maxRetries})`);
-          setTimeout(attemptSend, delay);
-        } else {
-          console.error("All retry attempts failed. Content script may not be loaded.");
-          // 尝试重新注入内容脚本
-          injectContentScript(tabId, message);
+        const reinjectionResult = await injectContentScript(tabId, {
+          maxRetries: settings.maxRetries,
+          remainingInjectionAttempts: settings.remainingInjectionAttempts - 1,
+          readyTimeoutMs: settings.readyTimeoutMs,
+          tabCompleteTimeoutMs: settings.tabCompleteTimeoutMs
+        });
+
+        if (!reinjectionResult.ready) {
+          return false;
         }
-      } else {
-        console.log("Message sent successfully:", response);
+        if (reinjectionResult.injected) {
+          settings.remainingInjectionAttempts = Math.max(0, settings.remainingInjectionAttempts - 1);
+        }
+
+        continue;
       }
-    });
+
+      if (retryCount < settings.maxRetries) {
+        retryCount++;
+        const retryDelay = retryCount * 500;
+        console.log(`Retrying in ${retryDelay}ms... (${retryCount}/${settings.maxRetries})`);
+        await delay(retryDelay);
+        continue;
+      }
+
+      console.error("All retry attempts failed.");
+      return false;
+    }
   }
 }
 
@@ -496,107 +683,85 @@ function trySimpleNotification() {
 /**
  * 尝试重新注入内容脚本
  */
-function injectContentScript(tabId, originalMessage) {
+async function injectContentScript(tabId, options) {
+  const settings = {
+    readyTimeoutMs: CONTENT_SCRIPT_READY_TIMEOUT_MS,
+    tabCompleteTimeoutMs: TAB_COMPLETE_TIMEOUT_MS
+  };
+
+  if (options && typeof options === 'object') {
+    if (typeof options.readyTimeoutMs === 'number') {
+      settings.readyTimeoutMs = options.readyTimeoutMs;
+    }
+    if (typeof options.tabCompleteTimeoutMs === 'number') {
+      settings.tabCompleteTimeoutMs = options.tabCompleteTimeoutMs;
+    }
+  }
+
   console.log("Attempting to inject content script into tab", tabId);
 
-  // 首先检查标签页是否还存在
-  chrome.tabs.get(tabId, async (tab) => {
-    if (chrome.runtime.lastError) {
-      console.error("Tab no longer exists:", chrome.runtime.lastError);
-      return;
+  const initialTab = await getTabInfo(tabId);
+  if (!initialTab) {
+    return { ready: false, injected: false };
+  }
+
+  console.log("Tab info:", initialTab.url, initialTab.status);
+
+  if (isRestrictedUrl(initialTab.url)) {
+    console.warn("Cannot inject into restricted URL:", initialTab.url);
+    showNotificationFallback();
+    return { ready: false, injected: false };
+  }
+
+  if (initialTab.status !== 'complete') {
+    const didComplete = await waitForTabComplete(tabId, settings.tabCompleteTimeoutMs);
+    if (!didComplete) {
+      console.warn("Tab did not reach complete status before injection:", tabId);
+      return { ready: false, injected: false };
     }
+  }
 
-    console.log("Tab info:", tab.url, tab.status);
+  const tab = await getTabInfo(tabId);
+  if (!tab) {
+    return { ready: false, injected: false };
+  }
 
-    if (isRestrictedUrl(tab.url)) {
-      console.warn("Cannot inject into restricted URL:", tab.url);
+  if (isRestrictedUrl(tab.url)) {
+    console.warn("Cannot inject into restricted URL after navigation:", tab.url);
+    showNotificationFallback();
+    return { ready: false, injected: false };
+  }
+
+  try {
+    await chrome.tabs.sendMessage(tabId, { action: 'ping' });
+    console.log("Content script already ready in tab", tabId);
+    markContentScriptReady(tabId);
+    return { ready: true, injected: false };
+  } catch (error) {
+    clearContentScriptState(tabId);
+  }
+
+  console.log("Content script not ready, injecting scripts");
+
+  try {
+    const readyPromise = waitForContentScriptReady(tabId, settings.readyTimeoutMs);
+
+    await chrome.scripting.executeScript({
+      target: { tabId: tabId },
+      files: CONTENT_SCRIPT_FILES
+    });
+
+    console.log("Content script files injected successfully");
+    await readyPromise;
+    console.log("Content script reported ready in tab", tabId);
+    return { ready: true, injected: true };
+  } catch (error) {
+    console.error("Failed to inject content script:", getErrorMessage(error));
+    if (getErrorMessage(error).includes('Cannot access contents of url')) {
       showNotificationFallback();
-      return;
     }
-
-    // 等待页面加载完成
-    if (tab.status !== 'complete') {
-      console.log("Tab not ready, waiting for load completion");
-      chrome.tabs.onUpdated.addListener(function listener(updatedTabId, changeInfo) {
-        if (updatedTabId === tabId && changeInfo.status === 'complete') {
-          chrome.tabs.onUpdated.removeListener(listener);
-          console.log("Tab loaded, now injecting content script");
-          performInjection();
-        }
-      });
-    } else {
-      performInjection();
-    }
-
-    function performInjection() {
-      // 先尝试简单的ping测试
-      chrome.tabs.sendMessage(tabId, { action: 'ping' }, (response) => {
-        if (!chrome.runtime.lastError) {
-          console.log("Content script already loaded, sending original message");
-          loadedTabs.add(tabId);
-          if (originalMessage) {
-            sendMessageToContentScript(tabId, originalMessage, 1);
-          }
-          return;
-        }
-
-        console.log("Content script not loaded, injecting scripts");
-
-        // 尝试注入脚本
-        chrome.scripting.executeScript({
-          target: { tabId: tabId },
-          files: [
-            'src/utils/constants.js',
-            'src/utils/helpers.js',
-            'src/utils/bookmark-api.js',
-            'src/utils/sorting-algorithm.js',
-            'src/utils/pin-manager.js',
-            'src/utils/tag-manager.js',
-            'src/utils/query-history.js',
-            'src/utils/data-export-import.js',
-            'src/utils/search-engine.js',
-            'src/components/virtual-scroller.js',
-            'src/components/ui-manager.js',
-            'src/components/theme-manager.js',
-            'src/components/keyboard-manager.js',
-            'src/components/language-manager.js',
-            'src/modal/modal-manager-core.js',
-            'src/modal/modal-manager-data.js',
-            'src/modal/modal-manager-search.js',
-            'src/modal/modal-manager-render.js',
-            'src/modal/modal-manager-navigation.js',
-            'src/modal/modal-manager-export.js',
-            'src/content-script.js'
-          ]
-        }).then(() => {
-          console.log("Content script files injected successfully");
-
-          // 同时注入CSS
-          return chrome.scripting.insertCSS({
-            target: { tabId: tabId },
-            files: ['src/styles/modal.css']
-          });
-        }).then(() => {
-          console.log("CSS injected successfully");
-
-          // 记录脚本已加载
-          loadedTabs.add(tabId);
-
-          // 等待脚本初始化后发送原始消息
-          setTimeout(() => {
-            console.log("Waiting period complete, sending original message");
-            if (originalMessage) {
-              sendMessageToContentScript(tabId, originalMessage, 1);
-            }
-          }, 2000);
-        }).catch((error) => {
-          console.error("Failed to inject content script or CSS:", error);
-          console.error("Error details:", error.message);
-          showNotificationFallback();
-        });
-      });
-    }
-  });
+    return { ready: false, injected: false };
+  }
 }
 
 // 监听插件图标点击事件
@@ -610,5 +775,7 @@ chrome.action.onClicked.addListener((tab) => {
       title: tab.title,
       url: tab.url
     }
+  }).catch((error) => {
+    console.error("Failed to open bookmark modal:", getErrorMessage(error));
   });
 });

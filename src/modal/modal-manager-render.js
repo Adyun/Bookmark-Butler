@@ -458,6 +458,7 @@ ModalManager.prototype.renderBookmarkItem = function (bookmark, index, hasSearch
 
   // 处理返回按钮 - 三行结构：标题 / 副标题 / 当前位置
   if (isBack) {
+    var currentFolderLabel = self.escapeHtml(self.currentFolderTitle || '搜索结果');
     item.innerHTML =
       '<div class="smart-bookmark-bookmark-content">' +
       '<span class="smart-bookmark-bookmark-icon">←</span>' +
@@ -466,7 +467,7 @@ ModalManager.prototype.renderBookmarkItem = function (bookmark, index, hasSearch
       '<span class="smart-bookmark-bookmark-title">返回上一级</span>' +
       '</div>' +
       '<div class="smart-bookmark-bookmark-url">点击或按回车键返回</div>' +
-      '<div class="breadcrumb">当前：' + (self.currentFolderTitle || '搜索结果') + '</div>' +
+      '<div class="breadcrumb">当前：' + currentFolderLabel + '</div>' +
       '</div>' +
       '</div>';
 
@@ -490,7 +491,7 @@ ModalManager.prototype.renderBookmarkItem = function (bookmark, index, hasSearch
   var searchInput = this.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
   var searchTerm = searchInput ? searchInput.value.trim() : '';
   var highlightedTitle = hasSearchQuery && searchTerm ?
-    this.highlightText(bookmark.title, searchTerm) : bookmark.title;
+    this.highlightText(bookmark.title, searchTerm) : this.escapeHtml(bookmark.title || '');
 
   if (isFolder) {
     item.innerHTML = this.renderFolderCardContent(bookmark, searchTerm, hasSearchQuery, true);
@@ -508,7 +509,8 @@ ModalManager.prototype.renderBookmarkItem = function (bookmark, index, hasSearch
     // 渲染书签
     var displayUrl = this.formatUrlForDisplay(bookmark.url);
     var highlightedUrl = hasSearchQuery && searchTerm ?
-      this.highlightText(displayUrl, searchTerm) : displayUrl;
+      this.highlightText(displayUrl, searchTerm) : this.escapeHtml(displayUrl);
+    var safeBookmarkUrl = this.escapeHtmlAttribute(bookmark.url || '');
 
     var bookmarkTagsHtml = this.renderTagsHtml(bookmark, searchTerm);
     item.innerHTML =
@@ -518,7 +520,7 @@ ModalManager.prototype.renderBookmarkItem = function (bookmark, index, hasSearch
       '<div class="smart-bookmark-bookmark-title-container">' +
       '<span class="smart-bookmark-bookmark-title">' + highlightedTitle + '</span>' +
       '</div>' +
-      '<div class="smart-bookmark-bookmark-url" title="' + bookmark.url + '">' + highlightedUrl + '</div>' +
+      '<div class="smart-bookmark-bookmark-url" title="' + safeBookmarkUrl + '">' + highlightedUrl + '</div>' +
       (breadcrumb ? breadcrumb : '') +
       bookmarkTagsHtml +
       '</div>' +

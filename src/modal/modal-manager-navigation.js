@@ -1288,7 +1288,9 @@ ModalManager.prototype.generateBreadcrumb = function (parentId) {
   // 根目录特殊处理
   if (parentId === '0') {
     var rootText = this.languageManager ? this.languageManager.t('rootDirectory') : '根目录';
-    return '<div class="breadcrumb" title="' + rootText + '">' + rootText + '</div>';
+    var safeRootText = this.escapeHtml(rootText);
+    var safeRootTitle = this.escapeHtmlAttribute(rootText);
+    return '<div class="breadcrumb" title="' + safeRootTitle + '">' + safeRootText + '</div>';
   }
 
   // 检查缓存
@@ -1317,7 +1319,9 @@ ModalManager.prototype.generateBreadcrumb = function (parentId) {
   var breadcrumbHtml = '';
   if (path.length > 0) {
     var displayPath = path.join(' › ');
-    breadcrumbHtml = '<div class="breadcrumb" title="' + displayPath + '">' + displayPath + '</div>';
+    var safeDisplayPath = this.escapeHtml(displayPath);
+    var safeDisplayPathTitle = this.escapeHtmlAttribute(displayPath);
+    breadcrumbHtml = '<div class="breadcrumb" title="' + safeDisplayPathTitle + '">' + safeDisplayPath + '</div>';
   }
 
   // 缓存结果
@@ -1406,12 +1410,12 @@ ModalManager.prototype.showTagEditor = function (item, type, options) {
     '<div class="smart-bookmark-tag-editor-dialog">' +
     '<div class="smart-bookmark-tag-editor-header">' +
     '<span>🏷️</span>' +
-    '<h3 class="smart-bookmark-tag-editor-title" title="' + self.escapeHtml(editorTitleWithTarget) + '">' + self.escapeHtml(editorTitleWithTarget) + '</h3>' +
+    '<h3 class="smart-bookmark-tag-editor-title" title="' + self.escapeHtmlAttribute(editorTitleWithTarget) + '">' + self.escapeHtml(editorTitleWithTarget) + '</h3>' +
     '</div>' +
     '<div class="smart-bookmark-tag-editor-body">' +
     '<div class="smart-bookmark-tag-editor-chips" id="smart-bookmark-tag-chips"></div>' +
     '<div class="smart-bookmark-tag-editor-input-wrap">' +
-    '<input class="smart-bookmark-tag-editor-input" id="smart-bookmark-tag-input" type="text" placeholder="' + placeholderText + '" autocomplete="off">' +
+    '<input class="smart-bookmark-tag-editor-input" id="smart-bookmark-tag-input" type="text" placeholder="' + self.escapeHtmlAttribute(placeholderText) + '" autocomplete="off">' +
     '<div class="smart-bookmark-tag-autocomplete" id="smart-bookmark-tag-autocomplete"></div>' +
     '</div>' +
     '<div class="smart-bookmark-tag-editor-hint" id="smart-bookmark-tag-editor-hint">' + self.escapeHtml(hintText) + '</div>' +
@@ -1878,4 +1882,3 @@ ModalManager.prototype.openTagEditorAfterCreate = function (createdBookmark, par
     }
   });
 };
-

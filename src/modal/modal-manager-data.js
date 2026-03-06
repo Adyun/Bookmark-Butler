@@ -43,31 +43,13 @@ ModalManager.prototype.loadFolders = function () {
         }
         return self.maybePruneOrphanTags();
       }).then(function () {
-
-        // 构建快速查找表
-        self.buildFolderIdMap();
-        // console.log('Retrieved ' + folders.length + ' folders');
-
         if (folders.length === 0) {
           self.uiManager.showEmptyState('folders');
           return;
         }
 
-        return window.SMART_BOOKMARK_SORTING.updateFolderActivity(self.allFolders);
+        return self.prepareFoldersForDisplay(self.allFolders);
       });
-    })
-    .then(function (foldersWithActivity) {
-      if (!foldersWithActivity) return;
-
-      self.allFolders = foldersWithActivity;
-
-      // 清理面包屑缓存，因为文件夹数据已更新
-      self.clearBreadcrumbCache();
-
-      // 索引后台空闲时构建（不阻塞首屏）
-      self.scheduleBuildIndexes();
-
-      return window.SMART_BOOKMARK_SORTING.sortByActivity(self.allFolders);
     })
     .then(function (sortedFolders) {
       if (!sortedFolders) return;
@@ -75,6 +57,9 @@ ModalManager.prototype.loadFolders = function () {
       // 将默认排序结果作为文件夹主数据源，统一后续空查询展示顺序
       self.allFolders = sortedFolders.slice();
       self.filteredFolders = self.getDefaultFolderResults();
+
+      // 索引后台空闲时构建（不阻塞首屏）
+      self.scheduleBuildIndexes();
 
       // 更新键盘管理器的当前项目
       self.keyboardManager.setCurrentItems(self.filteredFolders);
@@ -114,13 +99,9 @@ ModalManager.prototype.loadBookmarks = function () {
     foldersPromise = window.SMART_BOOKMARK_API.getAllFolders()
       .then(function (folders) {
         if (folders && Array.isArray(folders)) {
-          self.allFolders = folders;
           self._folderDataReadyForTagPrune = true;
           self.foldersPrefetched = true;
-          // 预取后构建查找表
-          self.buildFolderIdMap();
-          // 预取后清理面包屑缓存，保证后续生成正确
-          self.clearBreadcrumbCache();
+          return self.prepareFoldersForDisplay(folders);
         }
       })
       .catch(function () { /* 忽略预取失败，不影响书签加载 */ });
@@ -358,6 +339,41 @@ ModalManager.prototype.buildFolderIdMap = function () {
 };
 
 /**
+ * 统一准备文件夹数据：补活跃度、排序，并重建本地索引
+ * @param {Array} folders
+ * @returns {Promise<Array>}
+ */
+ModalManager.prototype.prepareFoldersForDisplay = function (folders) {
+  var self = this;
+  var folderList = Array.isArray(folders) ? folders.slice() : [];
+
+  if (folderList.length === 0) {
+    self.allFolders = [];
+    self.buildFolderIdMap();
+    self.clearBreadcrumbCache();
+    return Promise.resolve([]);
+  }
+
+  return window.SMART_BOOKMARK_SORTING.updateFolderActivity(folderList)
+    .then(function (foldersWithActivity) {
+      return window.SMART_BOOKMARK_SORTING.sortByActivity(foldersWithActivity);
+    })
+    .then(function (sortedFolders) {
+      self.allFolders = sortedFolders.slice();
+      self.buildFolderIdMap();
+      self.clearBreadcrumbCache();
+      return self.allFolders;
+    })
+    .catch(function (error) {
+      console.warn('Failed to prepare sorted folders, falling back to original order:', error);
+      self.allFolders = folderList.slice();
+      self.buildFolderIdMap();
+      self.clearBreadcrumbCache();
+      return self.allFolders;
+    });
+};
+
+/**
  * 构建书签 parentId → [bookmark, ...] 索引（书签数据加载后调用）
  */
 ModalManager.prototype.buildBookmarkParentMap = function () {
@@ -429,8 +445,7 @@ ModalManager.prototype.refreshFoldersForNavigation = function () {
         }
       }
 
-      self.buildFolderIdMap();
-      self.clearBreadcrumbCache();
+      return self.prepareFoldersForDisplay(self.allFolders);
     })
     .catch(function () {
       // 忽略导航索引刷新失败，不影响主流程

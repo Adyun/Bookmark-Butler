@@ -4,17 +4,6 @@ ModalManager.prototype.handleSearch = function (query) {
   var startTime = performance.now();
   var self = this;
   var searchGeneration = ++this.searchGeneration;
-  var shouldAnimateModalHeight = this.uiManager.currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH;
-
-
-
-  // 标记高度动画（延迟到搜索结果渲染后执行，避免搜索前同步回流）
-  var modal = this.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.MODAL_ID);
-  if (modal && shouldAnimateModalHeight) {
-    modal.classList.add('content-changing');
-  } else if (modal) {
-    modal.classList.remove('content-changing');
-  }
 
   // 执行搜索
   if (this.uiManager.currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_BOOKMARK_SEARCH) {
@@ -87,32 +76,6 @@ ModalManager.prototype.handleSearch = function (query) {
     this.keyboardManager.setCurrentItems(this.filteredFolders);
     this.updateFolderList();
   }
-
-  // 使用 rAF 批量处理高度过渡，减少强制回流次数
-  requestAnimationFrame(function () {
-    if (searchGeneration !== self.searchGeneration) return;
-    if (modal && shouldAnimateModalHeight) {
-      // FLIP: 读取当前实际高度 → 设为 auto 测量目标高度 → 恢复 → 动画到目标
-      var fromHeight = modal.offsetHeight; // 回流 1（必要：读取当前渲染高度）
-      modal.style.height = 'auto';
-      var toHeight = modal.offsetHeight;   // 回流 2（必要：测量 auto 高度）
-
-      if (fromHeight !== toHeight) {
-        modal.style.height = fromHeight + 'px';
-        void modal.offsetHeight; // 强制浏览器记录起始值
-        modal.style.height = toHeight + 'px';
-      } else {
-        modal.style.height = toHeight + 'px';
-      }
-
-      // 动画完成后清理
-      setTimeout(function () {
-        if (modal) {
-          modal.classList.remove('content-changing');
-        }
-      }, 350);
-    }
-  });
 
   // 延迟设置选中索引，确保虚拟滚动器完全渲染后再进行选择
   setTimeout(function () {
@@ -510,6 +473,17 @@ ModalManager.prototype.escapeHtml = function (text) {
   var div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+};
+
+/**
+ * HTML 属性值转义
+ * @param {string} text - 需要转义的文本
+ * @returns {string} 可安全写入双引号属性值的文本
+ */
+ModalManager.prototype.escapeHtmlAttribute = function (text) {
+  return this.escapeHtml(text)
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 };
 
 /**

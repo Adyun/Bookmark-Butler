@@ -229,9 +229,9 @@
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   width: 760px;
   max-width: 95vw;
-  max-height: 80vh;
-  height: auto;
-  min-height: min(550px, calc(100vh - 24px));
+  max-height: min(820px, calc(100vh - 24px));
+  height: min(820px, calc(100vh - 24px));
+  min-height: min(820px, calc(100vh - 24px));
   overflow: hidden;
   display: flex;
   flex-direction: column;
