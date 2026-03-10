@@ -1,12 +1,16 @@
+> 本项目是 Vibe Coding 产物，代码与文档可能包含实验性实现，使用、二次开发和发布前建议自行审查与测试。
+
 # Bookmark Butler
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![License](https://img.shields.io/badge/license-GPLv3-blue.svg)
 ![Version](https://img.shields.io/badge/version-1.0.0-brightgreen.svg)
-![Chrome Web Store](https://img.shields.io/badge/Chrome%20Web%20Store-Approved-brightgreen.svg)
+![Install](https://img.shields.io/badge/install-unpacked%20extension-orange.svg)
 
 ## 简介
 
 书签管家（Bookmark Butler）是一款智能书签管理 Chrome 扩展，旨在提升您的书签组织和访问效率。通过智能排序和快速搜索功能，您可以轻松将网页收藏到最相关的文件夹中。
+
+> 当前项目尚未上架 Chrome Web Store。你需要通过开发者模式“解压加载”使用，或者自行打包后发布到浏览器扩展商店。
 
 ## 功能特性
 
@@ -20,13 +24,7 @@
 
 ## 安装方式
 
-### 从 Chrome Web Store 安装（推荐）
-
-1. 访问 [Chrome Web Store](https://chrome.google.com/webstore)
-2. 搜索 "书签管家"
-3. 点击 "添加到 Chrome"
-
-### 开发者模式安装
+### 开发者模式安装（当前推荐）
 
 1. 克隆或下载本仓库
 2. 打开 Chrome 浏览器
@@ -34,6 +32,13 @@
 4. 启用"开发者模式"
 5. 点击"加载已解压的扩展程序"
 6. 选择项目根目录
+
+### 自行打包并发布到商店
+
+1. 完成你自己的配置、图标和商店素材准备
+2. 在 `chrome://extensions/` 中使用“打包扩展程序”生成发布包
+3. 登录对应浏览器扩展商店后台
+4. 上传打包产物并补全商店说明、截图、隐私信息和权限说明
 
 ## 使用方法
 
@@ -153,7 +158,7 @@ cd bookmark-butler
 
 ## 许可证
 
-本项目采用 MIT 许可证。详见 [LICENSE](LICENSE) 文件。
+本项目采用 GNU GPL v3 许可证。详见 [LICENSE](LICENSE) 文件。
 
 ## 🔄 版本升级指南
 

@@ -12,7 +12,7 @@
     "productivity"
   ],
   "author": "Bookmark Butler Team",
-  "license": "MIT",
+  "license": "GPL-3.0-only",
   "devDependencies": {
     "eslint": "^8.0.0"
   }
