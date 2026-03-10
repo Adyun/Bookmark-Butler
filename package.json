@@ -1,7 +1,7 @@
 {
-  "name": "smart-bookmark-extension",
+  "name": "bookmark-butler",
   "version": "1.0.0",
-  "description": "智能书签扩展，基于活跃度排序和快速搜索的书签管理工具",
+  "description": "Bookmark Butler is a smart bookmark manager with fast search and quick save workflows.",
   "main": "src/content-script.js",
   "scripts": {
     "lint": "eslint src/"
@@ -11,7 +11,7 @@
     "bookmark",
     "productivity"
   ],
-  "author": "Smart Bookmark Team",
+  "author": "Bookmark Butler Team",
   "license": "MIT",
   "devDependencies": {
     "eslint": "^8.0.0"

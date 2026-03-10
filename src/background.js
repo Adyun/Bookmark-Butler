@@ -1,6 +1,6 @@
 // Background script to handle extension commands
 const DEBUG = false;
-if (DEBUG) console.log("Smart Bookmark Extension background script loaded");
+if (DEBUG) console.log("Bookmark Butler background script loaded");
 
 // 内存管理器
 const memoryManager = {
@@ -665,7 +665,7 @@ function trySimpleNotification() {
     chrome.notifications.create({
       type: 'basic',
       iconUrl: simpleIcon,
-      title: '智能书签扩展',
+      title: '书签管家',
       message: '当前页面不支持书签管理器。请在普通网页中使用此功能。'
     }, function (notificationId) {
       if (chrome.runtime.lastError) {

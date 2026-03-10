@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Smart Bookmark Extension",
+  "name": "书签管家",
   "version": "1.0.0",
-  "description": "智能书签扩展，提供两种模式的书签管理功能：模式一可快速搜索和打开已有书签，模式二可将当前页面快速添加到收藏文件夹中。支持深色/浅色主题切换。",
+  "description": "书签管家（Bookmark Butler）提供快速搜索、智能整理与一键收藏能力，让常用书签管理更轻松。",
   "permissions": [
     "bookmarks",
     "activeTab",
@@ -14,7 +14,7 @@
     "service_worker": "src/background.js"
   },
   "action": {
-    "default_title": "智能书签扩展",
+    "default_title": "书签管家",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
@@ -23,7 +23,7 @@
   },
   "commands": {
     "_execute_action": {
-      "description": "打开智能书签"
+      "description": "打开书签管家"
     }
   },
   "icons": {

@@ -1,4 +1,4 @@
-// Fallback page script for Smart Bookmark Extension
+// Fallback page script for Bookmark Butler
 
 function openNewTab() {
     // 通过消息传递与background script通信，打开Bing搜索
