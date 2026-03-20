@@ -1,87 +1,66 @@
-# Chrome Web Store 描述文档
+# Chrome Web Store Copy
 
-## 扩展名称
-Smart Bookmark Extension - 智能书签管理器
+## Extension Name
+Bookmark Butler
 
-## 简短描述
-基于活跃度排序和快速搜索的智能书签管理扩展，让收藏网页变得更简单高效。
+## Short Description
+Save pages faster, search bookmarks instantly, and organize folders with pins and tags.
 
-## 详细描述
-Smart Bookmark Extension 是一款革命性的书签管理工具，旨在提升您的书签组织和访问效率。
+## Detailed Description
+Bookmark Butler is a lightweight bookmark manager for Chrome-compatible browsers. It helps users save the current page quickly, search bookmarks and folders in one place, and keep important items easy to reach with pins, tags, and smarter ranking.
 
-### 核心功能
+### Core Features
 
-**智能排序**
-- 根据文件夹活跃度自动排序书签文件夹
-- 活跃度基于文件夹中书签的数量和使用频率
-- 最常用的文件夹始终显示在顶部
+**Quick Save**
+- Save the current page directly into any bookmark folder.
+- Launch from the toolbar button or a custom browser shortcut.
 
-**快速搜索**
-- 实时模糊搜索功能
-- 智能匹配算法（完全匹配 > 前缀匹配 > 包含匹配）
-- 搜索响应时间小于100ms
+**Fast Search**
+- Search bookmarks and folders from the same modal.
+- Filter results by type and tag.
+- Navigate large result sets efficiently with keyboard support and virtualized lists.
 
-**快捷操作**
-- 点击扩展图标或使用自定义快捷键快速收藏当前页面（默认未设置）
-- 简洁直观的用户界面
-- Modal打开时间小于200ms
+**Smarter Organization**
+- Pin important bookmarks and folders.
+- Add custom tags to bookmarks and folders.
+- Improve ranking with local query history and bookmark metadata.
 
-**性能优化**
-- 智能缓存机制，减少重复API调用
-- 内存占用小于50MB
-- 防抖搜索，减少不必要的计算
+**Local Data Tools**
+- Export local extension metadata to a backup JSON file.
+- Import backup data back into the extension when needed.
+- Customize theme mode, accent color, and interface language.
 
-### 使用方法
-1. 在任何网页上点击扩展图标，或使用你在快捷键页面配置的快捷键（默认未设置）
-2. 在弹出的对话框中搜索或浏览文件夹
-3. 选择目标文件夹
-4. 点击"添加书签"完成操作
+### How It Works
+1. Open a normal webpage.
+2. Click the Bookmark Butler icon or trigger your assigned shortcut.
+3. Search bookmarks or folders in the modal.
+4. Pick a destination folder to save the current page, or browse existing items.
+5. Use pins, tags, and filters to organize faster.
 
-### 为什么选择Smart Bookmark Extension？
-- **零学习成本**：简洁直观的界面设计
-- **高性能**：优化的代码确保流畅体验
-- **隐私保护**：不收集任何个人数据
-- **完全免费**：无任何隐藏费用
+### Why Users Install It
+- Fast bookmark capture without leaving the page
+- Better organization for large bookmark libraries
+- Clean local-first design
+- No account, no sync service, no external analytics
 
-提升您的书签管理体验，立即安装Smart Bookmark Extension！
+## Privacy Disclosure
+Bookmark Butler does not collect, sell, or transmit personal data to external servers.
 
-## 功能亮点
-- 智能文件夹排序
-- 快速实时搜索
-- 快捷键操作
-- 轻量级设计
-- 高性能优化
-- 隐私友好
+Data stays on the user's device and is used only to provide the extension experience:
 
-## 使用场景
-- 研究人员管理大量资料链接
-- 开发者组织技术文档和示例
-- 学生整理学习资源
-- 任何需要高效管理书签的用户
+- `bookmarks`: read, search, create, and remove bookmarks and folders
+- `activeTab`: read the current tab title and URL when the user opens the extension
+- `storage`: save local settings and metadata such as language, theme, tags, pins, cache, and query history
+- `scripting`: inject the extension UI into the active tab after the user triggers the extension
+- `notifications`: show a fallback notice on restricted pages where the extension UI cannot run
 
-## 支持页面
-https://github.com/your-repo/smart-bookmark-extension
+The extension does not require sign-in and does not include analytics, trackers, or advertising SDKs.
 
-## 隐私政策
-Smart Bookmark Extension 尊重您的隐私。我们不会收集、存储或分享您的任何个人信息。扩展仅使用必要的浏览器权限来实现书签管理功能。
+## Suggested Store Category
+Productivity
 
-使用的权限：
-- bookmarks：用于读取和创建书签
-- activeTab：用于获取当前页面信息
+## Suggested Tags
+bookmark, productivity, organization, search, browser extension, tab workflow
 
-## 使用条款
-本扩展按"现状"提供，不提供任何明示或暗示的担保。
-
-## 截图说明
-1. 主界面 - 展示扩展的Modal界面和文件夹列表
-2. 搜索功能 - 展示实时搜索和过滤功能
-3. 文件夹选择 - 展示活跃度排序的文件夹列表
-
-## Logo描述
-简洁现代的书签图标，体现智能和高效的特点
-
-## 应用类别
- productivity
-
-## 相关应用标签
-bookmark, productivity, organizer, chrome, browser, extension, manager
+## Support Page
+https://github.com/your-repo/bookmark-butler

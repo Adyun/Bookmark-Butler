@@ -1,4 +1,4 @@
-> 本项目是 Vibe Coding 产物，代码与文档可能包含实验性实现，使用、二次开发和发布前建议自行审查与测试。
+> This project was created with Vibe Coding. Review, test, and polish the code and store assets before publishing.
 
 # Bookmark Butler
 
@@ -6,188 +6,148 @@
 ![Version](https://img.shields.io/badge/version-1.0.0-brightgreen.svg)
 ![Install](https://img.shields.io/badge/install-unpacked%20extension-orange.svg)
 
-## 简介
+Bookmark Butler is a Chrome-compatible bookmark manager focused on fast saving, quick search, and lightweight organization. It opens directly on the current page, lets you search folders or bookmarks, and helps you keep large bookmark libraries manageable without sending data to external services.
 
-书签管家（Bookmark Butler）是一款智能书签管理 Chrome 扩展，旨在提升您的书签组织和访问效率。通过智能排序和快速搜索功能，您可以轻松将网页收藏到最相关的文件夹中。
+> The extension is not published to the Chrome Web Store yet. For now, load it unpacked in developer mode or package it for your own store submission.
 
-> 当前项目尚未上架 Chrome Web Store。你需要通过开发者模式“解压加载”使用，或者自行打包后发布到浏览器扩展商店。
+## Features
 
-## 功能特性
+- Quickly save the current page into any bookmark folder.
+- Search bookmarks and folders in the same interface.
+- Rank folders intelligently with bookmark metadata and recent usage signals.
+- Pin important folders or bookmarks to keep them near the top.
+- Organize bookmarks and folders with custom tags.
+- Filter results by item type and tag.
+- Export and import local extension metadata, including tags, pins, and search history.
+- Switch theme mode, accent color, and interface language.
+- Navigate efficiently with keyboard shortcuts and virtualized lists.
 
-- **智能排序**: 根据活跃度自动排序书签文件夹
-- **快速搜索**: 实时模糊搜索，快速定位目标文件夹
-- **快捷操作**: 点击扩展图标或使用自定义快捷键快速收藏当前页面
-- **自定义快捷键**: 默认未设置快捷键，可在扩展快捷键页面手动配置
-- **性能优化**: 响应迅速，内存占用低
-- **简洁界面**: 直观易用的用户界面设计
-- **隐私保护**: 不收集任何个人数据
+## Installation
 
-## 安装方式
+### Load unpacked
 
-### 开发者模式安装（当前推荐）
+1. Download or clone this repository.
+2. Open `chrome://extensions/`.
+3. Enable `Developer mode`.
+4. Click `Load unpacked`.
+5. Select this project folder.
 
-1. 克隆或下载本仓库
-2. 打开 Chrome 浏览器
-3. 访问 `chrome://extensions/`
-4. 启用"开发者模式"
-5. 点击"加载已解压的扩展程序"
-6. 选择项目根目录
+### Package for store submission
 
-### 自行打包并发布到商店
+1. Finalize your branding assets, screenshots, and store copy.
+2. Open `chrome://extensions/`.
+3. Use `Pack extension` to generate a distributable package.
+4. Upload the package to the target extension store.
+5. Submit the listing with permissions rationale and privacy disclosure.
 
-1. 完成你自己的配置、图标和商店素材准备
-2. 在 `chrome://extensions/` 中使用“打包扩展程序”生成发布包
-3. 登录对应浏览器扩展商店后台
-4. 上传打包产物并补全商店说明、截图、隐私信息和权限说明
+## Usage
 
-## 使用方法
+1. Open any regular webpage.
+2. Click the extension icon, or assign your own shortcut in `chrome://extensions/shortcuts`.
+3. Search folders or bookmarks in the modal.
+4. Choose a target folder to save the current page, or browse existing bookmarks.
+5. Use tags, pins, filters, and keyboard navigation to manage results faster.
 
-1. 在任何网页上点击扩展图标，或使用你在快捷键页面配置的快捷键（默认未设置）
-2. 在弹出的对话框中搜索或浏览文件夹
-3. 选择目标文件夹
-4. 点击"添加书签"完成操作
+## Permissions
 
-### 自定义快捷键
+- `bookmarks`: Read, create, search, and remove bookmarks and bookmark folders.
+- `activeTab`: Read the current tab title and URL when the user opens the extension.
+- `storage`: Save preferences and local metadata such as theme, language, tags, pins, cache, and query history.
+- `scripting`: Inject the modal UI into the active page when the user triggers the extension.
+- `notifications`: Show a fallback notice when the extension is triggered on restricted browser pages.
 
-用户可以通过以下步骤自定义快捷键（默认未设置）：
+## Privacy
 
-1. 在浏览器地址栏输入 `chrome://extensions/shortcuts` 并回车
-2. 找到 书签管家 的“打开书签管家”命令
-3. 点击并设置你想要的快捷键组合
+Bookmark Butler is designed to work locally in the browser.
 
-## 技术架构
+- No account is required.
+- No analytics, tracking pixels, or advertising SDKs are included.
+- No bookmark data, page URLs, tags, pins, or search history are sent to our servers.
+- No personal information is sold or shared with third parties.
 
-- **核心技术**: 原生 JavaScript 和 Chrome Extension API
-- **样式框架**: 原生 CSS（包含响应式设计）
-- **架构模式**: 模块化设计，易于维护和扩展
-- **兼容性**: 支持 Chrome 88+ 和 Edge 88+
+The extension stores data only on the user's device through browser storage APIs:
 
-## 项目结构
+- Bookmark access comes from the browser's `chrome.bookmarks` API.
+- Local preferences and metadata are stored in `chrome.storage.local`.
+- Exported backup files are created only when the user explicitly runs export.
 
-### 📁 v2.0 组件化架构
+Local data currently includes:
 
-```
+- Language preference
+- Theme mode and theme color
+- Cached bookmark data
+- Pinned bookmarks and folders
+- Custom tags and tag filter statistics
+- Local query history used to improve result ranking
+
+If the extension is triggered on restricted pages such as `chrome://` or other browser-internal URLs, it does not read page content. Instead, it falls back to a local helper flow because content scripts cannot run on those pages.
+
+A standalone policy file for store submission is available at [PRIVACY_POLICY.md](PRIVACY_POLICY.md).
+
+## Project Structure
+
+```text
 bookmark-butler/
-├── manifest.json              # 扩展配置文件
+├── manifest.json
 ├── src/
-│   ├── background.js          # 后台脚本
-│   ├── content-script.js      # 内容脚本入口
-│   ├── components/            # 🆕 组件化架构
-│   │   ├── virtual-scroller.js   # 虚拟滚动组件
-│   │   ├── ui-manager.js          # UI状态管理
-│   │   ├── theme-manager.js       # 主题管理
-│   │   └── keyboard-manager.js    # 键盘导航
-│   ├── modal/                 # Modal控制器
-│   │   └── modal-manager.js   # 主控制器（重构）
-│   ├── utils/                 # 工具函数
-│   │   ├── bookmark-api.js    # 书签API封装
-│   │   ├── constants.js       # 常量定义
-│   │   ├── helpers.js         # 辅助函数
-│   │   ├── search-engine.js   # 搜索引擎
-│   │   └── sorting-algorithm.js # 排序算法
-│   └── styles/
-│       └── modal.css          # 样式文件（优化布局）
-├── icons/                     # 扩展图标
-├── docs/                      # 文档
-│   ├── user-guide.md          # 用户指南
-│   ├── chrome-store-description.md # 商店描述
-│   └── REFACTORING_GUIDE.md   # 🆕 重构架构指南
-├── CHANGELOG.md               # 🆕 更新日志
+│   ├── background.js
+│   ├── content-script.js
+│   ├── components/
+│   │   ├── keyboard-manager.js
+│   │   ├── language-manager.js
+│   │   ├── theme-manager.js
+│   │   ├── ui-manager.js
+│   │   └── virtual-scroller.js
+│   ├── modal/
+│   │   ├── modal-manager-core.js
+│   │   ├── modal-manager-data.js
+│   │   ├── modal-manager-export.js
+│   │   ├── modal-manager-navigation.js
+│   │   ├── modal-manager-render.js
+│   │   └── modal-manager-search.js
+│   ├── styles/
+│   │   └── modal.css
+│   └── utils/
+│       ├── bookmark-api.js
+│       ├── constants.js
+│       ├── data-export-import.js
+│       ├── helpers.js
+│       ├── pin-manager.js
+│       ├── query-history.js
+│       ├── search-engine.js
+│       ├── sorting-algorithm.js
+│       └── tag-manager.js
+├── icons/
+└── docs/
 ```
 
-### 🏗️ 架构亮点
+## Development
 
-- **🧩 组件化设计**：模块化拆分，职责清晰
-- **📱 响应式布局**：修复虚拟滚动和高度计算问题  
-- **⚡ 性能优化**：虚拟滚动性能提升50%+
-- **🎹 键盘友好**：完整的键盘导航支持
-- **🎨 主题系统**：独立的主题管理组件
-- **🔧 易维护**：从1454行巨型文件拆分为5个组件
+Detailed technical documentation is available in [docs/REFACTORING_GUIDE.md](docs/REFACTORING_GUIDE.md), [docs/COMPONENT_API.md](docs/COMPONENT_API.md), and [docs/user-guide.md](docs/user-guide.md).
 
-## 开发指南
-
-> 📖 **详细开发文档**: 请查看 [重构架构指南](docs/REFACTORING_GUIDE.md) 了解完整的架构设计和开发指南
-
-### 项目设置
+### Local setup
 
 ```bash
-# 克隆项目
 git clone https://github.com/your-repo/bookmark-butler.git
-
-# 进入项目目录
 cd bookmark-butler
 ```
 
-### 🆕 v2.0 架构特点
+### Available script
 
-- **组件化开发**: 每个功能模块独立，便于维护和测试
-- **清晰的职责分离**: UI管理、主题控制、键盘导航各司其职
-- **现代化的代码结构**: 遵循最佳实践，提高代码质量
-- **性能优化**: 虚拟滚动和布局算法全面优化
+```bash
+npm run lint
+```
 
-### 本地运行
+## Store Submission Notes
 
-1. 打开 Chrome 浏览器
-2. 访问 `chrome://extensions/`
-3. 启用"开发者模式"
-4. 点击"加载已解压的扩展程序"
-5. 选择项目根目录
+For a store listing, the current project materials already cover the main reviewer questions:
 
-## 性能指标
+- English product name and description in `manifest.json`
+- English default UI language
+- Explicit permissions rationale
+- Privacy disclosure stating that data stays local
+- A store copy draft in `docs/chrome-store-description.md`
 
-- Modal 打开时间: < 200ms
-- 搜索响应时间: < 100ms
-- 内存占用: < 50MB
-- 支持文件夹数量: 1000+
+## License
 
-## 贡献指南
-
-欢迎提交 Issue 和 Pull Request 来帮助改进项目。
-
-### 提交 Issue
-
-请使用清晰的标题和详细的描述来提交 Issue。
-
-### 提交 Pull Request
-
-1. Fork 本仓库
-2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 开启 Pull Request
-
-## 许可证
-
-本项目采用 GNU GPL v3 许可证。详见 [LICENSE](LICENSE) 文件。
-
-## 🔄 版本升级指南
-
-### 从 v1.x 升级到 v2.0
-
-**自动升级：**
-- ✅ 扩展会自动使用新的组件化架构
-- ✅ 所有设置和数据完全保留
-- ✅ 功能体验保持一致，性能大幅提升
-
-**新功能体验：**
-- 🎹 更丰富的键盘导航（Home/End/PageUp/PageDown）
-- ⚡ 更流畅的虚拟滚动体验
-- 🎨 更稳定的主题切换
-- 📱 更好的响应式布局
-
-**开发者升级：**
-- 📖 查看 [重构架构指南](docs/REFACTORING_GUIDE.md)
-- 📋 参考 [更新日志](CHANGELOG.md)
-- 🧩 了解新的组件化API
-
-## 📚 文档索引
-
-- [📖 重构架构指南](docs/REFACTORING_GUIDE.md) - 详细的技术架构文档
-- [🔧 组件API参考](docs/COMPONENT_API.md) - 组件化API使用指南
-- [📋 更新日志](CHANGELOG.md) - 版本更新记录
-- [👤 用户指南](docs/user-guide.md) - 功能使用说明
-- [🏪 商店描述](docs/chrome-store-description.md) - 扩展商店信息
-
-## 支持
-
-如有任何问题，请提交 Issue 或联系项目维护者。
+This project is licensed under the GNU GPL v3. See [LICENSE](LICENSE) for details.

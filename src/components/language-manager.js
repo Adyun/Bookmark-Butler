@@ -4,7 +4,7 @@
  * 语言管理器 - 处理多语言切换和本地化
  */
 function LanguageManager() {
-  this.currentLanguage = 'zh'; // 默认中文
+  this.currentLanguage = 'en'; // Default to English
   this.translations = {
     zh: {
       // 模态框标题和按钮

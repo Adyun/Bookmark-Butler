@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "书签管家",
+  "name": "Bookmark Butler",
   "version": "1.0.0",
-  "description": "书签管家（Bookmark Butler）提供快速搜索、智能整理与一键收藏能力，让常用书签管理更轻松。",
+  "description": "Quickly save pages, search bookmarks, pin favorites, and organize with tags.",
   "permissions": [
     "bookmarks",
     "activeTab",
@@ -14,7 +14,7 @@
     "service_worker": "src/background.js"
   },
   "action": {
-    "default_title": "书签管家",
+    "default_title": "Bookmark Butler",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
@@ -23,7 +23,7 @@
   },
   "commands": {
     "_execute_action": {
-      "description": "打开书签管家"
+      "description": "Open Bookmark Butler"
     }
   },
   "icons": {
