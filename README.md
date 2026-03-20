@@ -1,4 +1,4 @@
-> This project was created with Vibe Coding. Review, test, and polish the code and store assets before publishing.
+> 本项目基于 Vibe Coding 生成。正式发布或上架商店前，建议你自行完成代码审查、测试和商店素材打磨。
 
 # Bookmark Butler
 
@@ -6,85 +6,85 @@
 ![Version](https://img.shields.io/badge/version-1.0.0-brightgreen.svg)
 ![Install](https://img.shields.io/badge/install-unpacked%20extension-orange.svg)
 
-Bookmark Butler is a Chrome-compatible bookmark manager focused on fast saving, quick search, and lightweight organization. It opens directly on the current page, lets you search folders or bookmarks, and helps you keep large bookmark libraries manageable without sending data to external services.
+Bookmark Butler 是一款面向 Chrome 兼容浏览器的书签管理扩展，主打快速收藏、即时搜索和轻量整理。它会直接在当前页面内打开管理界面，让你搜索书签或文件夹，并在不把数据发送到外部服务的前提下，更高效地管理大量书签。
 
-> The extension is not published to the Chrome Web Store yet. For now, load it unpacked in developer mode or package it for your own store submission.
+> 当前扩展尚未发布到 Chrome Web Store。你可以先通过开发者模式加载，或自行打包后提交到扩展商店。
 
-## Features
+## 功能特性
 
-- Quickly save the current page into any bookmark folder.
-- Search bookmarks and folders in the same interface.
-- Rank folders intelligently with bookmark metadata and recent usage signals.
-- Pin important folders or bookmarks to keep them near the top.
-- Organize bookmarks and folders with custom tags.
-- Filter results by item type and tag.
-- Export and import local extension metadata, including tags, pins, and search history.
-- Switch theme mode, accent color, and interface language.
-- Navigate efficiently with keyboard shortcuts and virtualized lists.
+- 快速将当前页面保存到任意书签文件夹。
+- 在同一个界面中搜索书签和文件夹。
+- 基于书签元数据和本地使用信号，对文件夹进行更智能的排序。
+- 支持置顶重要的书签或文件夹，方便优先访问。
+- 支持为书签和文件夹添加自定义标签。
+- 支持按类型和标签筛选结果。
+- 支持导出和导入本地扩展元数据，包括标签、置顶和搜索历史。
+- 支持切换主题模式、主题颜色和界面语言。
+- 支持键盘快捷操作和虚拟列表，适合大量数据场景。
 
-## Installation
+## 安装方式
 
-### Load unpacked
+### 开发者模式加载
 
-1. Download or clone this repository.
-2. Open `chrome://extensions/`.
-3. Enable `Developer mode`.
-4. Click `Load unpacked`.
-5. Select this project folder.
+1. 下载或克隆本仓库。
+2. 打开 `chrome://extensions/`。
+3. 开启 `Developer mode`。
+4. 点击 `Load unpacked`。
+5. 选择当前项目目录。
 
-### Package for store submission
+### 打包并提交商店
 
-1. Finalize your branding assets, screenshots, and store copy.
-2. Open `chrome://extensions/`.
-3. Use `Pack extension` to generate a distributable package.
-4. Upload the package to the target extension store.
-5. Submit the listing with permissions rationale and privacy disclosure.
+1. 准备好品牌素材、截图和商店文案。
+2. 打开 `chrome://extensions/`。
+3. 使用 `Pack extension` 生成可分发安装包。
+4. 将安装包上传到目标扩展商店。
+5. 提交时一并补充权限用途说明和隐私说明。
 
-## Usage
+## 使用方式
 
-1. Open any regular webpage.
-2. Click the extension icon, or assign your own shortcut in `chrome://extensions/shortcuts`.
-3. Search folders or bookmarks in the modal.
-4. Choose a target folder to save the current page, or browse existing bookmarks.
-5. Use tags, pins, filters, and keyboard navigation to manage results faster.
+1. 打开任意普通网页。
+2. 点击扩展图标，或者在 `chrome://extensions/shortcuts` 中为它设置快捷键。
+3. 在弹出的管理面板中搜索文件夹或书签。
+4. 选择目标文件夹来保存当前页面，或者浏览已有书签。
+5. 借助标签、置顶、筛选和键盘导航更高效地管理内容。
 
-## Permissions
+## 权限说明
 
-- `bookmarks`: Read, create, search, and remove bookmarks and bookmark folders.
-- `activeTab`: Read the current tab title and URL when the user opens the extension.
-- `storage`: Save preferences and local metadata such as theme, language, tags, pins, cache, and query history.
-- `scripting`: Inject the modal UI into the active page when the user triggers the extension.
-- `notifications`: Show a fallback notice when the extension is triggered on restricted browser pages.
+- `bookmarks`：读取、创建、搜索和删除书签与书签文件夹。
+- `activeTab`：在用户主动打开扩展时读取当前标签页的标题和 URL。
+- `storage`：保存主题、语言、标签、置顶、缓存和查询历史等本地元数据。
+- `scripting`：在用户触发扩展后，将弹窗界面注入到当前页面。
+- `notifications`：在浏览器受限页面无法注入时，展示备用提示。
 
-## Privacy
+## 隐私说明
 
-Bookmark Butler is designed to work locally in the browser.
+Bookmark Butler 采用本地优先设计，主要在浏览器本地运行。
 
-- No account is required.
-- No analytics, tracking pixels, or advertising SDKs are included.
-- No bookmark data, page URLs, tags, pins, or search history are sent to our servers.
-- No personal information is sold or shared with third parties.
+- 不需要注册账号。
+- 不包含统计分析、追踪像素或广告 SDK。
+- 不会将书签数据、页面 URL、标签、置顶信息或搜索历史发送到我们的服务器。
+- 不会出售或与第三方共享个人信息。
 
-The extension stores data only on the user's device through browser storage APIs:
+扩展只会通过浏览器存储 API 在用户设备本地保存数据：
 
-- Bookmark access comes from the browser's `chrome.bookmarks` API.
-- Local preferences and metadata are stored in `chrome.storage.local`.
-- Exported backup files are created only when the user explicitly runs export.
+- 书签访问依赖浏览器提供的 `chrome.bookmarks` API。
+- 本地偏好设置和扩展元数据保存在 `chrome.storage.local`。
+- 只有当用户主动执行导出时，才会生成备份文件。
 
-Local data currently includes:
+当前可能保存在本地的数据包括：
 
-- Language preference
-- Theme mode and theme color
-- Cached bookmark data
-- Pinned bookmarks and folders
-- Custom tags and tag filter statistics
-- Local query history used to improve result ranking
+- 语言偏好
+- 主题模式和主题颜色
+- 书签缓存数据
+- 置顶的书签和文件夹
+- 自定义标签及标签筛选统计
+- 用于优化排序和搜索结果的本地查询历史
 
-If the extension is triggered on restricted pages such as `chrome://` or other browser-internal URLs, it does not read page content. Instead, it falls back to a local helper flow because content scripts cannot run on those pages.
+如果扩展在 `chrome://` 等浏览器内部受限页面被触发，它不会读取这些页面的内容，而是走本地备用流程，因为浏览器本身不允许内容脚本在这些页面运行。
 
-A standalone policy file for store submission is available at [PRIVACY_POLICY.md](PRIVACY_POLICY.md).
+用于商店提交的独立隐私政策文件见 [PRIVACY_POLICY.md](PRIVACY_POLICY.md)。
 
-## Project Structure
+## 项目结构
 
 ```text
 bookmark-butler/
@@ -121,33 +121,33 @@ bookmark-butler/
 └── docs/
 ```
 
-## Development
+## 开发说明
 
-Detailed technical documentation is available in [docs/REFACTORING_GUIDE.md](docs/REFACTORING_GUIDE.md), [docs/COMPONENT_API.md](docs/COMPONENT_API.md), and [docs/user-guide.md](docs/user-guide.md).
+更详细的技术文档可参考 [docs/REFACTORING_GUIDE.md](docs/REFACTORING_GUIDE.md)、[docs/COMPONENT_API.md](docs/COMPONENT_API.md) 和 [docs/user-guide.md](docs/user-guide.md)。
 
-### Local setup
+### 本地开发
 
 ```bash
 git clone https://github.com/your-repo/bookmark-butler.git
 cd bookmark-butler
 ```
 
-### Available script
+### 可用脚本
 
 ```bash
 npm run lint
 ```
 
-## Store Submission Notes
+## 商店上架说明
 
-For a store listing, the current project materials already cover the main reviewer questions:
+当前项目已经补齐了大部分商店审核常见材料：
 
-- English product name and description in `manifest.json`
-- English default UI language
-- Explicit permissions rationale
-- Privacy disclosure stating that data stays local
-- A store copy draft in `docs/chrome-store-description.md`
+- `manifest.json` 中的英文产品名和英文描述
+- 默认英文界面
+- 明确的权限用途说明
+- 说明“数据仅保存在本地”的隐私声明
+- 可直接复用的商店文案草稿，见 `docs/chrome-store-description.md`
 
-## License
+## 许可证
 
-This project is licensed under the GNU GPL v3. See [LICENSE](LICENSE) for details.
+本项目基于 GNU GPL v3 协议发布，详见 [LICENSE](LICENSE)。
