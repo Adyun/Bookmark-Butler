@@ -270,7 +270,9 @@ ModalManager.prototype.getFolderCountText = function (folder) {
  * @returns {string}
  */
 ModalManager.prototype.renderFolderCardContent = function (folder, searchTerm, hasSearchQuery, showArrow) {
-  var titleText = folder && folder.title ? folder.title : '';
+  var titleText = folder && folder.title
+    ? folder.title
+    : (this.languageManager ? this.languageManager.t('untitledFolder') : 'Untitled Folder');
   var highlightedTitle = hasSearchQuery && searchTerm
     ? this.highlightText(titleText, searchTerm)
     : this.escapeHtml(titleText);
@@ -458,16 +460,19 @@ ModalManager.prototype.renderBookmarkItem = function (bookmark, index, hasSearch
 
   // 处理返回按钮 - 三行结构：标题 / 副标题 / 当前位置
   if (isBack) {
-    var currentFolderLabel = self.escapeHtml(self.currentFolderTitle || '搜索结果');
+    var currentFolderLabel = self.escapeHtml(self.currentFolderTitle || (self.languageManager ? self.languageManager.t('searchResultsLabel') : 'Search Results'));
+    var backTitle = self.languageManager ? self.languageManager.t('backToParentTitle') : 'Back to Parent';
+    var backHint = self.languageManager ? self.languageManager.t('backToParentHint') : 'Click or press Enter to go back';
+    var currentLocationPrefix = self.languageManager ? self.languageManager.t('currentLocationPrefix') : 'Current: ';
     item.innerHTML =
       '<div class="smart-bookmark-bookmark-content">' +
       '<span class="smart-bookmark-bookmark-icon">←</span>' +
       '<div class="smart-bookmark-bookmark-text">' +
       '<div class="smart-bookmark-bookmark-title-container">' +
-      '<span class="smart-bookmark-bookmark-title">返回上一级</span>' +
+      '<span class="smart-bookmark-bookmark-title">' + self.escapeHtml(backTitle) + '</span>' +
       '</div>' +
-      '<div class="smart-bookmark-bookmark-url">点击或按回车键返回</div>' +
-      '<div class="breadcrumb">当前：' + currentFolderLabel + '</div>' +
+      '<div class="smart-bookmark-bookmark-url">' + self.escapeHtml(backHint) + '</div>' +
+      '<div class="breadcrumb">' + self.escapeHtml(currentLocationPrefix) + currentFolderLabel + '</div>' +
       '</div>' +
       '</div>';
 
@@ -490,8 +495,9 @@ ModalManager.prototype.renderBookmarkItem = function (bookmark, index, hasSearch
   // 获取搜索关键词并应用高亮
   var searchInput = this.getRoot().getElementById(window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID);
   var searchTerm = searchInput ? searchInput.value.trim() : '';
+  var bookmarkTitle = bookmark.title || (this.languageManager ? this.languageManager.t(isFolder ? 'untitledFolder' : 'untitledBookmark') : '');
   var highlightedTitle = hasSearchQuery && searchTerm ?
-    this.highlightText(bookmark.title, searchTerm) : this.escapeHtml(bookmark.title || '');
+    this.highlightText(bookmarkTitle, searchTerm) : this.escapeHtml(bookmarkTitle);
 
   if (isFolder) {
     item.innerHTML = this.renderFolderCardContent(bookmark, searchTerm, hasSearchQuery, true);

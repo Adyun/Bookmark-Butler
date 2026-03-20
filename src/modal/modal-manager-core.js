@@ -19,10 +19,12 @@ function ModalManager() {
   this.breadcrumbCache = new Map();
 
   // 组件实例
+  this.languageManager = new window.LanguageManager();
   this.uiManager = new window.UIManager();
+  this.uiManager.languageManager = this.languageManager;
   this.themeManager = new window.ThemeManager();
   this.keyboardManager = new window.KeyboardManager();
-  this.languageManager = new window.LanguageManager();
+  this.themeManager.languageManager = this.languageManager;
   this.folderVirtualScroller = null;
   this.bookmarkVirtualScroller = null;
   this.foldersPrefetched = false; // 首次进入为书签模式时的文件夹预取标记

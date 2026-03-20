@@ -74,7 +74,7 @@ ModalManager.prototype.enterFolder = function (folderId, folderTitle, options) {
     // 添加返回项
     combinedItems.push({
       id: '__back__',
-      title: '← 返回',
+      title: self.languageManager ? self.languageManager.t('backToParentTitle') : 'Back to Parent',
       itemType: 'back'
     });
 
@@ -1350,11 +1350,11 @@ ModalManager.prototype.findFolderById = function (folderId) {
 
   // 如果找不到，可能是根文件夹或系统文件夹
   if (folderId === '1') {
-    return { id: '1', title: '书签栏', parentId: '0' };
+    return { id: '1', title: this.languageManager ? this.languageManager.t('bookmarksBar') : 'Bookmarks Bar', parentId: '0' };
   } else if (folderId === '2') {
-    return { id: '2', title: '其他书签', parentId: '0' };
+    return { id: '2', title: this.languageManager ? this.languageManager.t('otherBookmarks') : 'Other Bookmarks', parentId: '0' };
   } else if (folderId === '3') {
-    return { id: '3', title: '移动设备书签', parentId: '0' };
+    return { id: '3', title: this.languageManager ? this.languageManager.t('mobileBookmarks') : 'Mobile Bookmarks', parentId: '0' };
   }
 
   return null;
@@ -1400,9 +1400,13 @@ ModalManager.prototype.showTagEditor = function (item, type, options) {
     : (self.languageManager ? self.languageManager.t('tagEditorBookmarkLabel') : '链接');
   var targetTitle = (item && item.title ? item.title : '').toString().trim();
   if (!targetTitle) {
-    targetTitle = type === 'folders' ? '未命名文件夹' : '未命名书签';
+    targetTitle = self.languageManager
+      ? self.languageManager.t(type === 'folders' ? 'untitledFolder' : 'untitledBookmark')
+      : (type === 'folders' ? 'Untitled Folder' : 'Untitled Bookmark');
   }
-  var editorTitleWithTarget = editorTitle + ' · ' + targetTypeLabel + '：' + targetTitle;
+  var editorTitleWithTarget = self.languageManager
+    ? self.languageManager.format('tagEditorTitleWithTarget', { title: editorTitle, type: targetTypeLabel, target: targetTitle })
+    : (editorTitle + ' · ' + targetTypeLabel + ': ' + targetTitle);
   var placeholderText = self.languageManager ? self.languageManager.t('tagPlaceholder') : '输入标签名称...';
   var hintText = self.languageManager ? self.languageManager.t('tagEditorHint') : '↑↓ 选建议 · Enter 添加 · Ctrl+Enter 保存 · Esc 取消';
 

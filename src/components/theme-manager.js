@@ -371,16 +371,26 @@ ThemeManager.prototype.updateDarkModeToggleIcon = function () {
   if (!toggle) return;
 
   var currentMode = this.darkMode;
+  var t = this.languageManager && typeof this.languageManager.t === 'function'
+    ? this.languageManager.t.bind(this.languageManager)
+    : function (key) {
+      var fallbacks = {
+        followSystem: 'Follow System',
+        lightMode: 'Light Mode',
+        darkMode: 'Dark Mode'
+      };
+      return fallbacks[key] || key;
+    };
 
   if (currentMode === window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_DARK) {
     toggle.textContent = '🌙'; // 深色模式图标
-    toggle.title = '深色模式';
+    toggle.title = t('darkMode');
   } else if (currentMode === window.SMART_BOOKMARK_CONSTANTS.DARK_MODE_LIGHT) {
     toggle.textContent = '☀️'; // 浅色模式图标
-    toggle.title = '浅色模式';
+    toggle.title = t('lightMode');
   } else {
     toggle.textContent = '🌗'; // 自动模式图标
-    toggle.title = '跟随系统';
+    toggle.title = t('followSystem');
   }
 };
 

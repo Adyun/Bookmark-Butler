@@ -27,6 +27,12 @@ function LanguageManager() {
       emptyFolders: '暂无文件夹',
       noResults: '无搜索结果',
       errorText: '加载失败',
+      loadingFolders: '正在加载书签文件夹...',
+      loadingBookmarks: '正在加载书签...',
+      emptyBookmarksDetailed: '没有书签，请先创建一些书签',
+      emptyFoldersDetailed: '没有书签文件夹，请先创建一些书签',
+      noResultsBookmarks: '未找到匹配的书签，请尝试其他关键词',
+      noResultsFolders: '未找到匹配的文件夹，请尝试其他关键词',
 
       // Toast消息
       bookmarkAdded: '书签添加成功！',
@@ -34,6 +40,14 @@ function LanguageManager() {
       specialUrlWarning: '无法打开特殊URL，请手动在浏览器中访问',
       permissionFailed: '权限获取失败，请手动在扩展管理页面授予权限',
       permissionRequestFailed: '权限请求失败，请手动在扩展管理页面授予权限',
+      permissionReloading: '权限获取成功，正在重新加载书签...',
+      bookmarkFeatureUnavailable: '书签功能不可用，请检查扩展权限',
+      bookmarksPermissionRequiredMessage: '缺少书签权限，请点击下方按钮授予权限',
+      loadFoldersFailed: '加载书签文件夹失败',
+      loadBookmarksFailed: '加载书签失败',
+      noFoldersFound: '没有找到书签文件夹，请先创建一些书签',
+      noBookmarksFound: '没有找到书签，请先创建一些书签',
+      bookmarkDataInvalid: '书签数据格式错误，请重试',
 
       // 删除书签
       deleteConfirmTitle: '确认删除',
@@ -53,6 +67,7 @@ function LanguageManager() {
 
       // 主题和语言设置
       themeSettings: '主题设置',
+      themeColorSettings: '主题颜色',
       languageSettings: '语言设置',
       followSystem: '跟随系统',
       lightMode: '浅色模式',
@@ -72,6 +87,15 @@ function LanguageManager() {
 
       // 面包屑
       rootDirectory: '根目录',
+      searchResultsLabel: '搜索结果',
+      backToParentTitle: '返回上一级',
+      backToParentHint: '点击或按回车键返回',
+      currentLocationPrefix: '当前：',
+      untitledFolder: '未命名文件夹',
+      untitledBookmark: '未命名书签',
+      bookmarksBar: '书签栏',
+      otherBookmarks: '其他书签',
+      mobileBookmarks: '移动设备书签',
       folderSummaryContains: '内含 {parts}',
       folderSummaryPartFolders: '{count} 个文件夹',
       folderSummaryPartBookmarks: '{count} 个书签',
@@ -81,6 +105,7 @@ function LanguageManager() {
       // 标签功能
       editTags: '编辑标签',
       tagEditorTitle: '管理标签',
+      tagEditorTitleWithTarget: '{title} · {type}：{target}',
       tagPlaceholder: '输入标签名称...',
       tagSaved: '标签已保存',
       tagSaveFailed: '标签保存失败',
@@ -130,6 +155,12 @@ function LanguageManager() {
       emptyFolders: 'No folders',
       noResults: 'No search results',
       errorText: 'Failed to load',
+      loadingFolders: 'Loading bookmark folders...',
+      loadingBookmarks: 'Loading bookmarks...',
+      emptyBookmarksDetailed: 'No bookmarks yet. Create some bookmarks first.',
+      emptyFoldersDetailed: 'No bookmark folders yet. Create some bookmarks first.',
+      noResultsBookmarks: 'No matching bookmarks found. Try another keyword.',
+      noResultsFolders: 'No matching folders found. Try another keyword.',
 
       // Toast messages
       bookmarkAdded: 'Bookmark added successfully!',
@@ -137,6 +168,14 @@ function LanguageManager() {
       specialUrlWarning: 'Cannot open special URL, please visit manually in browser',
       permissionFailed: 'Permission request failed, please grant manually in extension management page',
       permissionRequestFailed: 'Permission request failed, please grant manually in extension management page',
+      permissionReloading: 'Permission granted. Reloading bookmarks...',
+      bookmarkFeatureUnavailable: 'Bookmarks are unavailable. Please check extension permissions.',
+      bookmarksPermissionRequiredMessage: 'Bookmark permission is required. Click the button below to grant access.',
+      loadFoldersFailed: 'Failed to load bookmark folders.',
+      loadBookmarksFailed: 'Failed to load bookmarks.',
+      noFoldersFound: 'No bookmark folders found. Create some bookmarks first.',
+      noBookmarksFound: 'No bookmarks found. Create some bookmarks first.',
+      bookmarkDataInvalid: 'Bookmark data is invalid. Please try again.',
 
       // Delete bookmark
       deleteConfirmTitle: 'Confirm Delete',
@@ -156,6 +195,7 @@ function LanguageManager() {
 
       // Theme and language settings
       themeSettings: 'Theme Settings',
+      themeColorSettings: 'Theme Colors',
       languageSettings: 'Language Settings',
       followSystem: 'Follow System',
       lightMode: 'Light Mode',
@@ -175,6 +215,15 @@ function LanguageManager() {
 
       // Breadcrumbs
       rootDirectory: 'Root Directory',
+      searchResultsLabel: 'Search Results',
+      backToParentTitle: 'Back to Parent',
+      backToParentHint: 'Click or press Enter to go back',
+      currentLocationPrefix: 'Current: ',
+      untitledFolder: 'Untitled Folder',
+      untitledBookmark: 'Untitled Bookmark',
+      bookmarksBar: 'Bookmarks Bar',
+      otherBookmarks: 'Other Bookmarks',
+      mobileBookmarks: 'Mobile Bookmarks',
       folderSummaryContains: 'Contains {parts}',
       folderSummaryPartFolders: '{count} folder{suffix}',
       folderSummaryPartBookmarks: '{count} bookmark{suffix}',
@@ -184,6 +233,7 @@ function LanguageManager() {
       // Tags
       editTags: 'Edit Tags',
       tagEditorTitle: 'Manage Tags',
+      tagEditorTitleWithTarget: '{title} · {type}: {target}',
       tagPlaceholder: 'Enter tag name...',
       tagSaved: 'Tags saved',
       tagSaveFailed: 'Failed to save tags',
@@ -323,6 +373,16 @@ LanguageManager.prototype.t = function (key) {
   return translations && translations[key] ? translations[key] : key;
 };
 
+LanguageManager.prototype.format = function (key, vars) {
+  var text = this.t(key);
+  var values = vars || {};
+  for (var name in values) {
+    if (!Object.prototype.hasOwnProperty.call(values, name)) continue;
+    text = text.replace(new RegExp('\\{' + name + '\\}', 'g'), String(values[name]));
+  }
+  return text;
+};
+
 /**
  * 更新界面文本
  */
@@ -424,6 +484,15 @@ LanguageManager.prototype.updateUI = function () {
   // 更新主题下拉菜单
   this.updateThemeDropdown();
 
+  var languageToggle = this.getRoot().getElementById('smart-bookmark-language-toggle');
+  if (languageToggle) languageToggle.title = this.t('languageSettings');
+
+  var modeToggle = this.getRoot().getElementById('smart-bookmark-mode-toggle');
+  if (modeToggle) modeToggle.title = this.t('themeSettings');
+
+  var themeToggle = this.getRoot().getElementById('smart-bookmark-theme-toggle');
+  if (themeToggle) themeToggle.title = this.t('themeColorSettings');
+
   // 更新数据管理按钮标题和下拉选项文案
   var dataToggle = this.getRoot().getElementById('smart-bookmark-data-toggle');
   if (dataToggle) dataToggle.title = this.t('dataManagement');
@@ -461,6 +530,12 @@ LanguageManager.prototype.updateUI = function () {
         window.modalManager.updateBookmarkList();
       }
     }
+  }
+
+  if (window.modalManager &&
+    window.modalManager.themeManager &&
+    typeof window.modalManager.themeManager.updateDarkModeToggleIcon === 'function') {
+    window.modalManager.themeManager.updateDarkModeToggleIcon();
   }
 };
 

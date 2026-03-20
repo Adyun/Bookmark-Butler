@@ -243,18 +243,19 @@ ModalManager.prototype.maybePruneOrphanTags = function () {
  */
 
 ModalManager.prototype.handleLoadError = function (type, error) {
-  var errorMessage = '加载' + (type === 'folders' ? '书签文件夹' : '书签') + '失败';
+  var t = this.languageManager ? this.languageManager.t.bind(this.languageManager) : function (key) { return key; };
+  var errorMessage = t(type === 'folders' ? 'loadFoldersFailed' : 'loadBookmarksFailed');
   var showPermissionButton = false;
 
   if (error.message.includes('not available')) {
-    errorMessage = '书签功能不可用，请检查扩展权限';
+    errorMessage = t('bookmarkFeatureUnavailable');
   } else if (error.message.includes('Bookmarks permission not granted')) {
-    errorMessage = '缺少书签权限，请点击下方按钮授予权限';
+    errorMessage = t('bookmarksPermissionRequiredMessage');
     showPermissionButton = true;
   } else if (error.message.includes('No bookmark tree found')) {
-    errorMessage = '没有找到' + (type === 'folders' ? '书签文件夹' : '书签') + '，请先创建一些书签';
+    errorMessage = t(type === 'folders' ? 'noFoldersFound' : 'noBookmarksFound');
   } else if (error.message.includes('Invalid data')) {
-    errorMessage = '书签数据格式错误，请重试';
+    errorMessage = t('bookmarkDataInvalid');
   }
 
   this.uiManager.showErrorState(type, errorMessage, showPermissionButton);
@@ -293,20 +294,20 @@ ModalManager.prototype.handlePermissionRequest = function () {
   window.SMART_BOOKMARK_API.requestBookmarksPermission()
     .then(function (granted) {
       if (granted) {
-        window.SMART_BOOKMARK_HELPERS.showToast('权限获取成功，正在重新加载书签...');
+        window.SMART_BOOKMARK_HELPERS.showToast(self.languageManager.t('permissionReloading'));
         // 重新加载数据
-        if (self.uiManager.currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_FOLDER_SELECT) {
+      if (self.uiManager.currentMode === window.SMART_BOOKMARK_CONSTANTS.MODE_FOLDER_SELECT) {
           self.loadFolders();
         } else {
           self.loadBookmarks();
         }
       } else {
-        window.SMART_BOOKMARK_HELPERS.showToast('权限获取失败，请手动在扩展管理页面授予权限', true);
+        window.SMART_BOOKMARK_HELPERS.showToast(self.languageManager.t('permissionFailed'), true);
       }
     })
     .catch(function (error) {
       console.error('Error requesting bookmarks permission:', error);
-      window.SMART_BOOKMARK_HELPERS.showToast('权限请求失败，请手动在扩展管理页面授予权限', true);
+      window.SMART_BOOKMARK_HELPERS.showToast(self.languageManager.t('permissionRequestFailed'), true);
     });
 };
 

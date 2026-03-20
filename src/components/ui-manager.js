@@ -9,12 +9,28 @@ function UIManager() {
   this.currentMode = window.SMART_BOOKMARK_CONSTANTS.DEFAULT_MODE;
   this.selectedIndex = -1;
   this.isModalVisible = false;
+  this.languageManager = null;
 
   // Shadow DOM 相关
   this.hostElement = null;
   this.shadowRoot = null;
   this.stylesLoaded = false;
 }
+
+UIManager.prototype.getLanguageManager = function () {
+  return this.languageManager || (window.modalManager && window.modalManager.languageManager) || null;
+};
+
+UIManager.prototype.t = function (key, fallback) {
+  var languageManager = this.getLanguageManager();
+  if (languageManager && typeof languageManager.t === 'function') {
+    var translated = languageManager.t(key);
+    if (translated && translated !== key) {
+      return translated;
+    }
+  }
+  return typeof fallback === 'string' ? fallback : key;
+};
 
 /**
  * 创建Modal DOM元素（使用 Shadow DOM 实现样式隔离）
@@ -79,13 +95,13 @@ UIManager.prototype.createModal = function () {
   modal.className = 'smart-bookmark-modal';
   modal.innerHTML =
     '<div class="smart-bookmark-modal-header">' +
-    '<h2 class="smart-bookmark-modal-title">搜索书签</h2>' +
+    '<h2 class="smart-bookmark-modal-title">Search Bookmarks</h2>' +
     '<div class="smart-bookmark-header-controls">' +
     '<div class="smart-bookmark-header-controls-container">' +
 
     // 语言设置按钮和下拉
     '<div class="smart-bookmark-control-group">' +
-    '<button id="smart-bookmark-language-toggle" class="smart-bookmark-control-toggle" title="语言设置">🌏</button>' +
+    '<button id="smart-bookmark-language-toggle" class="smart-bookmark-control-toggle" title="Language Settings">🌏</button>' +
     '<div id="smart-bookmark-language-dropdown" class="smart-bookmark-control-dropdown">' +
     '<div class="smart-bookmark-control-option" data-language="zh"><span class="smart-bookmark-option-icon">🇨🇳</span>中文</div>' +
     '<div class="smart-bookmark-control-option" data-language="en"><span class="smart-bookmark-option-icon">🇺🇸</span>English</div>' +
@@ -94,33 +110,33 @@ UIManager.prototype.createModal = function () {
 
     // 深浅色模式按钮和下拉
     '<div class="smart-bookmark-control-group">' +
-    '<button id="smart-bookmark-mode-toggle" class="smart-bookmark-control-toggle" title="深浅色模式">💡</button>' +
+    '<button id="smart-bookmark-mode-toggle" class="smart-bookmark-control-toggle" title="Follow System">💡</button>' +
     '<div id="smart-bookmark-mode-dropdown" class="smart-bookmark-control-dropdown">' +
-    '<div class="smart-bookmark-control-option" data-mode="auto"><span class="smart-bookmark-option-icon">🔄</span>跟随系统</div>' +
-    '<div class="smart-bookmark-control-option" data-mode="light"><span class="smart-bookmark-option-icon">☀️</span>浅色模式</div>' +
-    '<div class="smart-bookmark-control-option" data-mode="dark"><span class="smart-bookmark-option-icon">🌙</span>深色模式</div>' +
+    '<div class="smart-bookmark-control-option" data-mode="auto"><span class="smart-bookmark-option-icon">🔄</span>Follow System</div>' +
+    '<div class="smart-bookmark-control-option" data-mode="light"><span class="smart-bookmark-option-icon">☀️</span>Light Mode</div>' +
+    '<div class="smart-bookmark-control-option" data-mode="dark"><span class="smart-bookmark-option-icon">🌙</span>Dark Mode</div>' +
     '</div>' +
     '</div>' +
 
     // 主题颜色按钮和下拉
     '<div class="smart-bookmark-control-group">' +
-    '<button id="smart-bookmark-theme-toggle" class="smart-bookmark-control-toggle" title="主题颜色">🎨</button>' +
+    '<button id="smart-bookmark-theme-toggle" class="smart-bookmark-control-toggle" title="Theme Colors">🎨</button>' +
     '<div id="smart-bookmark-theme-dropdown" class="smart-bookmark-control-dropdown">' +
-    '<div class="smart-bookmark-control-option" data-theme="gray"><span class="smart-bookmark-option-icon">🩶</span>中性灰色（默认）</div>' +
-    '<div class="smart-bookmark-control-option" data-theme="red"><span class="smart-bookmark-option-icon">❤️</span>经典红色</div>' +
-    '<div class="smart-bookmark-control-option" data-theme="green"><span class="smart-bookmark-option-icon">💚</span>清新绿色</div>' +
-    '<div class="smart-bookmark-control-option" data-theme="pink"><span class="smart-bookmark-option-icon">🩷</span>温馨粉色</div>' +
-    '<div class="smart-bookmark-control-option" data-theme="purple"><span class="smart-bookmark-option-icon">💜</span>优雅紫色</div>' +
-    '<div class="smart-bookmark-control-option" data-theme="blue"><span class="smart-bookmark-option-icon">💙</span>经典蓝色</div>' +
+    '<div class="smart-bookmark-control-option" data-theme="gray"><span class="smart-bookmark-option-icon">🩶</span>Neutral Gray</div>' +
+    '<div class="smart-bookmark-control-option" data-theme="red"><span class="smart-bookmark-option-icon">❤️</span>Classic Red</div>' +
+    '<div class="smart-bookmark-control-option" data-theme="green"><span class="smart-bookmark-option-icon">💚</span>Fresh Green</div>' +
+    '<div class="smart-bookmark-control-option" data-theme="pink"><span class="smart-bookmark-option-icon">🩷</span>Warm Pink</div>' +
+    '<div class="smart-bookmark-control-option" data-theme="purple"><span class="smart-bookmark-option-icon">💜</span>Elegant Purple</div>' +
+    '<div class="smart-bookmark-control-option" data-theme="blue"><span class="smart-bookmark-option-icon">💙</span>Classic Blue</div>' +
     '</div>' +
     '</div>' +
 
     // 数据管理按钮和下拉
     '<div class="smart-bookmark-control-group">' +
-    '<button id="smart-bookmark-data-toggle" class="smart-bookmark-control-toggle" title="数据管理">💾</button>' +
+    '<button id="smart-bookmark-data-toggle" class="smart-bookmark-control-toggle" title="Data Management">💾</button>' +
     '<div id="smart-bookmark-data-dropdown" class="smart-bookmark-control-dropdown">' +
-    '<div class="smart-bookmark-control-option" data-action="export"><span class="smart-bookmark-option-icon">📤</span><span data-i18n="exportData">导出数据</span></div>' +
-    '<div class="smart-bookmark-control-option" data-action="import"><span class="smart-bookmark-option-icon">📥</span><span data-i18n="importData">导入数据</span></div>' +
+    '<div class="smart-bookmark-control-option" data-action="export"><span class="smart-bookmark-option-icon">📤</span><span data-i18n="exportData">Export Data</span></div>' +
+    '<div class="smart-bookmark-control-option" data-action="import"><span class="smart-bookmark-option-icon">📥</span><span data-i18n="importData">Import Data</span></div>' +
     '</div>' +
     '</div>' +
 
@@ -128,22 +144,22 @@ UIManager.prototype.createModal = function () {
     '</div>' +
     '</div>' +
     '<div class="smart-bookmark-modal-body">' +
-    '<input type="text" id="' + window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID + '" class="smart-bookmark-search" placeholder="搜索书签..." autofocus>' +
+    '<input type="text" id="' + window.SMART_BOOKMARK_CONSTANTS.SEARCH_INPUT_ID + '" class="smart-bookmark-search" placeholder="Search bookmarks..." autofocus>' +
     '<div class="smart-bookmark-filter-bar" id="smart-bookmark-filter-bar">' +
     '<div class="smart-bookmark-filter-group smart-bookmark-filter-group-type">' +
     '<div class="smart-bookmark-filter-type-nav" id="smart-bookmark-filter-type-tabs">' +
-    '<button class="smart-bookmark-filter-tab smart-bookmark-filter-tab-type active" data-filter="all">全部</button>' +
-    '<button class="smart-bookmark-filter-tab smart-bookmark-filter-tab-type" data-filter="bookmark">🔗 链接</button>' +
-    '<button class="smart-bookmark-filter-tab smart-bookmark-filter-tab-type" data-filter="folder">📁 文件夹</button>' +
+    '<button class="smart-bookmark-filter-tab smart-bookmark-filter-tab-type active" data-filter="all">All</button>' +
+    '<button class="smart-bookmark-filter-tab smart-bookmark-filter-tab-type" data-filter="bookmark">🔗 Links</button>' +
+    '<button class="smart-bookmark-filter-tab smart-bookmark-filter-tab-type" data-filter="folder">📁 Folders</button>' +
     '</div>' +
     '</div>' +
     '<div class="smart-bookmark-filter-group smart-bookmark-filter-group-tag">' +
     '<div class="smart-bookmark-filter-tabs-row" id="smart-bookmark-filter-tag-tabs">' +
-    '<span class="smart-bookmark-filter-tag-empty" id="smart-bookmark-filter-tag-empty">未选择</span>' +
+    '<span class="smart-bookmark-filter-tag-empty" id="smart-bookmark-filter-tag-empty">Not selected</span>' +
     '</div>' +
-    '<button class="smart-bookmark-filter-more-btn" id="smart-bookmark-more-tags-btn" data-more-tags-toggle="1" type="button" style="display:none;">更多标签</button>' +
+    '<button class="smart-bookmark-filter-more-btn" id="smart-bookmark-more-tags-btn" data-more-tags-toggle="1" type="button" style="display:none;">More Tags</button>' +
     '<div class="smart-bookmark-tag-popover" id="smart-bookmark-tag-popover">' +
-    '<input class="smart-bookmark-tag-popover-search" id="smart-bookmark-tag-popover-search" type="text" placeholder="搜索标签...">' +
+    '<input class="smart-bookmark-tag-popover-search" id="smart-bookmark-tag-popover-search" type="text" placeholder="Search tags...">' +
     '<div class="smart-bookmark-tag-popover-list" id="smart-bookmark-tag-popover-list"></div>' +
     '</div>' +
     '</div>' +
@@ -155,14 +171,14 @@ UIManager.prototype.createModal = function () {
     '</div>' +
     '<div class="smart-bookmark-modal-footer">' +
     '<div class="smart-bookmark-keyboard-hints">' +
-    '<span class="smart-bookmark-keyboard-hint">↑↓ 选择</span>' +
-    '<span class="smart-bookmark-keyboard-hint">Enter 确认</span>' +
-    '<span class="smart-bookmark-keyboard-hint">Space 切换模式</span>' +
-    '<span class="smart-bookmark-keyboard-hint">Tab 切换筛选</span>' +
+    '<span class="smart-bookmark-keyboard-hint">↑↓ Select</span>' +
+    '<span class="smart-bookmark-keyboard-hint">Enter Confirm</span>' +
+    '<span class="smart-bookmark-keyboard-hint">Space Toggle Mode</span>' +
+    '<span class="smart-bookmark-keyboard-hint">Tab Cycle Filter</span>' +
     '</div>' +
     '<div class="smart-bookmark-footer-buttons">' +
-    '<button class="smart-bookmark-btn smart-bookmark-btn-secondary" id="smart-bookmark-cancel">取消</button>' +
-    '<button class="smart-bookmark-btn smart-bookmark-btn-primary" id="smart-bookmark-confirm" style="display: none;">添加书签</button>' +
+    '<button class="smart-bookmark-btn smart-bookmark-btn-secondary" id="smart-bookmark-cancel">Cancel</button>' +
+    '<button class="smart-bookmark-btn smart-bookmark-btn-primary" id="smart-bookmark-confirm" style="display: none;">Add Bookmark</button>' +
     '</div>' +
     '</div>';
 
@@ -568,7 +584,7 @@ UIManager.prototype.showLoadingState = function (listType) {
   if (!list) return;
 
   var itemClass = listType === 'folders' ? 'smart-bookmark-folder-item' : 'smart-bookmark-bookmark-item';
-  var message = listType === 'folders' ? '正在加载书签文件夹...' : '正在加载书签...';
+  var message = this.t(listType === 'folders' ? 'loadingFolders' : 'loadingBookmarks');
 
   list.innerHTML = '<li class="' + itemClass + ' loading">' + message + '</li>';
 };
@@ -586,7 +602,7 @@ UIManager.prototype.showEmptyState = function (listType) {
   if (!list) return;
 
   var itemClass = listType === 'folders' ? 'smart-bookmark-folder-item' : 'smart-bookmark-bookmark-item';
-  var message = listType === 'folders' ? '没有书签文件夹，请先创建一些书签' : '没有书签，请先创建一些书签';
+  var message = this.t(listType === 'folders' ? 'emptyFoldersDetailed' : 'emptyBookmarksDetailed');
 
   list.innerHTML = '<li class="' + itemClass + ' empty">' + message + '</li>';
 };
@@ -606,12 +622,12 @@ UIManager.prototype.showErrorState = function (listType, message, showPermission
   if (!list) return;
 
   var itemClass = listType === 'folders' ? 'smart-bookmark-folder-item' : 'smart-bookmark-bookmark-item';
-  var html = '<li class="' + itemClass + ' error">' + (message || '加载失败') + '</li>';
+  var html = '<li class="' + itemClass + ' error">' + (message || this.t('errorText')) + '</li>';
 
   if (showPermissionButton) {
     var buttonId = 'smart-bookmark-request-permission-' + listType;
     html += '<li class="smart-bookmark-permission-container">' +
-      '<button id="' + buttonId + '" class="smart-bookmark-btn smart-bookmark-btn-primary">授予权限</button>' +
+      '<button id="' + buttonId + '" class="smart-bookmark-btn smart-bookmark-btn-primary">' + this.t('grantPermission') + '</button>' +
       '</li>';
   }
 
@@ -631,9 +647,7 @@ UIManager.prototype.showNoResultsState = function (listType) {
   if (!list) return;
 
   var itemClass = listType === 'folders' ? 'smart-bookmark-folder-item' : 'smart-bookmark-bookmark-item';
-  var message = listType === 'folders' ?
-    '未找到匹配的文件夹，请尝试其他关键词' :
-    '未找到匹配的书签，请尝试其他关键词';
+  var message = this.t(listType === 'folders' ? 'noResultsFolders' : 'noResultsBookmarks');
 
   list.innerHTML = '<li class="' + itemClass + ' no-results">' + message + '</li>';
 };
@@ -786,7 +800,7 @@ UIManager.prototype.updateTagFilterTabs = function (tags, activeTag) {
     }
   }
 
-  var baseMoreText = moreBtn.getAttribute('data-base-label') || moreBtn.textContent || '更多标签';
+  var baseMoreText = moreBtn.getAttribute('data-base-label') || moreBtn.textContent || this.t('moreTags', 'More Tags');
   moreBtn.textContent = baseMoreText;
   moreBtn.style.display = 'inline-flex';
   moreBtn.style.visibility = 'hidden';

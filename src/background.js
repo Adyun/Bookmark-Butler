@@ -88,6 +88,43 @@ const pendingReadyWaiters = new Map();
 const CONTENT_SCRIPT_READY_TIMEOUT_MS = 10000;
 const TAB_COMPLETE_TIMEOUT_MS = 10000;
 const MAX_INJECTION_ATTEMPTS = 2;
+const LANGUAGE_STORAGE_KEY = 'smartBookmarkLanguage';
+const BACKGROUND_TRANSLATIONS = {
+  zh: {
+    untitledFolder: '未命名文件夹',
+    untitledBookmark: '未命名书签',
+    unsupportedPageMessage: '当前页面不支持书签管理器。请在普通网页中使用此功能。'
+  },
+  en: {
+    untitledFolder: 'Untitled Folder',
+    untitledBookmark: 'Untitled Bookmark',
+    unsupportedPageMessage: 'This page does not support Bookmark Butler. Please use it on a regular webpage.'
+  }
+};
+
+function getCurrentLanguage() {
+  return new Promise((resolve) => {
+    try {
+      if (!chrome.storage || !chrome.storage.local) {
+        resolve('en');
+        return;
+      }
+
+      chrome.storage.local.get([LANGUAGE_STORAGE_KEY], (result) => {
+        const language = result && result[LANGUAGE_STORAGE_KEY] === 'zh' ? 'zh' : 'en';
+        resolve(language);
+      });
+    } catch (error) {
+      resolve('en');
+    }
+  });
+}
+
+function tBackground(key, language) {
+  const lang = language === 'zh' ? 'zh' : 'en';
+  const table = BACKGROUND_TRANSLATIONS[lang] || BACKGROUND_TRANSLATIONS.en;
+  return table[key] || key;
+}
 
 function getErrorMessage(error) {
   if (!error) return 'Unknown error';
@@ -246,64 +283,66 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === "getBookmarks") {
-    // 获取书签树
-    chrome.bookmarks.getTree((bookmarkTree) => {
-      if (chrome.runtime.lastError) {
-        console.error("Error getting bookmark tree:", chrome.runtime.lastError);
-        sendResponse({ error: chrome.runtime.lastError.message });
-        return;
-      }
+    getCurrentLanguage().then((language) => {
+      // 获取书签树
+      chrome.bookmarks.getTree((bookmarkTree) => {
+        if (chrome.runtime.lastError) {
+          console.error("Error getting bookmark tree:", chrome.runtime.lastError);
+          sendResponse({ error: chrome.runtime.lastError.message });
+          return;
+        }
 
-      // 从书签树中提取文件夹
-      const folders = [];
+        // 从书签树中提取文件夹
+        const folders = [];
 
-      function traverse(node) {
-        if (!node) return;
+        function traverse(node) {
+          if (!node) return;
 
-        // 如果节点没有url属性，则认为是文件夹
-        if (!node.url) {
-          // 计算文件夹中的书签数量和子文件夹数量
-          let bookmarkCount = 0;
-          let subFolderCount = 0;
-          if (node.children && Array.isArray(node.children)) {
-            for (const child of node.children) {
-              if (child && child.url) {
-                bookmarkCount++;
-              } else if (child && !child.url) {
-                subFolderCount++;
+          // 如果节点没有url属性，则认为是文件夹
+          if (!node.url) {
+            // 计算文件夹中的书签数量和子文件夹数量
+            let bookmarkCount = 0;
+            let subFolderCount = 0;
+            if (node.children && Array.isArray(node.children)) {
+              for (const child of node.children) {
+                if (child && child.url) {
+                  bookmarkCount++;
+                } else if (child && !child.url) {
+                  subFolderCount++;
+                }
               }
+            }
+
+            // 跳过没有标题的根节点
+            if (node.id !== '0' || node.title) {
+              folders.push({
+                id: node.id,
+                title: node.title || tBackground('untitledFolder', language),
+                children: node.children || [],
+                bookmarkCount: bookmarkCount,
+                subFolderCount: subFolderCount,
+                parentId: node.parentId
+              });
             }
           }
 
-          // 跳过没有标题的根节点
-          if (node.id !== '0' || node.title) {
-            folders.push({
-              id: node.id,
-              title: node.title || '未命名文件夹',
-              children: node.children || [],
-              bookmarkCount: bookmarkCount,
-              subFolderCount: subFolderCount,
-              parentId: node.parentId
-            });
+          // 递归遍历子节点
+          if (node.children && Array.isArray(node.children)) {
+            for (const child of node.children) {
+              traverse(child);
+            }
           }
         }
 
-        // 递归遍历子节点
-        if (node.children && Array.isArray(node.children)) {
-          for (const child of node.children) {
-            traverse(child);
-          }
+        try {
+          traverse(bookmarkTree[0]);
+          console.log(`Extracted ${folders.length} folders`);
+          sendResponse({ folders: folders });
+        } catch (error) {
+          console.error("Error traversing bookmark tree:", error);
+          sendResponse({ error: error.message });
         }
-      }
-
-      try {
-        traverse(bookmarkTree[0]);
-        console.log(`Extracted ${folders.length} folders`);
-        sendResponse({ folders: folders });
-      } catch (error) {
-        console.error("Error traversing bookmark tree:", error);
-        sendResponse({ error: error.message });
-      }
+      });
     });
 
     return true; // 保持消息通道开放，以便异步发送响应
@@ -393,46 +432,48 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === "getAllBookmarks") {
-    // 获取所有书签
-    chrome.bookmarks.getTree((bookmarkTree) => {
-      if (chrome.runtime.lastError) {
-        console.error("Error getting bookmark tree:", chrome.runtime.lastError);
-        sendResponse({ error: chrome.runtime.lastError.message });
-        return;
-      }
-
-      // 从书签树中提取书签
-      const bookmarks = [];
-
-      function traverse(node) {
-        if (!node) return;
-
-        // 如果节点有url属性，则认为是书签
-        if (node.url) {
-          bookmarks.push({
-            id: node.id,
-            title: node.title || '未命名书签',
-            url: node.url,
-            parentId: node.parentId
-          });
+    getCurrentLanguage().then((language) => {
+      // 获取所有书签
+      chrome.bookmarks.getTree((bookmarkTree) => {
+        if (chrome.runtime.lastError) {
+          console.error("Error getting bookmark tree:", chrome.runtime.lastError);
+          sendResponse({ error: chrome.runtime.lastError.message });
+          return;
         }
 
-        // 递归遍历子节点
-        if (node.children && Array.isArray(node.children)) {
-          for (const child of node.children) {
-            traverse(child);
+        // 从书签树中提取书签
+        const bookmarks = [];
+
+        function traverse(node) {
+          if (!node) return;
+
+          // 如果节点有url属性，则认为是书签
+          if (node.url) {
+            bookmarks.push({
+              id: node.id,
+              title: node.title || tBackground('untitledBookmark', language),
+              url: node.url,
+              parentId: node.parentId
+            });
+          }
+
+          // 递归遍历子节点
+          if (node.children && Array.isArray(node.children)) {
+            for (const child of node.children) {
+              traverse(child);
+            }
           }
         }
-      }
 
-      try {
-        traverse(bookmarkTree[0]);
-        console.log(`Extracted ${bookmarks.length} bookmarks`);
-        sendResponse({ bookmarks: bookmarks });
-      } catch (error) {
-        console.error("Error traversing bookmark tree:", error);
-        sendResponse({ error: error.message });
-      }
+        try {
+          traverse(bookmarkTree[0]);
+          console.log(`Extracted ${bookmarks.length} bookmarks`);
+          sendResponse({ bookmarks: bookmarks });
+        } catch (error) {
+          console.error("Error traversing bookmark tree:", error);
+          sendResponse({ error: error.message });
+        }
+      });
     });
 
     return true; // 保持消息通道开放，以便异步发送响应
@@ -661,19 +702,21 @@ function trySimpleNotification() {
   if (chrome.notifications) {
     // 创建一个base64编码的简单图标作为备用
     const simpleIcon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+    getCurrentLanguage().then((language) => {
 
-    chrome.notifications.create({
-      type: 'basic',
-      iconUrl: simpleIcon,
-      title: '书签管家',
-      message: '当前页面不支持书签管理器。请在普通网页中使用此功能。'
-    }, function (notificationId) {
-      if (chrome.runtime.lastError) {
-        console.error('Simple notification also failed:', chrome.runtime.lastError.message);
-        console.log('Notification system appears to be unavailable. User will need to manually navigate to a regular webpage.');
-      } else {
-        console.log('Simple notification created successfully:', notificationId);
-      }
+      chrome.notifications.create({
+        type: 'basic',
+        iconUrl: simpleIcon,
+        title: 'Bookmark Butler',
+        message: tBackground('unsupportedPageMessage', language)
+      }, function (notificationId) {
+        if (chrome.runtime.lastError) {
+          console.error('Simple notification also failed:', chrome.runtime.lastError.message);
+          console.log('Notification system appears to be unavailable. User will need to manually navigate to a regular webpage.');
+        } else {
+          console.log('Simple notification created successfully:', notificationId);
+        }
+      });
     });
   } else {
     console.log('Notifications API not available');
