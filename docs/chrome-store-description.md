@@ -1,4 +1,11 @@
-# Chrome Web Store Copy
+# Browser Store Copy
+
+This document contains reusable English listing copy for both Google Chrome Web Store and Microsoft Edge Add-ons.
+
+## Live Store Links
+
+- Google Chrome: https://chromewebstore.google.com/detail/bookmark-butler/nbhlidmjiphicgnojapojbbjknfhpiib
+- Microsoft Edge: https://microsoftedge.microsoft.com/addons/detail/bookmark-butler/nceipfijlhmmemjdhjhdclafbaffjaad
 
 ## Extension Name
 Bookmark Butler
@@ -63,4 +70,4 @@ Productivity
 bookmark, productivity, organization, search, browser extension, tab workflow
 
 ## Support Page
-https://github.com/your-repo/bookmark-butler
+https://github.com/Adyun/Bookmark-Butler
